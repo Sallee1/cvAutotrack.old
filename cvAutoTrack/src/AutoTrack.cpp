@@ -880,6 +880,7 @@ bool AutoTrack::getMiniMapRefMat()
 }
 
 #ifdef _DEBUG
+#define _Pi 3.1415926
 Resources* resource = &Resources::getInstance();
 inline void AutoTrack::showMatchResult(float x, float y, int mapId, float angle, float rotate)
 {
