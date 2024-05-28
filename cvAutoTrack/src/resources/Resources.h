@@ -71,7 +71,7 @@ public:
     void deSerialize(std::string infileName);
 };
 
-bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, double hessian_threshold = 1, int octaves = 1, int octave_layers = 1, bool extended = false, bool upright = false);
+bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, float hessian_threshold = 1, int octaves = 1, int octave_layers = 1, bool extended = false, bool upright = false);
 bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
 bool get_map_keypoint(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
