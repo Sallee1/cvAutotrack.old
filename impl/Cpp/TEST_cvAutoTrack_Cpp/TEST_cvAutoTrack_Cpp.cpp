@@ -142,6 +142,7 @@ void Run_GetAll()
 		case 0:mapType = "提瓦特大陆"; break;
 		case 1:mapType = "渊下宫"; break;
 		case 2:mapType = "地下矿区"; break;
+		case 3:mapType = "旧日之海"; break;
 		}
 		std::cout << std::format(R"(
 全部信息：
