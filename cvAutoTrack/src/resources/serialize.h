@@ -15,8 +15,8 @@ namespace Tianli::Resources::Utils
 				size >>= 1;
 			size <<= p;
 
-			int fsLen = fileOut.tellp();
-			int addLen = (fsLen >> p << p) + size - fsLen;
+			size_t fsLen = fileOut.tellp();
+			size_t addLen = (fsLen >> p << p) + size - fsLen;
 			if (addLen != size) {
 				char* emptyBinarys = new char[addLen];
 				memset(emptyBinarys, 0, addLen);
@@ -30,7 +30,7 @@ namespace Tianli::Resources::Utils
 		void operator <<(const std::string& s)
 		{
 			align(sizeof(DWORD));
-			DWORD size = s.size() + 1;
+			DWORD size = static_cast<DWORD>(s.size() + 1);
 			fileOut.write((char*)&size, sizeof(DWORD));
 			fileOut.write(s.c_str(), size);
 		}
@@ -46,7 +46,7 @@ namespace Tianli::Resources::Utils
 		void operator <<(const std::vector<cv::KeyPoint>& points)
 		{
 			align(sizeof(DWORD));
-			DWORD size = points.size() * sizeof(cv::KeyPoint);
+			DWORD size = static_cast<DWORD>(points.size() * sizeof(cv::KeyPoint));
 			fileOut.write((char*)&size, sizeof(DWORD));
 
 			const cv::KeyPoint* keyPointPtr = points.data();
@@ -59,7 +59,7 @@ namespace Tianli::Resources::Utils
 			std::vector<uchar> buf;
 			cv::imencode(".tiff", mat, buf, std::vector<int>(cv::IMWRITE_TIFF_COMPRESSION, 8));
 
-			DWORD size = buf.size();
+			DWORD size = static_cast<DWORD>(buf.size());
 			fileOut.write((char*)&size, sizeof(DWORD));
 
 			const uchar* bytes = buf.data();
@@ -81,8 +81,8 @@ namespace Tianli::Resources::Utils
 				size >>= 1;
 			size <<= p;
 
-			int fsLen = fileIn.tellg();
-			int addLen = (fsLen >> p << p) + size - fsLen;
+			size_t fsLen = fileIn.tellg();
+			size_t addLen = (fsLen >> p << p) + size - fsLen;
 			if (addLen != size) {
 				fileIn.ignore(addLen);
 			}

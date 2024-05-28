@@ -334,7 +334,7 @@ bool Dxgi::capture(cv::Mat& frame)
 
     if (client_box_available)
     {
-        if (client_box.right - client_box.left > frame_size.Width || client_box.bottom - client_box.top > frame_size.Height)
+        if (client_box.right - client_box.left > static_cast<uint32_t>(frame_size.Width) || client_box.bottom - client_box.top > static_cast<uint32_t>(frame_size.Height))
         {
             err = { 14, "窗口画面小于裁剪框，截图失败" };
             return false;

@@ -47,7 +47,7 @@ void rotation_calculation(cv::Mat& giMiniMapRef, double&a, rotation_calculation_
 	sumOfImg = sumOfImg(cv::Rect2i(256, 0, 512, 1));
 
 	//求角度
-	float angles[2];
+	double angles[2];
 	cv::Point2i maxLoc,minLoc;
 	cv::minMaxLoc(sumOfImg, NULL, NULL, &minLoc, &maxLoc);
 	angles[0] = std::fmod((minLoc.x / 512.0) * 360, 360);
@@ -72,8 +72,8 @@ cv::Mat cvMatRoll(const cv::Mat& src,cv::Point2d shift)
 	cv::Mat dst;
 	transFormMat.at<float>(0, 0) = 1;
 	transFormMat.at<float>(1, 1) = 1;
-	transFormMat.at<float>(0, 2) = shift.x;
-	transFormMat.at<float>(1, 2) = shift.y;
+	transFormMat.at<float>(0, 2) = static_cast<float>(shift.x);
+	transFormMat.at<float>(1, 2) = static_cast<float>(shift.y);
 	cv::warpAffine(src, dst, transFormMat, src.size(), cv::INTER_NEAREST, cv::BORDER_WRAP);
 	return dst;
 }
@@ -102,7 +102,7 @@ void rotation_calculation_2nd(cv::Mat& giMiniMapRef, double& a, rotation_calcula
 		cv::abs(img_object * (1 - alpha) + alpha - cvMatRoll(img_object,cv::Point2d(5,0)))
 	};
 
-	float angles[2];
+	double angles[2];
 	for (int i = 0; i < 2; i++)
 	{
 		//提取边缘信息
