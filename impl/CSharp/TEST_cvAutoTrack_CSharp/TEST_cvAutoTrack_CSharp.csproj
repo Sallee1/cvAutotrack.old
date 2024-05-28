@@ -4,13 +4,9 @@
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Configurations>Debug;Release;Compile</Configurations>
+		<Configurations>Debug;Release;DebugRel</Configurations>
 		<BaseOutputPath></BaseOutputPath>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Compile|AnyCPU'">
-		<Optimize>True</Optimize>
 	</PropertyGroup>
 
 </Project>
