@@ -18,6 +18,26 @@ namespace TianLi::Genshin
 		return out;
 	}
 
+	HWND get_cloud_window()
+	{
+		HWND cloud_window = NULL;
+		EnumWindows(
+			[](HWND hwnd, LPARAM lParam) -> BOOL {
+				auto cloud_window = reinterpret_cast<HWND*>(lParam);
+				wchar_t buffer[1024];
+				auto style = GetWindowLongPtr(hwnd, GWL_STYLE);
+				GetWindowTextW(hwnd, buffer, 1024);
+				if (std::wstring(buffer) == L"云·原神" && (style & WS_EX_LAYERED))
+				{
+					*cloud_window = hwnd;
+					return FALSE;
+				}
+				return TRUE;
+			},
+			reinterpret_cast<LPARAM>(&cloud_window));
+		return cloud_window;
+	}
+
 	void get_genshin_handle(GenshinHandle& genshin_handle)
 	{
 		if (genshin_handle.config.is_auto_find_genshin)
@@ -27,11 +47,15 @@ namespace TianLi::Genshin
 			auto now_class = GenshinWindowClass::Unity;
 			for (auto& [genshin_window_name, genshin_window_class] : genshin_handle.config.genshin_window_name_list)
 			{
-				if (genshin_window_class == GenshinWindowClass::Unity)
+				if (giHandle == NULL)
 				{
 					giHandle = FindWindowW(L"UnityWndClass", genshin_window_name.c_str());
 				}
-				else
+				if (giHandle == NULL && genshin_window_name == L"云·原神")
+				{
+					giHandle = get_cloud_window();
+				}
+				if (giHandle == NULL)
 				{
 					giHandle = FindWindowW(nullptr, genshin_window_name.c_str());
 				}
@@ -43,7 +67,7 @@ namespace TianLi::Genshin
 			}
 
 			//窗口投影（源） - 云·原神
-			if (now_class == GenshinWindowClass::Obs || now_class == GenshinWindowClass::None)
+			if (now_class == GenshinWindowClass::Obs || now_class == GenshinWindowClass::Qt)
 			{
 				genshin_handle.config.is_force_used_no_alpha = true;
 			}
