@@ -30,7 +30,7 @@ bool __stdcall SetUseBitbltCaptureMode()
 }
 bool __stdcall SetUseDx11CaptureMode()
 {
-	INSTALL_DUMP(_at.SetUseDx11CaptureMode());
+	INSTALL_DUMP(_at.SetUseWindowGraphics());
 }
 bool __stdcall SetHandle(long long int handle = 0)
 {

@@ -11,18 +11,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="src\capture">
-      <UniqueIdentifier>{dab1e440-aefc-4c57-aba1-f28c90365601}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\capture\dxgi">
-      <UniqueIdentifier>{d7976ad7-3e49-46ce-8fa4-13e4ae679a75}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\capture\bitblt">
-      <UniqueIdentifier>{773cb314-1b4c-4edb-9142-d5be669693ac}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\capture\dxgi\include">
-      <UniqueIdentifier>{ef9fee04-c2fd-47c5-a7d0-e011239919d6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\match">
       <UniqueIdentifier>{ac6f39d1-8b24-4329-8e46-af9ad6ab5919}</UniqueIdentifier>
     </Filter>
@@ -55,9 +43,6 @@
     </Filter>
     <Filter Include="src\filter\untouched">
       <UniqueIdentifier>{507751c9-0c0a-40f3-a833-f2d62a3f00a3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\capture\video">
-      <UniqueIdentifier>{3685c184-17eb-4d9c-820d-bdedebf3c3aa}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\match\surf\filter">
       <UniqueIdentifier>{dcabbda0-572b-43c0-a67e-0964167f83d0}</UniqueIdentifier>
@@ -122,6 +107,15 @@
     <Filter Include="src\genshin\match\position">
       <UniqueIdentifier>{0638de7f-89ef-45cd-b3e8-6d8cfac31b22}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\frame">
+      <UniqueIdentifier>{dab1e440-aefc-4c57-aba1-f28c90365601}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\frame\capture">
+      <UniqueIdentifier>{3ec8c733-3e4c-44f2-9c70-a58364eb4410}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\frame\capture\utils">
+      <UniqueIdentifier>{93ab9efa-388b-438e-b60c-a3ecf4953867}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="resource\Source.def">
@@ -156,27 +150,6 @@
     <ClInclude Include="src\AutoTrack.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\capture\dxgi\include\capture.interop.h">
-      <Filter>src\capture\dxgi\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\dxgi\include\composition.interop.h">
-      <Filter>src\capture\dxgi\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\dxgi\include\d3dHelpers.h">
-      <Filter>src\capture\dxgi\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\dxgi\include\direct3d11.interop.h">
-      <Filter>src\capture\dxgi\include</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\Capture.h">
-      <Filter>src\capture</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\dxgi\Dxgi.h">
-      <Filter>src\capture\dxgi</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\bitblt\Bitblt.h">
-      <Filter>src\capture\bitblt</Filter>
-    </ClInclude>
     <ClInclude Include="src\resources\Resources.h">
       <Filter>src\resources</Filter>
     </ClInclude>
@@ -206,9 +179,6 @@
     </ClInclude>
     <ClInclude Include="src\filter\untouched\Untouched.h">
       <Filter>src\filter\untouched</Filter>
-    </ClInclude>
-    <ClInclude Include="src\capture\video\video.h">
-      <Filter>src\capture\video</Filter>
     </ClInclude>
     <ClInclude Include="src\resource.h">
       <Filter>resource</Filter>
@@ -309,6 +279,24 @@
     <ClInclude Include="src\resources\serialize.h">
       <Filter>src\resources</Filter>
     </ClInclude>
+    <ClInclude Include="src\frame\frame.include.h">
+      <Filter>src\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame\capture\capture.bitblt.h">
+      <Filter>src\frame\capture</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame\capture\capture.include.h">
+      <Filter>src\frame\capture</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame\capture\capture.window_graphics.h">
+      <Filter>src\frame\capture</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame\capture\utils\utils.window_graphics.h">
+      <Filter>src\frame\capture\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame\capture\utils\utils.window_scale.h">
+      <Filter>src\frame\capture\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AutoTrack.cpp">
@@ -316,15 +304,6 @@
     </ClCompile>
     <ClCompile Include="src\cvAutoTrack.cpp">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\capture\Capture.cpp">
-      <Filter>src\capture</Filter>
-    </ClCompile>
-    <ClCompile Include="src\capture\dxgi\Dxgi.cpp">
-      <Filter>src\capture\dxgi</Filter>
-    </ClCompile>
-    <ClCompile Include="src\capture\bitblt\Bitblt.cpp">
-      <Filter>src\capture\bitblt</Filter>
     </ClCompile>
     <ClCompile Include="src\resources\Resources.cpp">
       <Filter>src\resources</Filter>
@@ -349,9 +328,6 @@
     </ClCompile>
     <ClCompile Include="src\filter\smooth\Smooth.cpp">
       <Filter>src\filter\smooth</Filter>
-    </ClCompile>
-    <ClCompile Include="src\capture\video\video.cpp">
-      <Filter>src\capture\video</Filter>
     </ClCompile>
     <ClCompile Include="src\filter\untouched\Untouched.cpp">
       <Filter>src\filter\untouched</Filter>
@@ -386,6 +362,12 @@
     <ClCompile Include="src\resources\import\resources.import.cpp" />
     <ClCompile Include="src\dllmain.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\frame\frame.include.cpp">
+      <Filter>src\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="src\frame\capture\capture.window_graphics.cpp">
+      <Filter>src\frame\capture</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

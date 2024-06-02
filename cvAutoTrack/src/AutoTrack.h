@@ -10,7 +10,9 @@ public:
     bool uninit();
 
     bool SetUseBitbltCaptureMode();
-    bool SetUseDx11CaptureMode();
+
+    [[deprecated("DXGI is not supported, use SetUseWindowGraphics instead")]] bool SetUseDx11CaptureMode();
+    bool SetUseWindowGraphics();
 
     bool ImportMapBlock(int id_x, int id_y, const char* image_data, int image_data_size, int image_width, int image_height);
     bool ImportMapBlockCenter(int x, int y);
@@ -65,6 +67,6 @@ private:
     bool getMiniMapRefMat();
 
 #ifdef _DEBUG
-    void showMatchResult(float x, float y, int mapId, float angle, float rotate);
+    void showMatchResult(double x, double y, int mapId, double angle, double rotate);
 #endif // DEBUG
 };

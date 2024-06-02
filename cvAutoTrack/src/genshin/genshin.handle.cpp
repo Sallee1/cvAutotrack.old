@@ -47,13 +47,13 @@ namespace TianLi::Genshin
 			auto now_class = GenshinWindowClass::Unity;
 			for (auto& [genshin_window_name, genshin_window_class] : genshin_handle.config.genshin_window_name_list)
 			{
+				if (genshin_window_name == L"云·原神")
+				{
+					giHandle = get_cloud_window();
+				}
 				if (giHandle == NULL)
 				{
 					giHandle = FindWindowW(L"UnityWndClass", genshin_window_name.c_str());
-				}
-				if (giHandle == NULL && genshin_window_name == L"云·原神")
-				{
-					giHandle = get_cloud_window();
 				}
 				if (giHandle == NULL)
 				{

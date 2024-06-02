@@ -154,12 +154,13 @@
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(opencvStaticLib);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</ExternalIncludePath>
+    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dyn|x64'">
     <TargetName>cvAutoTrack</TargetName>
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Sallee\Documents\code\Cpp\cvAutoTrack\third_party\opencv-cvv-dll\x64\vc17\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Users\Sallee\Documents\code\thirdCpp\opencv\opencv-lib-release\lib;C:\Program Files\mingw-w64\x86_64-8.1.0-win32-seh-rt_v6-rev0\mingw64\site-package\Opencv\x64\vc17\staticlib;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>C:\Users\Sallee\Documents\code\Cpp\cvAutoTrack\third_party\opencv-cvv-dll\include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugRel|x64'">
@@ -301,7 +302,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -328,7 +329,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>ade.lib;IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libprotobuf.lib;libtiff.lib;libwebp.lib;quirc.lib;zlib.lib;opencv_world460.lib;opencv_img_hash460.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ade.lib;IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libprotobuf.lib;libtiff.lib;libwebp.lib;quirc.lib;zlib.lib;dxgi.lib;opencv_world460.lib;opencv_img_hash460.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <Version>3.4</Version>
@@ -379,7 +380,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>opencv_calib3d490.lib;opencv_calib3d490d.lib;opencv_core490.lib;opencv_core490d.lib;opencv_cvv490.lib;opencv_cvv490d.lib;opencv_features2d490.lib;opencv_features2d490d.lib;opencv_flann490.lib;opencv_flann490d.lib;opencv_imgcodecs490.lib;opencv_imgcodecs490d.lib;opencv_imgproc490.lib;opencv_imgproc490d.lib;opencv_video490.lib;opencv_video490d.lib;opencv_videoio490.lib;opencv_videoio490d.lib;opencv_xfeatures2d490.lib;opencv_xfeatures2d490d.lib;dxgi.lib;d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ade.lib;IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libprotobuf.lib;libtiff.lib;libwebp.lib;quirc.lib;zlib.lib;opencv_world480.lib;dxgi.lib;d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <Version>3.4</Version>
@@ -395,7 +396,8 @@
       <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>src\version\build_version_before.bat</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugRel|x64'">
@@ -469,19 +471,17 @@
     <ClInclude Include="src\algorithms\algorithms.rotation.h" />
     <ClInclude Include="src\algorithms\algorithms.include.h" />
     <ClInclude Include="src\AutoTrack.h" />
-    <ClInclude Include="src\capture\bitblt\Bitblt.h" />
-    <ClInclude Include="src\capture\Capture.h" />
-    <ClInclude Include="src\capture\dxgi\Dxgi.h" />
-    <ClInclude Include="src\capture\dxgi\include\capture.interop.h" />
-    <ClInclude Include="src\capture\dxgi\include\composition.interop.h" />
-    <ClInclude Include="src\capture\dxgi\include\d3dHelpers.h" />
-    <ClInclude Include="src\capture\dxgi\include\direct3d11.interop.h" />
-    <ClInclude Include="src\capture\video\video.h" />
     <ClInclude Include="src\ErrorCode.h" />
     <ClInclude Include="src\filter\Filter.h" />
     <ClInclude Include="src\filter\kalman\Kalman.h" />
     <ClInclude Include="src\filter\smooth\Smooth.h" />
     <ClInclude Include="src\filter\untouched\Untouched.h" />
+    <ClInclude Include="src\frame\capture\capture.bitblt.h" />
+    <ClInclude Include="src\frame\capture\capture.include.h" />
+    <ClInclude Include="src\frame\capture\capture.window_graphics.h" />
+    <ClInclude Include="src\frame\capture\utils\utils.window_graphics.h" />
+    <ClInclude Include="src\frame\capture\utils\utils.window_scale.h" />
+    <ClInclude Include="src\frame\frame.include.h" />
     <ClInclude Include="src\genshin\cailb\minimap\genshin.cailb.minimap.h" />
     <ClInclude Include="src\genshin\check\paimon\genshin.check.paimon.h" />
     <ClInclude Include="src\genshin\genshin.h" />
@@ -523,16 +523,6 @@
     <ClCompile Include="src\AutoTrack.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\capture\bitblt\Bitblt.cpp" />
-    <ClCompile Include="src\capture\Capture.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="src\capture\dxgi\Dxgi.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="src\capture\video\video.cpp" />
     <ClCompile Include="src\cvAutoTrack.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
     <ClCompile Include="src\ErrorCode.cpp" />
@@ -540,6 +530,8 @@
     <ClCompile Include="src\filter\kalman\Kalman.cpp" />
     <ClCompile Include="src\filter\smooth\Smooth.cpp" />
     <ClCompile Include="src\filter\untouched\Untouched.cpp" />
+    <ClCompile Include="src\frame\capture\capture.window_graphics.cpp" />
+    <ClCompile Include="src\frame\frame.include.cpp" />
     <ClCompile Include="src\genshin\cailb\minimap\genshin.cailb.minimap.cpp" />
     <ClCompile Include="src\genshin\check\paimon\genshin.check.paimon.cpp" />
     <ClCompile Include="src\genshin\genshin.handle.cpp" />
