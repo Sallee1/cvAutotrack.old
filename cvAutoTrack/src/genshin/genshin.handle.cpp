@@ -43,6 +43,11 @@ namespace TianLi::Genshin
 		if (genshin_handle.config.is_auto_find_genshin)
 		{
 			auto& giHandle = genshin_handle.handle;
+			if (IsWindow(giHandle))
+			{
+				set_genshin_window_variable(genshin_handle);
+				return;
+			}
 
 			auto now_class = GenshinWindowClass::Unity;
 			for (auto& [genshin_window_name, genshin_window_class] : genshin_handle.config.genshin_window_name_list)
@@ -90,6 +95,11 @@ namespace TianLi::Genshin
 			genshin_handle.is_exist = false;
 			return;
 		}
+		set_genshin_window_variable(genshin_handle);
+	}
+
+	void set_genshin_window_variable(GenshinHandle& genshin_handle)
+	{
 		// 判断窗口是否存在标题栏
 		if (GetWindowLong(genshin_handle.handle, GWL_STYLE) & WS_CAPTION)
 		{
@@ -112,7 +122,7 @@ namespace TianLi::Genshin
 		{
 			int x = genshin_handle.rect_client.right - genshin_handle.rect_client.left;
 			int y = genshin_handle.rect_client.bottom - genshin_handle.rect_client.top;
-			
+
 			double f = 1, fx = 1, fy = 1;
 
 			if (static_cast<double>(x) / static_cast<double>(y) == 16.0 / 9.0)
@@ -197,7 +207,7 @@ namespace TianLi::Genshin
 				UID_mayArea_width,
 				UID_mayArea_height);
 			genshin_handle.rect_uid_maybe = Area_UID_mayArea;
-			
+
 			int UID_Rect_x = cvCeil(x - x * (1.0 - 0.865));
 			int UID_Rect_y = cvCeil(y - 1080.0 * (1.0 - 0.9755));
 			int UID_Rect_w = cvCeil(1920 * 0.11);

@@ -834,21 +834,12 @@ bool AutoTrack::getMiniMapRefMat()
     // 检测派蒙的同时，判断是不是原神窗口
     if (TianLi::Genshin::Check::check_paimon(genshin_screen, genshin_paimon) == false)
     {
-        if (genshin_handle.is_genshin == false)
-        {
-            genshin_handle.handle = nullptr;
-        }
         return false;
     }
     if (genshin_paimon.is_visial == false)
     {
         return false;
-        if (genshin_handle.is_genshin == false)
-        {
-            genshin_handle.handle = nullptr;
-        }
     }
-    genshin_handle.is_genshin = true;
 
     genshin_screen.config.rect_paimon = genshin_paimon.rect_paimon;
     genshin_screen.config.is_handle_mode = genshin_paimon.is_handle_mode;
