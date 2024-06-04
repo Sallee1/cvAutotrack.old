@@ -830,20 +830,25 @@ bool AutoTrack::getMiniMapRefMat()
         genshin_screen.config.is_used_alpha = true;
     }
 
-    // 检测派蒙 -> 直接计算小地图坐标
-
+    // 检测派蒙 -> 计算小地图坐标
+    // 检测派蒙的同时，判断是不是原神窗口
     if (TianLi::Genshin::Check::check_paimon(genshin_screen, genshin_paimon) == false)
     {
-        //没找到派蒙，把句柄设为空
-        genshin_handle.handle = nullptr;
+        if (genshin_handle.is_genshin == false)
+        {
+            genshin_handle.handle = nullptr;
+        }
         return false;
     }
     if (genshin_paimon.is_visial == false)
     {
-        //没找到派蒙，把句柄设为空
-        genshin_handle.handle = nullptr;
         return false;
+        if (genshin_handle.is_genshin == false)
+        {
+            genshin_handle.handle = nullptr;
+        }
     }
+    genshin_handle.is_genshin = true;
 
     genshin_screen.config.rect_paimon = genshin_paimon.rect_paimon;
     genshin_screen.config.is_handle_mode = genshin_paimon.is_handle_mode;
