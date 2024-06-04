@@ -69,7 +69,20 @@ namespace tianli::frame::capture
         if (data == nullptr)
             return false;
 
-        frame = cv::Mat(frame_size.Height, frame_size.Width, CV_8UC4, data, pitch);
+        //不知道什么原理，有时候frame_size和desc大小不一样，就会炸
+        if (frame_size.Width != desc.Width || frame_size.Height != desc.Height)
+        {
+            return false;
+        }
+
+        try {
+            frame = cv::Mat(frame_size.Height, frame_size.Width, CV_8UC4, data, pitch);
+        }
+        catch(cv::Exception e){
+            return false;
+        }
+
+
         if (client_box_available)
         {
             if (client_box.right - client_box.left > frame_size.Width || client_box.bottom - client_box.top > frame_size.Height)
