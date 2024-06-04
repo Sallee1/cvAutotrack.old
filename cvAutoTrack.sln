@@ -52,6 +52,9 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		RelNoOpz|Any CPU = RelNoOpz|Any CPU
+		RelNoOpz|x64 = RelNoOpz|x64
+		RelNoOpz|x86 = RelNoOpz|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{92943FAC-32B9-4416-A05E-5058B414142D}.Debug|Any CPU.ActiveCfg = Debug|x64
@@ -78,6 +81,12 @@ Global
 		{92943FAC-32B9-4416-A05E-5058B414142D}.Release|x64.Build.0 = Release|x64
 		{92943FAC-32B9-4416-A05E-5058B414142D}.Release|x86.ActiveCfg = Release|Win32
 		{92943FAC-32B9-4416-A05E-5058B414142D}.Release|x86.Build.0 = Release|Win32
+		{92943FAC-32B9-4416-A05E-5058B414142D}.RelNoOpz|Any CPU.ActiveCfg = RelNoOpz|x64
+		{92943FAC-32B9-4416-A05E-5058B414142D}.RelNoOpz|Any CPU.Build.0 = RelNoOpz|x64
+		{92943FAC-32B9-4416-A05E-5058B414142D}.RelNoOpz|x64.ActiveCfg = RelNoOpz|x64
+		{92943FAC-32B9-4416-A05E-5058B414142D}.RelNoOpz|x64.Build.0 = RelNoOpz|x64
+		{92943FAC-32B9-4416-A05E-5058B414142D}.RelNoOpz|x86.ActiveCfg = RelNoOpz|Win32
+		{92943FAC-32B9-4416-A05E-5058B414142D}.RelNoOpz|x86.Build.0 = RelNoOpz|Win32
 		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.Debug|Any CPU.Build.0 = Debug|x64
 		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.Debug|x64.ActiveCfg = Debug|x64
@@ -102,6 +111,12 @@ Global
 		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.Release|x64.Build.0 = Release|x64
 		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.Release|x86.ActiveCfg = Release|Win32
 		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.Release|x86.Build.0 = Release|Win32
+		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.RelNoOpz|Any CPU.ActiveCfg = RelNoOpz|x64
+		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.RelNoOpz|Any CPU.Build.0 = RelNoOpz|x64
+		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.RelNoOpz|x64.ActiveCfg = RelNoOpz|x64
+		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.RelNoOpz|x64.Build.0 = RelNoOpz|x64
+		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.RelNoOpz|x86.ActiveCfg = RelNoOpz|Win32
+		{8A8D9B56-DC74-49CA-9F0A-BDD2FD176F86}.RelNoOpz|x86.Build.0 = RelNoOpz|Win32
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -126,6 +141,12 @@ Global
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.Release|x64.Build.0 = Release|Any CPU
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.Release|x86.ActiveCfg = Release|Any CPU
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.Release|x86.Build.0 = Release|Any CPU
+		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|Any CPU.ActiveCfg = RelNoOpz|Any CPU
+		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|Any CPU.Build.0 = RelNoOpz|Any CPU
+		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x64.ActiveCfg = RelNoOpz|Any CPU
+		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x64.Build.0 = RelNoOpz|Any CPU
+		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x86.ActiveCfg = RelNoOpz|Any CPU
+		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x86.Build.0 = RelNoOpz|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -834,10 +834,14 @@ bool AutoTrack::getMiniMapRefMat()
 
     if (TianLi::Genshin::Check::check_paimon(genshin_screen, genshin_paimon) == false)
     {
+        //没找到派蒙，把句柄设为空
+        genshin_handle.handle = nullptr;
         return false;
     }
     if (genshin_paimon.is_visial == false)
     {
+        //没找到派蒙，把句柄设为空
+        genshin_handle.handle = nullptr;
         return false;
     }
 
