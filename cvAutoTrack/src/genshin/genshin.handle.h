@@ -7,5 +7,7 @@ namespace TianLi::Genshin
 
 	void get_genshin_handle(GenshinHandle& genshin_handle);
 
+	static void set_genshin_window_variable(GenshinHandle& genshin_handle);
+
 	void update_genshin_handle(const HWND& old_handle, GenshinHandle& out_genshin_handle);
 }

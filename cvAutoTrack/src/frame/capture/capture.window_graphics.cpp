@@ -85,7 +85,8 @@ namespace tianli::frame::capture
 
         if (client_box_available)
         {
-            if (client_box.right - client_box.left > frame_size.Width || client_box.bottom - client_box.top > frame_size.Height)
+            if (static_cast<int32_t>(client_box.right - client_box.left) > frame_size.Width || 
+                static_cast<int32_t>(client_box.bottom - client_box.top) > frame_size.Height)
                 return false;
             this->source_frame = frame(cv::Rect(0, 0, client_box.right - client_box.left, client_box.bottom - client_box.top));
         }
