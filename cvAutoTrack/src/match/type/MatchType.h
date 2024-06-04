@@ -74,6 +74,7 @@ struct GenshinHandleConfig
 struct GenshinHandle
 {
 	bool is_exist = false;
+	bool is_genshin = false;	//检测窗口是否为原神
 	HWND handle;
 	RECT rect;
 	RECT rect_client;
