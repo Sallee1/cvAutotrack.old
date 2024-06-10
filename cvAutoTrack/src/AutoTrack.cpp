@@ -80,7 +80,7 @@ bool AutoTrack::SetUseBitbltCaptureMode()
 
 bool AutoTrack::SetUseDx11CaptureMode()
 {
-    SetUseWindowGraphics();
+    return SetUseWindowGraphics();
 }
 
 bool AutoTrack::SetUseWindowGraphics()

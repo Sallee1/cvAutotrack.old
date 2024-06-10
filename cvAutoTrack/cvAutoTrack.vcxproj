@@ -179,6 +179,7 @@
     <IncludePath>$(ProjectDir)\src;$(ProjectDir)include;$(opencvstaticinc);$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(opencvstaticlib);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <ExternalIncludePath>$(opencvstaticinc);$(VC_IncludePath);$(WindowsSDK_IncludePath);</ExternalIncludePath>
+    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>cvAutoTrack</TargetName>
@@ -194,7 +195,7 @@
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(opencvStaticLib);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</ExternalIncludePath>
-    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Dyn|x64'">
     <TargetName>cvAutoTrack</TargetName>
@@ -202,6 +203,7 @@
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\Sallee\Documents\code\thirdCpp\opencv\opencv-lib-release\lib;C:\Program Files\mingw-w64\x86_64-8.1.0-win32-seh-rt_v6-rev0\mingw64\site-package\Opencv\x64\vc17\staticlib;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>C:\Users\Sallee\Documents\code\Cpp\cvAutoTrack\third_party\opencv-cvv-dll\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugRel|x64'">
     <TargetName>cvAutoTrack</TargetName>
@@ -209,6 +211,7 @@
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(opencvStaticLib);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</ExternalIncludePath>
+    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgUseStatic>true</VcpkgUseStatic>
@@ -266,7 +269,8 @@
       <AdditionalIncludeDirectories>./src</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
+      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\
+xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>src\version\build_version_before.bat</Command>
@@ -404,7 +408,8 @@
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
+      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\
+xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>src\version\build_version_before.bat</Command>
@@ -432,17 +437,19 @@
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>
+      </EnableCOMDATFolding>
+      <OptimizeReferences>
+      </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>ade.lib;IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libprotobuf.lib;libtiff.lib;libwebp.lib;quirc.lib;zlib.lib;dxgi.lib;opencv_world460.lib;opencv_img_hash460.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
-      <LinkTimeCodeGeneration>
-      </LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <Version>3.4</Version>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
@@ -453,7 +460,8 @@
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
+      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\
+xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>src\version\build_version_before.bat</Command>
@@ -504,7 +512,8 @@
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
+      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\
+xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>
@@ -561,7 +570,8 @@
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
+      <Command>xcopy /Y $(targetPath) C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\
+xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧酒馆\Map\DLL\$(configuration)\</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>src\version\build_version_before.bat</Command>
