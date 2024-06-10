@@ -4,7 +4,7 @@
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<Configurations>Debug;Release;DebugRel;RelNoOpz</Configurations>
+		<Configurations>Debug;Release;RelNoOpz</Configurations>
 		<BaseOutputPath></BaseOutputPath>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 	</PropertyGroup>
