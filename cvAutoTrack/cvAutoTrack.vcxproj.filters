@@ -297,6 +297,9 @@
     <ClInclude Include="src\frame\capture\utils\utils.window_scale.h">
       <Filter>src\frame\capture\utils</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\map_mapper.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AutoTrack.cpp">
