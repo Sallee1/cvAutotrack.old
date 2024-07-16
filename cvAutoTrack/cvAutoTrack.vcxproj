@@ -180,7 +180,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>aded.lib;ippicvmt.lib;IlmImfd.lib;ippiwd.lib;ittnotifyd.lib;libjpeg-turbod.lib;libopenjp2d.lib;libpngd.lib;libprotobufd.lib;libtiffd.lib;libwebpd.lib;opencv_img_hash460d.lib;opencv_world460d.lib;quircd.lib;zlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>aded.lib;dxgi.lib;ippicvmt.lib;IlmImfd.lib;ippiwd.lib;ittnotifyd.lib;libjpeg-turbod.lib;libopenjp2d.lib;libpngd.lib;libprotobufd.lib;libtiffd.lib;libwebpd.lib;opencv_img_hash460d.lib;opencv_world460d.lib;quircd.lib;zlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <Version>3.0</Version>
       <AdditionalLibraryDirectories>D:\opencv\opencv_460\install\build_Static_World_NoCuda\install\x64\vc17\staticlib;$(OpenCvDir)\$(Platform)\vc15\staticlib;$(opecvsstaticlib)</AdditionalLibraryDirectories>
@@ -325,7 +325,8 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>ade.lib;IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libprotobuf.lib;libtiff.lib;libwebp.lib;quirc.lib;zlib.lib;dxgi.lib;opencv_world460.lib;opencv_img_hash460.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
-      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
       <Version>3.4</Version>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
@@ -403,6 +404,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\resources\resources.load.h" />
     <ClInclude Include="src\resources\serialize.h" />
     <ClInclude Include="src\utils\log\utils.log.h" />
+    <ClInclude Include="src\utils\map_mapper.h" />
     <ClInclude Include="src\utils\Utils.h" />
     <ClInclude Include="src\Ver.h" />
   </ItemGroup>
