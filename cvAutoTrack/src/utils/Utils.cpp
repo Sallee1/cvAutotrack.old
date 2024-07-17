@@ -310,6 +310,8 @@ namespace TianLi::Utils
                     id = 2;
                 else if (key == "旧日之海")
                     id = 3;
+                else if (key == "希穆兰卡")
+                    id = 1002;
                 else
                     id = 0;
                 dstPoint = {

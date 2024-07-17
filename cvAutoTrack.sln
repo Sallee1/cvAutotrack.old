@@ -38,6 +38,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ci", "ci", "{DF269035-8114-
 		ci\upload_version.ps1 = ci\upload_version.ps1
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TEST_FakeGI", "test\TEST_FakeGI\TEST_fakeGI.vcxproj", "{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -105,6 +107,24 @@ Global
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x64.Build.0 = RelNoOpz|Any CPU
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x86.ActiveCfg = RelNoOpz|Any CPU
 		{D5442D22-FD24-4C8F-BAFB-865D1A7BF3F6}.RelNoOpz|x86.Build.0 = RelNoOpz|Any CPU
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Debug|Any CPU.Build.0 = Debug|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Debug|x64.ActiveCfg = Debug|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Debug|x64.Build.0 = Debug|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Debug|x86.ActiveCfg = Debug|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Debug|x86.Build.0 = Debug|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Release|Any CPU.ActiveCfg = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Release|Any CPU.Build.0 = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Release|x64.ActiveCfg = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Release|x64.Build.0 = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Release|x86.ActiveCfg = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.Release|x86.Build.0 = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.RelNoOpz|Any CPU.ActiveCfg = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.RelNoOpz|Any CPU.Build.0 = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.RelNoOpz|x64.ActiveCfg = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.RelNoOpz|x64.Build.0 = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.RelNoOpz|x86.ActiveCfg = Release|x64
+		{FB8604E3-6AFF-423B-9CDE-8BDE043038D8}.RelNoOpz|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
