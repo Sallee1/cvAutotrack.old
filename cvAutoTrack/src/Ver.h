@@ -2,8 +2,8 @@
 #include <string>
 #include "version/Version.h"
 #include "ErrorCode.h"
-#ifndef err
-#define err ErrorCode::getInstance()
+#ifndef ErrorCode::getInstance()
+#define ErrorCode::getInstance() ErrorCode::getInstance()
 #endif
 
 
@@ -14,12 +14,12 @@ public:
 	{
 		if (version_buff == nullptr || buff_size < 1)
 		{
-			err = { 291,"»º´æÇøÎª¿ÕÖ¸Õë»òÊÇ»º´æÇø´óĞ¡ÎªĞ¡ÓÚ1" };
+			ErrorCode::getInstance() = { 291,"ç¼“å­˜åŒºä¸ºç©ºæŒ‡é’ˆæˆ–æ˜¯ç¼“å­˜åŒºå¤§å°ä¸ºå°äº1" };
 			return false;
 		}
 		if (TianLi::Version::build_version.size() > buff_size)
 		{
-			err = { 292,"»º´æÇø´óĞ¡²»×ã" };
+			ErrorCode::getInstance() = { 292,"ç¼“å­˜åŒºå¤§å°ä¸è¶³" };
 			return false;
 		}
 		strcpy_s(version_buff, buff_size, TianLi::Version::build_version.c_str());
@@ -30,12 +30,12 @@ public:
 	{
 		if (time_buff == nullptr || buff_size < 1)
 		{
-			err = { 291,"»º´æÇøÎª¿ÕÖ¸Õë»òÊÇ»º´æÇø´óĞ¡ÎªĞ¡ÓÚ1" };
+			ErrorCode::getInstance() = { 291,"ç¼“å­˜åŒºä¸ºç©ºæŒ‡é’ˆæˆ–æ˜¯ç¼“å­˜åŒºå¤§å°ä¸ºå°äº1" };
 			return false;
 		}
 		if (TianLi::Version::build_time.size() > buff_size)
 		{
-			err = { 292,"»º´æÇø´óĞ¡²»×ã" };
+			ErrorCode::getInstance() = { 292,"ç¼“å­˜åŒºå¤§å°ä¸è¶³" };
 			return false;
 		}
 		strcpy_s(time_buff, buff_size, TianLi::Version::build_time.c_str());
@@ -43,4 +43,4 @@ public:
 	}
 };
 
-#undef err
+#undef ErrorCode::getInstance()

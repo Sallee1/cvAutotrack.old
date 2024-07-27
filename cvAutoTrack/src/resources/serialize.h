@@ -57,7 +57,7 @@ namespace Tianli::Resources::Utils
 		{
 			align(sizeof(DWORD));
 			std::vector<uchar> buf;
-			cv::imencode(".tiff", mat, buf, std::vector<int>(cv::IMWRITE_TIFF_COMPRESSION, 8));
+			cv::imencode(".tiff", mat, buf, std::vector<int>{cv::IMWRITE_TIFF_COMPRESSION, cv::IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE});
 
 			DWORD size = static_cast<DWORD>(buf.size());
 			fileOut.write((char*)&size, sizeof(DWORD));
