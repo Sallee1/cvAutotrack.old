@@ -169,79 +169,35 @@ namespace TianLi::Resource::Utils
 
     //	return true;
     //}
-    void LoadImg_ID2Mat(int IDB, cv::Mat& mat, const wchar_t* format = L"PNG", int depth = 4)
-    {
-        IWICStream* pIWICStream = NULL;
-        IWICBitmapDecoder* pIDecoder = NULL;
-        IWICBitmapFrameDecode* pIDecoderFrame = NULL;
-        IWICBitmapSource* bitmap_source = NULL;
-        HRSRC imageResHandle = NULL;
-        HGLOBAL imageResDataHandle = NULL;
-        void* pImageFile = NULL;
-        DWORD imageFileSize = 0;
-        IWICImagingFactory* m_pIWICFactory = NULL;
 
+    void LoadImg_ID2Mat(int IDB, cv::Mat& mat, const wchar_t* format = L"PNG")
+    {
         HMODULE hModu = GetModuleHandleW(L"CVAUTOTRACK.dll");
 
-        if (hModu == NULL) throw "Get Dll Instance Fail!";
+        if (!hModu)
+            throw std::runtime_error("Get Dll Instance Fail!");
 
-        imageResHandle = FindResource(hModu, MAKEINTRESOURCE(IDB), format);
-        if (imageResHandle == NULL) throw "Load Image Resource Fail!";
+        HRSRC imageResHandle = FindResource(hModu, MAKEINTRESOURCE(IDB), format);
+        if (!imageResHandle)
+            throw std::runtime_error("Load Image Resource Fail!");
 
-        imageResDataHandle = LoadResource(hModu, imageResHandle);
-        if (imageResHandle == NULL) throw "Load Image Resource Data Fail!";
+        HGLOBAL imageResDataHandle = LoadResource(hModu, imageResHandle);
+        if (!imageResDataHandle)
+            throw std::runtime_error("Load Image Resource Data Fail!");
 
-        pImageFile = LockResource(imageResDataHandle);
-        imageFileSize = SizeofResource(hModu, imageResHandle);
-        /*
-        {
-          // 2nd
-          char * ptr_data = (char*)malloc(imageFileSize);
-          memcpy(ptr_data, pImageFile, imageFileSize);
-          // to bin file
-          cv::Mat mat_array = cv::Mat(1, (int)imageFileSize, CV_8UC1, (void*)ptr_data);
-          // Debug下 imdecode 中 validateInputImageSize 中的 CV_IO_MAX_IMAGE_WIDTH 为0导致CV_Assert失败
-          cv::Mat v_mat = cv::imdecode(mat_array, cv::IMREAD_UNCHANGED);
-          mat = v_mat;
-          free(ptr_data);
-        }
-        */
+        void* pImageFile = LockResource(imageResDataHandle);
+        size_t imageFileSize = SizeofResource(hModu, imageResHandle);
 
-        CoInitializeEx(NULL, COINIT_MULTITHREADED);
+        std::fstream debug_out_file(std::to_string(IDB)+"dbg_image.png",std::ios::out|std::ios::binary);
+        debug_out_file.write(reinterpret_cast<char*>(pImageFile), imageFileSize);
+        debug_out_file.close();
 
-        CoCreateInstance(
-            CLSID_WICImagingFactory,
-            NULL,
-            CLSCTX_INPROC_SERVER,
-            IID_PPV_ARGS(&m_pIWICFactory)
-        );
+        // 直接使用OpenCV的imdecode函数从二进制数据加载图像
+        std::vector<char> buf = { (char*)pImageFile, (char*)pImageFile + imageFileSize };
+        mat = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
 
-        m_pIWICFactory->CreateStream(&pIWICStream);
-
-        pIWICStream->InitializeFromMemory(
-            reinterpret_cast<BYTE*>(pImageFile),
-            imageFileSize);
-        m_pIWICFactory->CreateDecoderFromStream(
-            pIWICStream,                   // The stream to use to create the decoder
-            NULL,                          // Do not prefer a particular vendor
-            WICDecodeMetadataCacheOnLoad,  // Cache metadata when needed
-            &pIDecoder);                   // Pointer to the decoder
-        pIDecoder->GetFrame(0, &pIDecoderFrame);
-
-        bitmap_source = pIDecoderFrame;
-
-        UINT width = 0, height = 0;
-        bitmap_source->GetSize(&width, &height);
-        {
-            std::vector<BYTE> buffer(width * height * depth);
-            bitmap_source->CopyPixels(NULL, width * depth, static_cast<UINT>(buffer.size()), buffer.data());
-            HBITMAP hPngMat = CreateBitmap(width, height, 1, 8 * depth, buffer.data());
-            HBitmap2MatAlpha(hPngMat, mat);
-            DeleteObject(hPngMat);
-        }
-        DeleteObject(bitmap_source);
-        CoFreeUnusedLibraries();
-        CoUninitialize();
+        UnlockResource(pImageFile);
+        FreeResource(imageResDataHandle);
     }
 }
 using namespace TianLi::Resource::Utils;
@@ -331,7 +287,7 @@ void Resources::install()
 {
     if (is_installed == false)
     {
-        LoadImg_ID2Mat(IDB_JPG_GIMAP, MapTemplate, L"JPG", 3);
+        LoadImg_ID2Mat(IDB_JPG_GIMAP48, MapTemplate, L"JPG");
         is_installed = true;
     }
 }
@@ -398,21 +354,21 @@ bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& desc
         build_time, TianLi::Version::build_version, hessian_threshold,
         (WORD)octaves, (WORD)octave_layers, (WORD)extended, (WORD)upright,
         keypoints, descriptors);
-    std::filesystem::remove("cvAutoTrack_Cache.xml");
-    cache.serialize("cvAutoTrack_Cache.xml");
+    std::filesystem::remove("cvAutoTrack_Cache48.xml");
+    cache.serialize("cvAutoTrack_Cache48.xml");
 
     return true;
 }
 bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
-    if (std::filesystem::exists("cvAutoTrack_Cache.xml") == false)
+    if (std::filesystem::exists("cvAutoTrack_Cache48.xml") == false)
     {
         return false;
     }
 
     MapKeypointCache cache;
     try {
-        cache.deSerialize("cvAutoTrack_Cache.xml");
+        cache.deSerialize("cvAutoTrack_Cache48.xml");
     }
     catch (std::exception) {   //缓存损坏
         return false;

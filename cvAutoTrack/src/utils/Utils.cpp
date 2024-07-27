@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Utils.h"
 #include "map_mapper.h"
+#include <resources/Resources.h>
 
 namespace TianLi::Utils
 {
@@ -278,7 +279,7 @@ namespace TianLi::Utils
     {
         int id = 0;
         cv::Point2d dstPoint = cv::Point2d(x, y);
-        cv::Point2i center = { 3967, 3962 };
+        cv::Point2i center = {0,0};
         //先检查在哪个洞内
         for (auto& [key, value] : area_mappers)
         {
@@ -337,7 +338,7 @@ namespace TianLi::Utils
         drawKeypoints(img_object, keypoint_object, imgminmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     }
-
+#define _DEBUG
     namespace CalcMatch
     {
         void calc_good_matches_show(const cv::Mat &img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat &img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>> &KNN_m, double ratio_thresh, std::vector<MatchKeyPoint> &good_keypoints)

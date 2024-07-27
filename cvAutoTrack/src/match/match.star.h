@@ -22,7 +22,7 @@ void star_calculation(cv::Mat& giStarRef,char* jsonBuff, star_calculation_config
 	std::vector<cv::Point2d> pos;
 	double scale = 1.3;
 
-	matchTemplate(res.StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
+	matchTemplate(Resources::getInstance().StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
 	minMaxLoc(tmp, &minVal, &maxVal, &minLoc, &maxLoc);
 #ifdef _DEBUG
 	//cout << "Match Star MinVal & MaxVal : " << minVal << " , " << maxVal << endl;
@@ -32,13 +32,13 @@ void star_calculation(cv::Mat& giStarRef,char* jsonBuff, star_calculation_config
 		isLoopMatch = true;
 		pos.emplace_back(cv::Point2d(maxLoc) -
 			cv::Point2d(giStarRef.cols / 2, giStarRef.rows / 2) +
-			cv::Point2d(res.StarTemplate.cols / 2, res.StarTemplate.rows / 2));
+			cv::Point2d(Resources::getInstance().StarTemplate.cols / 2, Resources::getInstance().StarTemplate.rows / 2));
 	}
 
 	while (isLoopMatch)
 	{
-		giStarRef(cv::Rect(maxLoc.x, maxLoc.y, res.StarTemplate.cols, res.StarTemplate.rows)) = cv::Scalar(0, 0, 0);
-		matchTemplate(res.StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
+		giStarRef(cv::Rect(maxLoc.x, maxLoc.y, Resources::getInstance().StarTemplate.cols, Resources::getInstance().StarTemplate.rows)) = cv::Scalar(0, 0, 0);
+		matchTemplate(Resources::getInstance().StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
 		minMaxLoc(tmp, &minVal, &maxVal, &minLoc, &maxLoc);
 #ifdef _DEBUG
 		//cout << "Match Star MinVal & MaxVal : " << minVal << " , " << maxVal << endl;
@@ -51,7 +51,7 @@ void star_calculation(cv::Mat& giStarRef,char* jsonBuff, star_calculation_config
 		{
 			pos.emplace_back(cv::Point2d(maxLoc) -
 				cv::Point2d(giStarRef.cols / 2, giStarRef.rows / 2) +
-				cv::Point2d(res.StarTemplate.cols / 2, res.StarTemplate.rows / 2));
+				cv::Point2d(Resources::getInstance().StarTemplate.cols / 2, Resources::getInstance().StarTemplate.rows / 2));
 		}
 
 		MAXLOOP > 10 ? isLoopMatch = false : MAXLOOP++;
