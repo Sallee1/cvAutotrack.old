@@ -3,8 +3,14 @@
 
 class AutoTrack
 {
-public:
     AutoTrack();
+public:
+    static AutoTrack& getInstance()
+    {
+        static AutoTrack instance;
+        return instance;
+    }
+
 #pragma region 外部接口
     bool init();
     bool uninit();
