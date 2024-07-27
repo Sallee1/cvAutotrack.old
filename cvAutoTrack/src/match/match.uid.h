@@ -20,7 +20,7 @@ void uid_calculation(cv::Mat& giUIDRef,int& uid, uid_calculation_config config)
 	int bitCount = 1;
 	cv::Mat matchTmp;
 	cv::Mat Roi;
-	cv::Mat checkUID = res.UID;
+	cv::Mat checkUID = Resources::getInstance().UID;
 
 #ifdef _DEBUG
 	//if (checkUID.rows > Roi.rows)
@@ -52,13 +52,13 @@ void uid_calculation(cv::Mat& giUIDRef,int& uid, uid_calculation_config config)
 			_NumBit[p] = 0;
 			for (int i = 0; i < 10; i++)
 			{
-				cv::Rect r(x_uid_, y_uid_, res.UIDnumber[i].cols + 2, giUIDRef.rows);//180-46/9->140/9->16->16*9=90+54=144
+				cv::Rect r(x_uid_, y_uid_, Resources::getInstance().UIDnumber[i].cols + 2, giUIDRef.rows);//180-46/9->140/9->16->16*9=90+54=144
 				if (x_uid_ + r.width > giUIDRef.cols)
 				{
-					r = cv::Rect(giUIDRef.cols - res.UIDnumber[i].cols - 2, y_uid_, res.UIDnumber[i].cols + 2, giUIDRef.rows);
+					r = cv::Rect(giUIDRef.cols - Resources::getInstance().UIDnumber[i].cols - 2, y_uid_, Resources::getInstance().UIDnumber[i].cols + 2, giUIDRef.rows);
 				}
 
-				cv::Mat numCheckUID = res.UIDnumber[i];
+				cv::Mat numCheckUID = Resources::getInstance().UIDnumber[i];
 				Roi = giUIDRef(r);
 
 				cv::matchTemplate(Roi, numCheckUID, matchTmp, cv::TM_CCOEFF_NORMED);
