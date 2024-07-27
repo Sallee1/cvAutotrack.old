@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Utils.h"
 #include "map_mapper.h"
+#include <resources/Resources.h>
 
 namespace TianLi::Utils
 {
