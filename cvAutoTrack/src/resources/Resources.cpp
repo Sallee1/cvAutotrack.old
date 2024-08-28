@@ -35,140 +35,6 @@ namespace TianLi::Resource::Utils
         _mat = v_mat;
         return true;
     }
-    //bool
-    //	imdecode_(const cv::Mat& buf, int flags, cv::Mat& mat)
-    //{
-    //	CV_Assert(!buf.empty());
-    //	CV_Assert(buf.isContinuous());
-    //	CV_Assert(buf.checkVector(1, CV_8U) > 0);
-    //	cv::Mat buf_row = buf.reshape(1, 1);  // decoders expects single row, avoid issues with vector columns
-
-    //	cv::String filename;
-
-    //	cv::ImageDecoder decoder = findDecoder(buf_row);
-    //	if (!decoder)
-    //		return 0;
-
-    //	int scale_denom = 1;
-    //	if (flags > IMREAD_LOAD_GDAL)
-    //	{
-    //		if (flags & IMREAD_REDUCED_GRAYSCALE_2)
-    //			scale_denom = 2;
-    //		else if (flags & IMREAD_REDUCED_GRAYSCALE_4)
-    //			scale_denom = 4;
-    //		else if (flags & IMREAD_REDUCED_GRAYSCALE_8)
-    //			scale_denom = 8;
-    //	}
-
-    //	/// set the scale_denom in the driver
-    //	decoder->setScale(scale_denom);
-
-    //	if (!decoder->setSource(buf_row))
-    //	{
-    //		filename = tempfile();
-    //		FILE* f = fopen(filename.c_str(), "wb");
-    //		if (!f)
-    //			return 0;
-    //		size_t bufSize = buf_row.total() * buf.elemSize();
-    //		if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
-    //		{
-    //			fclose(f);
-    //			CV_Error(Error::StsError, "failed to write image data to temporary file");
-    //		}
-    //		if (fclose(f) != 0)
-    //		{
-    //			CV_Error(Error::StsError, "failed to write image data to temporary file");
-    //		}
-    //		decoder->setSource(filename);
-    //	}
-
-    //	bool success = false;
-    //	try
-    //	{
-    //		if (decoder->readHeader())
-    //			success = true;
-    //	}
-    //	catch (const cv::Exception& e)
-    //	{
-    //		std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
-    //	}
-    //	catch (...)
-    //	{
-    //		std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
-    //	}
-    //	if (!success)
-    //	{
-    //		decoder.release();
-    //		if (!filename.empty())
-    //		{
-    //			if (0 != remove(filename.c_str()))
-    //			{
-    //				std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
-    //			}
-    //		}
-    //		return 0;
-    //	}
-
-    //	// established the required input image size
-    //	Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
-
-    //	int type = decoder->type();
-    //	if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
-    //	{
-    //		if ((flags & IMREAD_ANYDEPTH) == 0)
-    //			type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-    //		if ((flags & IMREAD_COLOR) != 0 ||
-    //			((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-    //			type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-    //		else
-    //			type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-    //	}
-
-    //	mat.create(size.height, size.width, type);
-
-    //	success = false;
-    //	try
-    //	{
-    //		if (decoder->readData(mat))
-    //			success = true;
-    //	}
-    //	catch (const cv::Exception& e)
-    //	{
-    //		std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
-    //	}
-    //	catch (...)
-    //	{
-    //		std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
-    //	}
-
-    //	if (!filename.empty())
-    //	{
-    //		if (0 != remove(filename.c_str()))
-    //		{
-    //			std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
-    //		}
-    //	}
-
-    //	if (!success)
-    //	{
-    //		mat.release();
-    //		return false;
-    //	}
-
-    //	if (decoder->setScale(scale_denom) > 1) // if decoder is JpegDecoder then decoder->setScale always returns 1
-    //	{
-    //		resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
-    //	}
-
-    //	/// optionally rotate the data if EXIF' orientation flag says so
-    //	if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
-    //	{
-    //		ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
-    //	}
-
-    //	return true;
-    //}
 
     void LoadImg_ID2Mat(int IDB, cv::Mat& mat, const wchar_t* format = L"PNG")
     {
@@ -188,7 +54,7 @@ namespace TianLi::Resource::Utils
         void* pImageFile = LockResource(imageResDataHandle);
         size_t imageFileSize = SizeofResource(hModu, imageResHandle);
 
-        std::fstream debug_out_file(std::to_string(IDB)+"dbg_image.png",std::ios::out|std::ios::binary);
+        std::fstream debug_out_file(std::to_string(IDB) + "dbg_image.png", std::ios::out | std::ios::binary);
         debug_out_file.write(reinterpret_cast<char*>(pImageFile), imageFileSize);
         debug_out_file.close();
 
@@ -203,7 +69,7 @@ namespace TianLi::Resource::Utils
 using namespace TianLi::Resource::Utils;
 #ifdef USED_BINARY_IMAGE
 #include "resources.load.h"
-#endif // 
+#endif //
 
 Resources::Resources()
 {
@@ -229,7 +95,7 @@ Resources::Resources()
     {
         cv::cvtColor(UIDnumber[i], UIDnumber[i], cv::COLOR_RGB2GRAY);
     }
-#endif // 
+#endif //
     LoadBitmap_ID2Mat(IDB_BITMAP_PAIMON, PaimonTemplate);
     LoadBitmap_ID2Mat(IDB_BITMAP_STAR, StarTemplate);
 
@@ -341,7 +207,6 @@ inline void MapKeypointCache::deSerialize(std::string infileName)
     dss >> this->bulid_version_end;
     ifs.close();
 }
-
 
 bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, float hessian_threshold, int octaves, int octave_layers, bool extended, bool upright)
 {
