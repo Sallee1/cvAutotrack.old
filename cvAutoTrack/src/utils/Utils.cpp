@@ -5,7 +5,7 @@
 
 namespace TianLi::Utils
 {
-    cv::Mat get_some_map(const cv::Mat &map, const cv::Point &pos, int size_r)
+    cv::Mat get_some_map(const cv::Mat& map, const cv::Point& pos, int size_r)
     {
         cv::Rect rect(pos.x - size_r, pos.y - size_r, size_r + size_r, size_r + size_r);
         if (rect.x < 0)
@@ -63,7 +63,7 @@ namespace TianLi::Utils
 
         return sqrt(accum / (list.size() - 1));
     }
-    cv::Mat crop_border(const cv::Mat &mat, double border)
+    cv::Mat crop_border(const cv::Mat& mat, double border)
     {
         int crop_size = static_cast<int>((mat.rows + mat.cols) * 0.5 * border);
         return mat(cv::Rect(crop_size, crop_size, mat.cols - crop_size * 2, mat.rows - crop_size * 2));
@@ -135,7 +135,7 @@ namespace TianLi::Utils
         }
 
         int valid_count = 0;
-        for (auto &point : list)
+        for (auto& point : list)
         {
             if (abs(point.x - x_mean) < param * x_stdev && abs(point.y - y_mean) < param * y_stdev)
             {
@@ -152,7 +152,7 @@ namespace TianLi::Utils
         return valid_list;
     }
 
-    void remove_invalid(std::vector<MatchKeyPoint> keypoints, double scale, std::vector<double> &x_list, std::vector<double> &y_list)
+    void remove_invalid(std::vector<MatchKeyPoint> keypoints, double scale, std::vector<double>& x_list, std::vector<double>& y_list)
     {
         for (int i = 0; i < keypoints.size(); i++)
         {
@@ -166,7 +166,7 @@ namespace TianLi::Utils
         }
     }
 
-    bool SPC(std::vector<double> lisx, std::vector<double> lisy, cv::Point2d &out)
+    bool SPC(std::vector<double> lisx, std::vector<double> lisy, cv::Point2d& out)
     {
         double meanx = std::accumulate(lisx.begin(), lisx.end(), 0.0) / lisx.size();
         double meany = std::accumulate(lisy.begin(), lisy.end(), 0.0) / lisy.size();
@@ -273,13 +273,11 @@ namespace TianLi::Utils
         return cv::Point2d(pos / scale + origin);
     }
 
-   
-
     std::pair<cv::Point2d, int> ConvertSpecialMapsPosition(double x, double y)
     {
         int id = 0;
         cv::Point2d dstPoint = cv::Point2d(x, y);
-        cv::Point2i center = { 3967, 3962 };
+        cv::Point2i center = { -5767, 3962 };
         //先检查在哪个洞内
         for (auto& [key, value] : area_mappers)
         {
@@ -288,13 +286,11 @@ namespace TianLi::Utils
 
             if (srcRect.contains(cv::Point2d(dstPoint.x, dstPoint.y)))
             {
-                
                 dstPoint = {
                     ((double)dstRect.width / srcRect.width) * (dstPoint.x - srcRect.x) + dstRect.x,
                     ((double)dstRect.height / srcRect.height) * (dstPoint.y - srcRect.y) + dstRect.y };
                 break;
             }
-
         }
 
         //然后检查在哪个地图内
@@ -321,7 +317,6 @@ namespace TianLi::Utils
                 return { dstPoint, id };
             }
         }
-        
 
         // 层级在地下，但是没有匹配到合适的点
         if (dstPoint.y > 7800)
@@ -331,7 +326,7 @@ namespace TianLi::Utils
         return { dstPoint, 0 };
     }
 
-    void draw_good_matches(const cv::Mat &img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat &img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<cv::DMatch> &good_matches)
+    void draw_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<cv::DMatch>& good_matches)
     {
         cv::Mat img_matches, imgmap, imgminmap;
         drawKeypoints(img_scene, keypoint_scene, imgmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
@@ -341,7 +336,7 @@ namespace TianLi::Utils
 
     namespace CalcMatch
     {
-        void calc_good_matches_show(const cv::Mat &img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat &img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>> &KNN_m, double ratio_thresh, std::vector<MatchKeyPoint> &good_keypoints)
+        void calc_good_matches_show(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<MatchKeyPoint>& good_keypoints)
         {
 #ifdef _DEBUG
             std::vector<cv::DMatch> good_matches;
@@ -371,13 +366,13 @@ namespace TianLi::Utils
         }
     }
 
-    void calc_good_matches(const cv::Mat &img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat &img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>> &KNN_m, double ratio_thresh, std::vector<TianLi::Utils::MatchKeyPoint> &good_keypoints)
+    void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<TianLi::Utils::MatchKeyPoint>& good_keypoints)
     {
         CalcMatch::calc_good_matches_show(img_scene, keypoint_scene, img_object, keypoint_object, KNN_m, ratio_thresh, good_keypoints);
     }
 
     // 注册表读取
-    bool getRegValue_REG_SZ(HKEY root, std::wstring item, std::wstring key, std::string &ret, int max_length)
+    bool getRegValue_REG_SZ(HKEY root, std::wstring item, std::wstring key, std::string& ret, int max_length)
     {
         HKEY hKey;
         long lRes = RegOpenKeyEx(root, item.c_str(), 0, KEY_READ, &hKey);
@@ -386,7 +381,7 @@ namespace TianLi::Utils
             RegCloseKey(hKey);
             return false;
         }
-        wchar_t *lpData = new wchar_t[max_length];
+        wchar_t* lpData = new wchar_t[max_length];
         DWORD dwType = REG_SZ;
         DWORD dwSize = max_length;
 
@@ -398,7 +393,7 @@ namespace TianLi::Utils
             return false;
         }
 
-        char *lpDataA = new char[max_length];
+        char* lpDataA = new char[max_length];
         size_t lpDataALen;
         DWORD isSuccess;
         isSuccess = wcstombs_s(&lpDataALen, lpDataA, max_length, lpData, max_length - 1);
@@ -417,7 +412,7 @@ namespace TianLi::Utils
         return true;
     }
 
-    bool getRegValue_DWORD(HKEY root, std::wstring item, std::wstring key, int &ret)
+    bool getRegValue_DWORD(HKEY root, std::wstring item, std::wstring key, int& ret)
     {
         HKEY hKey;
         long lRes = RegOpenKeyEx(root, item.c_str(), 0, KEY_READ, &hKey);
