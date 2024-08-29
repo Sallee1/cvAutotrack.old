@@ -34,11 +34,11 @@ namespace tianli::frame::capture
         if (frame_size.Width != m_lastSize.Width || frame_size.Height != m_lastSize.Height)
         {
             m_framePool.Recreate(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(), winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized, 2,
-                                 frame_size);
+                frame_size);
             m_lastSize = frame_size;
 
             m_swapChain->ResizeBuffers(2, static_cast<uint32_t>(m_lastSize.Width), static_cast<uint32_t>(m_lastSize.Height),
-                                       static_cast<DXGI_FORMAT>(winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized), 0);
+                static_cast<DXGI_FORMAT>(winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized), 0);
         }
         auto frameSurface = utils::window_graphics::GetDXGIInterfaceFromObject<ID3D11Texture2D>(new_frame.Surface());
 
@@ -70,7 +70,7 @@ namespace tianli::frame::capture
             return false;
 
         //不知道什么原理，有时候frame_size和desc大小不一样，就会炸
-        if (frame_size.Width != desc.Width || frame_size.Height != desc.Height)
+        if (frame_size.Width != static_cast<int32_t>(desc.Width) || frame_size.Height != static_cast<int32_t>(desc.Height))
         {
             return false;
         }
@@ -78,14 +78,13 @@ namespace tianli::frame::capture
         try {
             frame = cv::Mat(frame_size.Height, frame_size.Width, CV_8UC4, data, pitch);
         }
-        catch(cv::Exception e){
+        catch (cv::Exception e) {
             return false;
         }
 
-
         if (client_box_available)
         {
-            if (static_cast<int32_t>(client_box.right - client_box.left) > frame_size.Width || 
+            if (static_cast<int32_t>(client_box.right - client_box.left) > frame_size.Width ||
                 static_cast<int32_t>(client_box.bottom - client_box.top) > frame_size.Height)
                 return false;
             this->source_frame = frame(cv::Rect(0, 0, client_box.right - client_box.left, client_box.bottom - client_box.top));
@@ -99,5 +98,5 @@ namespace tianli::frame::capture
             return false;
         frame = this->source_frame;
         return true;
-}
+    }
 }

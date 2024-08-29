@@ -19,7 +19,7 @@ namespace tianli::frame::capture
         capture_window_graphics()
         {
             this->type = source_type::window_graphics;
-            auto& init_global = utils::window_graphics::graphics_global::get_instance();
+            utils::window_graphics::graphics_global::get_instance();
         }
         ~capture_window_graphics() override { uninitialized(); }
 
@@ -42,12 +42,12 @@ namespace tianli::frame::capture
 
             m_lastSize = m_item.Size();
             m_swapChain = utils::window_graphics::CreateDXGISwapChain(utils::window_graphics::graphics_global::get_instance().d3d_device, static_cast<uint32_t>(m_lastSize.Width),
-                                                                      static_cast<uint32_t>(m_lastSize.Height), DXGI_FORMAT_B8G8R8A8_UNORM, 2);
+                static_cast<uint32_t>(m_lastSize.Height), DXGI_FORMAT_B8G8R8A8_UNORM, 2);
 
             utils::window_graphics::graphics_global::get_instance().d3d_device->GetImmediateContext(m_d3dContext.put());
 
             m_framePool = winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool::Create(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(),
-                                                                                                static_cast<winrt::Windows::Graphics::DirectX::DirectXPixelFormat>(87), 2, m_lastSize);
+                static_cast<winrt::Windows::Graphics::DirectX::DirectXPixelFormat>(87), 2, m_lastSize);
             m_session = m_framePool.CreateCaptureSession(m_item);
 
             utils::window_graphics::set_capture_session_property(m_session);
@@ -105,11 +105,10 @@ namespace tianli::frame::capture
         }
 
         bool get_frame(cv::Mat& frame) override;
-        
+
     private:
         RECT source_rect = { 0, 0, 0, 0 };
         RECT source_client_rect = { 0, 0, 0, 0 };
         cv::Size source_client_size;
     };
-
 } // namespace tianli::frame::capture
