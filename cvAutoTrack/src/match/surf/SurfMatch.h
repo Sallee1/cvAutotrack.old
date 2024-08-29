@@ -1,23 +1,12 @@
 #pragma once
 #include "utils/Utils.h"
 
-// 城镇外确认最小匹配点数量，大于该值即为城镇外
-constexpr int NOT_ON_CITY__MIN_GOODMATCHS = 20;
-// 城镇外尝试使用城镇内缩放计算的最小匹配点数量，小于该值即匹配失败
-constexpr int NOT_ON_CITY__ON_CITY_MIN_GOODMATCHS = 8;
-// 城镇内确认最小匹配点数量，大于该值即为城镇内
-constexpr int ON_CITY__MIN_GOODMATCHS = 20;
-// 全图匹配时城镇缩放下匹配点方差阈值，范围内即为城镇内
-constexpr double ALL_MAP__ON_CITY__STDEV_THRESH = 50;
-// 全图匹配时城镇外缩放下匹配点方差阈值，范围内即为城镇外
-constexpr double ALL_MAP__NOT_ON_CITY__STDEV_THRESH = 500;
-
 // 特征点匹配的剔除因子，越大越严格
 constexpr double SURF_MATCH_RATIO_THRESH = 0.66;
 // 地图和小地图野外的缩放比例，（大地图 / 小地图野外）得到，注意城镇内小地图是野外的两倍，所以是城镇内比例是1.3/2
-constexpr double MAP_BOTH_SCALE_RATE = 1.3;
+constexpr double MAP_BOTH_SCALE_RATE = 1.0;
 // 地图中取小部分区域的半径，目前为小地图标准半径
-constexpr int DEFAULT_SOME_MAP_SIZE_R = 106;
+constexpr int DEFAULT_SOME_MAP_SIZE_R = 150;
 
 class Match
 {
@@ -30,7 +19,7 @@ public:
         auto size() { return keypoints.size(); }
     };
 public:
-    Match(double hessian_threshold = 1, int octaves = 4, int octave_layers = 3, bool extended = false, bool upright = false);
+    Match(double hessian_threshold = 1, int octaves = 1, int octave_layers = 1, bool extended = false, bool upright = true);
     ~Match() = default;
 public:
     cv::Ptr<cv::xfeatures2d::SURF> detector;
