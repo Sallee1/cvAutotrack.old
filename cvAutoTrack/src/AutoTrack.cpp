@@ -353,12 +353,13 @@ bool AutoTrack::GetPositionOfMap(double& x, double& y, int& mapId)
         return false;
     }
 
-    auto raw_pos = TianLi::Utils::ConvertSpecialMapsPosition(x, y);
-    if (raw_pos.first == cv::Point2d(0, 0))
+    if (abs(x) < 10.0 && abs(y) < 10.0)
     {
         //跳过无效坐标
         return false;
     }
+
+    auto raw_pos = TianLi::Utils::ConvertSpecialMapsPosition(x, y);
 
     mapId = raw_pos.second;
     if (mapId == 0)

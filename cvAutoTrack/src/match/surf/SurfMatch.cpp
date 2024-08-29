@@ -92,7 +92,7 @@ void SurfMatch::match()
     }
 }
 
-cv::Point2d  SurfMatch::match_continuity(bool& calc_continuity_is_faile)
+cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
 {
     static cv::Mat img_scene(_mapMat);
     const auto minimap_scale_param = 1.0;
@@ -102,7 +102,8 @@ cv::Point2d  SurfMatch::match_continuity(bool& calc_continuity_is_faile)
 
     cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
     //不在城镇中时
-    cv::Mat someMap = TianLi::Utils::get_some_map(img_scene, pos, DEFAULT_SOME_MAP_SIZE_R);
+    cv::Point some_map_center_pos = pos;
+    cv::Mat someMap = TianLi::Utils::get_some_map(img_scene, some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
     cv::Mat miniMap(img_object);
     cv::Mat miniMap_scale = img_object.clone();
 
@@ -148,7 +149,7 @@ cv::Point2d  SurfMatch::match_continuity(bool& calc_continuity_is_faile)
         calc_continuity_is_faile = true;
         return pos_not_on_city;
     }
-    pos_not_on_city = cv::Point2d(p.x + pos.x - real_some_map_size_r, p.y + pos.y - real_some_map_size_r);
+    pos_not_on_city = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
     return pos_not_on_city;
 }
 

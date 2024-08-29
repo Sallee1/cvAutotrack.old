@@ -5,23 +5,27 @@
 
 namespace TianLi::Utils
 {
-    cv::Mat get_some_map(const cv::Mat& map, const cv::Point& pos, int size_r)
+    cv::Mat get_some_map(const cv::Mat& map, cv::Point& pos, int size_r)
     {
         cv::Rect rect(pos.x - size_r, pos.y - size_r, size_r + size_r, size_r + size_r);
         if (rect.x < 0)
         {
+            pos.x += -rect.x;
             rect.x = 0;
         }
         if (rect.y < 0)
         {
+            pos.y += -rect.y;
             rect.y = 0;
         }
         if (rect.x + rect.width > map.cols)
         {
+            pos.x -= rect.x + rect.width - map.cols;
             rect.x = map.cols - rect.width;
         }
         if (rect.y + rect.height > map.rows)
         {
+            pos.y -= rect.y + rect.height - map.rows;
             rect.y = map.rows - rect.height;
         }
         return map(rect);
@@ -307,8 +311,6 @@ namespace TianLi::Utils
                     id = 2;
                 else if (key == "旧日之海")
                     id = 3;
-                else if (key == "希穆兰卡")
-                    id = 1002;
                 else
                     id = 0;
                 dstPoint = {
@@ -333,7 +335,7 @@ namespace TianLi::Utils
         drawKeypoints(img_object, keypoint_object, imgminmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     }
-
+    //#define _DEBUG
     namespace CalcMatch
     {
         void calc_good_matches_show(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<MatchKeyPoint>& good_keypoints)
@@ -358,13 +360,13 @@ namespace TianLi::Utils
                                    img_object.rows / 2.0 - keypoint_object[KNN_m[i][0].queryIdx].pt.y},
                                   {keypoint_scene[KNN_m[i][0].trainIdx].pt.x, keypoint_scene[KNN_m[i][0].trainIdx].pt.y}
                         });
+                    }
                 }
-            }
 #ifdef _DEBUG
             draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
 #endif
         }
-    }
+}
 
     void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<TianLi::Utils::MatchKeyPoint>& good_keypoints)
     {
