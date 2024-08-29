@@ -241,7 +241,7 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
     {
         // 绘制paimon Rect
         cv::rectangle(out_info_img, genshin_paimon.rect_paimon, cv::Scalar(0, 0, 255), 2);
-        // 绘制miniMap Rect		      
+        // 绘制miniMap Rect
         cv::rectangle(out_info_img, genshin_minimap.rect_minimap, cv::Scalar(0, 0, 255), 2);
         cv::Rect Avatar = genshin_minimap.rect_avatar;
         Avatar.x += genshin_minimap.rect_minimap.x;
@@ -257,7 +257,7 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
     {
         // 绘制paimon Rect
         cv::rectangle(out_info_img, genshin_paimon.rect_paimon, cv::Scalar(0, 0, 255), 2);
-        // 绘制miniMap Rect			      
+        // 绘制miniMap Rect
         cv::rectangle(out_info_img, genshin_minimap.rect_minimap, cv::Scalar(0, 0, 255), 2);
         cv::Rect Avatar = genshin_minimap.rect_avatar;
         Avatar.x += genshin_minimap.rect_minimap.x;
@@ -488,7 +488,6 @@ bool AutoTrack::GetStar(double& x, double& y, bool& isEnd)
         cv::cvtColor(genshin_minimap.img_minimap(cv::Rect(36, 36, genshin_minimap.img_minimap.cols - 72, genshin_minimap.img_minimap.rows - 72)),
             giStarRef, cv::COLOR_RGBA2GRAY);
 
-
         matchTemplate(Resources::getInstance().StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
         minMaxLoc(tmp, &minVal, &maxVal, &minLoc, &maxLoc);
 #ifdef _DEBUG
@@ -529,7 +528,6 @@ bool AutoTrack::GetStar(double& x, double& y, bool& isEnd)
 
             MAXLOOP > 10 ? isLoopMatch = false : MAXLOOP++;
         }
-
 
         if (isStarVisible == true)
         {
@@ -582,7 +580,7 @@ bool AutoTrack::GetStarJson(char* jsonBuff)
         giStarRef, cv::COLOR_RGBA2GRAY);
 
     star_calculation_config config;
-    config.is_on_city = genshin_avatar_position.config.is_on_city;
+
     star_calculation(giStarRef, jsonBuff, config);
     if (config.error)
     {
@@ -657,7 +655,6 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
         genshin_minimap.config.is_find_paimon = true;
         GetPositionOfMap(x, y, mapId);
     }
-
 
     // a
     {
@@ -815,8 +812,7 @@ bool AutoTrack::getMiniMapRefMat()
 {
     genshin_minimap.img_minimap = genshin_screen.img_screen(genshin_minimap.rect_minimap);
 
-
-    if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics|| 
+    if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics ||
         genshin_handle.config.is_force_used_no_alpha)
     {
         genshin_screen.config.is_used_alpha = false;
@@ -885,4 +881,3 @@ inline void AutoTrack::showMatchResult(double x, double y, int mapId, double ang
     cv::imshow("Visual Debug", subMap);
 }
 #endif
-
