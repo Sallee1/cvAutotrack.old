@@ -101,7 +101,7 @@ namespace TianLi::Utils
         {"UI_Map_LayeredMap_3430201.png",{cv::Rect2i(2512,7468,157,128), cv::Rect2i(-4503,394,75,62)}},
         {"UI_Map_LayeredMap_3430204.png",{cv::Rect2i(-1971,5573,430,570), cv::Rect2i(-4600,381,210,278)}},
         {"UI_Map_LayeredMap_3430301.png",{cv::Rect2i(-777,3836,560,430), cv::Rect2i(-4855,619,273,210)}},
-        {"UI_Map_LayeredMap_3430401.png",{cv::Rect2i(-3624,5904,780,646), cv::Rect2i(-4936,342,381,315)}},
+        {"UI_Map_LayeredMap_3430401.png",{cv::Rect2i(-3624,5904,390,323), cv::Rect2i(-4936,342,381,315)}},
         {"UI_Map_LayeredMap_3430403.png",{cv::Rect2i(-1305,6332,272,363), cv::Rect2i(-4902,569,133,177)}},
         {"UI_Map_LayeredMap_3430101.png",{cv::Rect2i(-217,4697,498,474), cv::Rect2i(-4917,294,243,231)}},
         {"UI_Map_LayeredMap_3440101.png",{cv::Rect2i(2856,4390,278,282), cv::Rect2i(-5129,694,97,98)}},
