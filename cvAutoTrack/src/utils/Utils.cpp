@@ -281,7 +281,7 @@ namespace TianLi::Utils
     {
         int id = 0;
         cv::Point2d dstPoint = cv::Point2d(x, y);
-        cv::Point2i center = { 5767, 3962 };
+        cv::Point2i center = { 6067, 3662 };
         //先检查在哪个洞内
         for (auto& [key, value] : area_mappers)
         {
@@ -360,13 +360,13 @@ namespace TianLi::Utils
                                    img_object.rows / 2.0 - keypoint_object[KNN_m[i][0].queryIdx].pt.y},
                                   {keypoint_scene[KNN_m[i][0].trainIdx].pt.x, keypoint_scene[KNN_m[i][0].trainIdx].pt.y}
                         });
-                    }
                 }
+            }
 #ifdef _DEBUG
             draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
 #endif
         }
-}
+    }
 
     void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<TianLi::Utils::MatchKeyPoint>& good_keypoints)
     {

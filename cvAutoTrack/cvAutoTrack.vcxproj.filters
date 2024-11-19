@@ -14,9 +14,6 @@
     <Filter Include="src\match">
       <UniqueIdentifier>{ac6f39d1-8b24-4329-8e46-af9ad6ab5919}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\resources">
-      <UniqueIdentifier>{74b73ab9-2390-4fea-9151-a6c838056cc1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\utils">
       <UniqueIdentifier>{eb43bce9-bfd0-402a-b861-47a6b71b007c}</UniqueIdentifier>
     </Filter>
@@ -80,24 +77,6 @@
     <Filter Include="src\genshin\match\uid">
       <UniqueIdentifier>{772c1ff8-82a2-4e07-92c0-1db3790b000a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\resources\binary">
-      <UniqueIdentifier>{621c57e8-94c6-447a-85fe-e917ec104364}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\resources\binary\image">
-      <UniqueIdentifier>{0983567b-7c15-4d5e-8345-c2c4fd03bb74}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\resources\binary\image\uid">
-      <UniqueIdentifier>{dffd9bca-0072-4ef3-8ab8-af29126c0f63}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\resources\binary\image\paimon">
-      <UniqueIdentifier>{655ae593-06cf-4820-b0c8-98499541b0aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\resources\binary\image\cailb">
-      <UniqueIdentifier>{15bf2f90-c41c-4c77-9e65-f87d1cfe2a2b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\resources\binary\image\star">
-      <UniqueIdentifier>{7b046303-de42-44b4-9425-39f8ee450b9b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\utils\workflow">
       <UniqueIdentifier>{a3d4089a-bcb4-408c-b848-fa28dc81ebba}</UniqueIdentifier>
     </Filter>
@@ -115,6 +94,27 @@
     </Filter>
     <Filter Include="src\frame\capture\utils">
       <UniqueIdentifier>{93ab9efa-388b-438e-b60c-a3ecf4953867}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources">
+      <UniqueIdentifier>{74b73ab9-2390-4fea-9151-a6c838056cc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources\binary">
+      <UniqueIdentifier>{621c57e8-94c6-447a-85fe-e917ec104364}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources\binary\image">
+      <UniqueIdentifier>{0983567b-7c15-4d5e-8345-c2c4fd03bb74}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources\binary\image\uid">
+      <UniqueIdentifier>{dffd9bca-0072-4ef3-8ab8-af29126c0f63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources\binary\image\paimon">
+      <UniqueIdentifier>{655ae593-06cf-4820-b0c8-98499541b0aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources\binary\image\cailb">
+      <UniqueIdentifier>{15bf2f90-c41c-4c77-9e65-f87d1cfe2a2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resources\binary\image\star">
+      <UniqueIdentifier>{7b046303-de42-44b4-9425-39f8ee450b9b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
