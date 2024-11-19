@@ -28,6 +28,8 @@ public:
     const cv::Point2d map_relative_center = { 5767, 3962 }; // 天理坐标中点
     // 地图中图片像素与天理坐标系的比例
     const double map_relative_scale = 3.413333; // 天理坐标缩放
+    // 手柄模式相对于键鼠模式ui大小的缩放值的倒数
+    const double controller_ui_scale = 1.2;
 public:
     void install();
     void release();

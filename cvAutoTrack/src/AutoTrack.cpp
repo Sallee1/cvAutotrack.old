@@ -843,11 +843,13 @@ bool AutoTrack::getMiniMapRefMat()
         return false;
     }
 
-#ifdef _DEBUG
-    cv::namedWindow("MiniMap", cv::WINDOW_FREERATIO);
-    cv::imshow("MiniMap", genshin_minimap.img_minimap);
-    cv::waitKey(1);
-#endif
+    // 根据当前使用的模式，调整minimap的大小
+    if (genshin_screen.config.is_handle_mode == true)
+    {
+        const auto& controller_ui_scale = Resources::getInstance().controller_ui_scale;
+        cv::resize(genshin_minimap.img_minimap, genshin_minimap.img_minimap, cv::Size(),
+            controller_ui_scale, controller_ui_scale, cv::INTER_AREA);
+    }
     return true;
 }
 

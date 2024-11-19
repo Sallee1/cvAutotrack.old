@@ -54,10 +54,6 @@ namespace TianLi::Resource::Utils
         void* pImageFile = LockResource(imageResDataHandle);
         size_t imageFileSize = SizeofResource(hModu, imageResHandle);
 
-        std::fstream debug_out_file(std::to_string(IDB) + "dbg_image.png", std::ios::out | std::ios::binary);
-        debug_out_file.write(reinterpret_cast<char*>(pImageFile), imageFileSize);
-        debug_out_file.close();
-
         // 直接使用OpenCV的imdecode函数从二进制数据加载图像
         std::vector<char> buf = { (char*)pImageFile, (char*)pImageFile + imageFileSize };
         mat = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
