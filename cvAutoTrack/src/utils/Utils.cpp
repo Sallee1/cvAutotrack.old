@@ -281,7 +281,7 @@ namespace TianLi::Utils
     {
         int id = 0;
         cv::Point2d dstPoint = cv::Point2d(x, y);
-        cv::Point2i center = { 6067, 3662 };
+        cv::Point2i center = Resources::getInstance().map_relative_center;
         //先检查在哪个洞内
         for (auto& [key, value] : area_mappers)
         {

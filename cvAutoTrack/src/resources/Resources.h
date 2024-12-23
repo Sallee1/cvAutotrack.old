@@ -25,7 +25,7 @@ public:
 
     // 天理坐标映射关系参数 地图中心
     // 地图中天理坐标中心的像素坐标
-    const cv::Point2d map_relative_center = { 5767, 3962 }; // 天理坐标中点
+    const cv::Point2d map_relative_center = { 6067, 3662 }; // 天理坐标中点
     // 地图中图片像素与天理坐标系的比例
     const double map_relative_scale = 3.413333; // 天理坐标缩放
     // 手柄模式相对于键鼠模式ui大小的缩放值的倒数
