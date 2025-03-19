@@ -105,7 +105,7 @@ namespace TianLi::Utils
 
         std::vector<double> x_list;
         std::vector<double> y_list;
-        for (auto point : list)
+        for (auto& point : list)
         {
             x_list.push_back(point.x);
             y_list.push_back(point.y);
@@ -156,14 +156,11 @@ namespace TianLi::Utils
         return valid_list;
     }
 
-    void remove_invalid(std::vector<MatchKeyPoint> keypoints, double scale, std::vector<double>& x_list, std::vector<double>& y_list)
+    void remove_invalid(std::vector<cv::Point2f>& scene_pt, std::vector<cv::Point2f>& object_pt, double scale, std::vector<double>& x_list, std::vector<double>& y_list)
     {
-        for (int i = 0; i < keypoints.size(); i++)
+        for (int i = 0; i < scene_pt.size(); i++)
         {
-            auto mini_keypoint = keypoints[i].query;
-            auto map_keypoint = keypoints[i].train;
-
-            auto diff_pos = mini_keypoint * scale + map_keypoint;
+            auto diff_pos = object_pt[i] * scale + scene_pt[i];
 
             x_list.push_back(diff_pos.x);
             y_list.push_back(diff_pos.y);
@@ -335,42 +332,26 @@ namespace TianLi::Utils
         drawKeypoints(img_object, keypoint_object, imgminmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     }
-    //#define _DEBUG
-    namespace CalcMatch
-    {
-        void calc_good_matches_show(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<MatchKeyPoint>& good_keypoints)
-        {
-#ifdef _DEBUG
-            std::vector<cv::DMatch> good_matches;
-#else
-            UNREFERENCED_PARAMETER(img_scene);
-#endif
-            for (size_t i = 0; i < KNN_m.size(); i++)
-            {
-                if (KNN_m[i][0].distance < ratio_thresh * KNN_m[i][1].distance)
-                {
-#ifdef _DEBUG
-                    good_matches.push_back(KNN_m[i][0]);
-#endif
-                    if (KNN_m[i][0].queryIdx >= keypoint_object.size())
-                    {
-                        continue;
-                    }
-                    good_keypoints.push_back({ {img_object.cols / 2.0 - keypoint_object[KNN_m[i][0].queryIdx].pt.x,
-                                   img_object.rows / 2.0 - keypoint_object[KNN_m[i][0].queryIdx].pt.y},
-                                  {keypoint_scene[KNN_m[i][0].trainIdx].pt.x, keypoint_scene[KNN_m[i][0].trainIdx].pt.y}
-                        });
-                }
-            }
-#ifdef _DEBUG
-            draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
-#endif
-        }
-    }
 
-    void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<TianLi::Utils::MatchKeyPoint>& good_keypoints)
+    void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
     {
-        CalcMatch::calc_good_matches_show(img_scene, keypoint_scene, img_object, keypoint_object, KNN_m, ratio_thresh, good_keypoints);
+#ifdef _DEBUG
+        std::vector<cv::DMatch> good_matches;
+#endif
+        for (auto& m : KNN_m)
+        {
+            if (m[0].distance < ratio_thresh * m[1].distance)
+            {
+                scene_goodmatch.emplace_back(keypoint_scene[m[0].trainIdx].pt);
+                object_goodmatch.emplace_back(keypoint_object[m[0].queryIdx].pt);
+#ifdef _DEBUG
+                good_matches.emplace_back(m[0]);
+#endif
+            }
+        }
+#ifdef _DEBUG
+        draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
+#endif
     }
 
     // 注册表读取
