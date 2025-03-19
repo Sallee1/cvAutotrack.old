@@ -225,7 +225,7 @@ struct GenshinAvatarPositionConfig
     bool is_continuity = false;
     bool is_exist_last_match_minimap = false;
     cv::Mat img_last_match_minimap;
-    bool is_use_filter = true;
+    bool is_use_filter = false;
     std::shared_ptr<Filter> pos_filter;
 };
 struct GenshinAvatarPosition

@@ -107,8 +107,6 @@ cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
     cv::Mat miniMap(img_object);
     cv::Mat miniMap_scale = img_object.clone();
 
-    cv::resize(miniMap_scale, miniMap_scale, cv::Size(0, 0), minimap_scale_param, minimap_scale_param, cv::INTER_CUBIC);
-
     matcher.detect_and_compute(someMap, some_map);
     matcher.detect_and_compute(miniMap_scale, mini_map);
 
@@ -119,36 +117,8 @@ cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
         return pos_not_on_city;
     }
 
-    std::vector<std::vector<cv::DMatch>> KNN = matcher.match(mini_map, some_map);
+    cv::Point2d p = match_impl(someMap, some_map, img_object, mini_map, calc_continuity_is_faile);
 
-    std::vector<TianLi::Utils::MatchKeyPoint> keypoint_matched;
-    TianLi::Utils::calc_good_matches(someMap, some_map.keypoints, miniMap_scale, mini_map.keypoints, KNN, SURF_MATCH_RATIO_THRESH, keypoint_matched);
-
-    std::vector<double> lisx;
-    std::vector<double> lisy;
-    TianLi::Utils::remove_invalid(keypoint_matched, MAP_BOTH_SCALE_RATE / minimap_scale_param, lisx, lisy);
-
-    std::vector<cv::Point2d> keypoints_filtered;
-    for (int i = 0; i < keypoint_matched.size(); i++)
-    {
-        keypoints_filtered.push_back(cv::Point2d(lisx[i], lisy[i]));
-    }
-    keypoints_filtered = TianLi::Utils::extract_valid(keypoints_filtered);
-
-    lisx.clear();
-    lisy.clear();
-    for (int i = 0; i < keypoints_filtered.size(); i++)
-    {
-        lisx.push_back(keypoints_filtered[i].x);
-        lisy.push_back(keypoints_filtered[i].y);
-    }
-
-    cv::Point2d p;
-    if (!TianLi::Utils::SPC(lisx, lisy, p))
-    {
-        calc_continuity_is_faile = true;
-        return pos_not_on_city;
-    }
     pos_not_on_city = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
     return pos_not_on_city;
 }
@@ -160,30 +130,67 @@ cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
 /// <returns></returns>
 cv::Point2d SurfMatch::match_no_continuity(bool& calc_is_faile)
 {
-    cv::Point2d all_map_pos;
-
     cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
-
-    // 小地图区域计算特征点
     matcher.detect_and_compute(img_object, mini_map);
+    if (mini_map.size() <= 2)
+    {
+        calc_is_faile = true;
+        return {};
+    }
+    return match_impl(_mapMat, map, img_object, mini_map, calc_is_faile);
+}
+
+cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const Match::KeyMatPoint& keypoint_object, bool& calc_is_faile)
+{
+    cv::Point2d all_map_pos;
     // 没有提取到特征点直接返回，结果无效
-    if (mini_map.keypoints.size() == 0)
+    if (keypoint_object.keypoints.size() == 0)
     {
         calc_is_faile = true;
         return all_map_pos;
     }
     // 匹配特征点
-    std::vector<std::vector<cv::DMatch>> KNN_m = matcher.match(mini_map, map);
+    std::vector<std::vector<cv::DMatch>> KNN_m = matcher.match(keypoint_object, keypoint_scene);
 
-    std::vector<TianLi::Utils::MatchKeyPoint> keypoint_list;
-    TianLi::Utils::calc_good_matches(_mapMat, map.keypoints, img_object, mini_map.keypoints, KNN_m, SURF_MATCH_RATIO_THRESH, keypoint_list);
+    std::vector<cv::Point2f> good_matched_scene;
+    std::vector<cv::Point2f> good_matched_object;
+    TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, SURF_MATCH_RATIO_THRESH, good_matched_scene, good_matched_object);
+    // 算法需求将good_matched_object做原点平移
+    std::transform(good_matched_object.begin(), good_matched_object.end(), good_matched_object.begin(), [&img_object](cv::Point2f p) {
+        return p - static_cast<cv::Point2f>(img_object.size()) / 2;
+        });
+
+    if (good_matched_scene.size() < 10)
+    {
+        return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+    }
+
+    cv::Mat H, mask;
+    H = cv::findHomography(cv::Mat(good_matched_object), cv::Mat(good_matched_scene), cv::RANSAC, 3.0, mask);
+
+    int accept_count = cv::countNonZero(mask);
+    if (accept_count < 6 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
+    {
+        //矩阵的置信度不高，使用旧版的筛选算法
+        return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+    }
+    else {
+        std::vector<cv::Point2f> out_pt{ cv::Point2f(0, 0) };
+        cv::perspectiveTransform(out_pt, out_pt, H);
+        return out_pt[0];
+    }
+}
+
+cv::Point2d SurfMatch::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
+{
+    cv::Point2d all_map_pos{};
 
     std::vector<double> lisx;
     std::vector<double> lisy;
-    TianLi::Utils::remove_invalid(keypoint_list, MAP_BOTH_SCALE_RATE, lisx, lisy);
+    TianLi::Utils::remove_invalid(good_matched_scene, good_matched_object, MAP_BOTH_SCALE_RATE, lisx, lisy);
 
     std::vector<cv::Point2d> list_filter_kp;
-    for (int i = 0; i < keypoint_list.size(); i++)
+    for (int i = 0; i < good_matched_scene.size(); i++)
     {
         list_filter_kp.push_back(cv::Point2d(lisx[i], lisy[i]));
     }
@@ -236,7 +243,7 @@ std::vector<std::vector<cv::DMatch>> Match::match(const cv::Mat& query_descripto
     return match_group;
 }
 
-std::vector<std::vector<cv::DMatch>> Match::match(KeyMatPoint& query_key_mat_point, KeyMatPoint& train_key_mat_point)
+std::vector<std::vector<cv::DMatch>> Match::match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point)
 {
     return match(query_key_mat_point.descriptors, train_key_mat_point.descriptors);
 }

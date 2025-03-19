@@ -28,7 +28,7 @@ public:
     KeyMatPoint train;
 public:
     std::vector<std::vector<cv::DMatch>> match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors);
-    std::vector<std::vector<cv::DMatch>> match(KeyMatPoint& query_key_mat_point, KeyMatPoint& train_key_mat_point);
+    std::vector<std::vector<cv::DMatch>> match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point);
     bool detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
     bool detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point);
 };
@@ -67,16 +67,20 @@ public:
     void UnInit();
     void match();
 
-    cv::Point2d match_continuity(bool& calc_continuity_is_faile);
-
-    cv::Point2d match_no_continuity(bool& calc_is_faile);
-
-    //全图匹配
-    //cv::Point2d match_all_map(bool& calc_is_faile,double& stdev, double minimap_scale_param = 1.0);
-
     cv::Point2d getLocalPos();
     bool getIsContinuity();
 
 private:
+
+    cv::Point2d match_continuity(bool& calc_continuity_is_faile);
+
+    cv::Point2d match_no_continuity(bool& calc_is_faile);
+
+    cv::Point2d match_impl(const cv::Mat& img_scene, const Match::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const Match::KeyMatPoint& keypoint_object, bool& calc_is_faile);
+
+    cv::Point2d cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile);
+
+    //全图匹配
+    //cv::Point2d match_all_map(bool& calc_is_faile,double& stdev, double minimap_scale_param = 1.0);
     bool isMatchAllMap = true;
 };
