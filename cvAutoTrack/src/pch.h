@@ -60,6 +60,7 @@
 #include <fstream>
 #include <functional>
 #include <filesystem>
+namespace fs = std::filesystem;
 
 // D3D
 #include <d3d11_4.h>

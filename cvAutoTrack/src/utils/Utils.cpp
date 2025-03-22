@@ -351,6 +351,9 @@ namespace TianLi::Utils
         }
 #ifdef _DEBUG
         draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
+#else
+        UNREFERENCED_PARAMETER(img_scene);
+        UNREFERENCED_PARAMETER(img_object);
 #endif
     }
 

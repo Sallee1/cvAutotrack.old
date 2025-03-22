@@ -95,7 +95,6 @@ void SurfMatch::match()
 cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
 {
     static cv::Mat img_scene(_mapMat);
-    const auto minimap_scale_param = 1.0;
     int real_some_map_size_r = DEFAULT_SOME_MAP_SIZE_R;
 
     cv::Point2d pos_not_on_city;

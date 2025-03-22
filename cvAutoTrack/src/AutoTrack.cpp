@@ -35,6 +35,12 @@ AutoTrack::AutoTrack()
 
 bool AutoTrack::init()
 {
+    if (third_is_load)
+    {
+        ErrorCode::getInstance() = { 10000,"调用init之前必须使用SetThirdPartyDllPath加载动态库" };
+        return false;
+    }
+
     if (!genshin_minimap.is_init_finish)
     {
         genshin_minimap.is_run_init_start = true;
@@ -287,6 +293,41 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
     }
 
     return clear_error_logs();
+}
+
+bool AutoTrack::SetThirdPartyDllPath(const char* path, int buff_size)
+{
+    static std::vector<std::string> dll_list{
+        "opencv_core4100.dll",
+        "opencv_imgproc4100.dll",
+        "opencv_imgcodecs4100.dll",
+        "opencv_dnn4100.dll",
+        "opencv_flann4100.dll",
+        "opencv_features2d4100.dll",
+        "opencv_calib3d4100.dll",
+        "opencv_video4100.dll",
+        "opencv_xfeatures2d4100.dll",
+    };
+
+    std::string dll_path(path, path + buff_size);
+    if (!fs::exists(fs::u8path(dll_path)))
+    {
+        return false;
+    }
+
+    //检查dll文件是否存在
+    for (auto& dll_name : dll_list)
+    {
+        if (!fs::exists(fs::u8path(dll_path) / fs::u8path(dll_name)))
+        {
+            return false;
+        }
+    }
+
+    //设置dll路径
+    std::wstring wdll_path{ reinterpret_cast<const wchar_t*>(fs::u8path(dll_path).u16string().c_str()) };
+    AddDllDirectory(wdll_path.c_str());
+    return true;
 }
 
 bool AutoTrack::GetTransformOfMap(double& x, double& y, double& a, int& mapId)
@@ -859,13 +900,14 @@ Resources* resource = &Resources::getInstance();
 inline void AutoTrack::showMatchResult(double x, double y, int mapId, double angle, double rotate)
 {
     cv::Point2d pos(x, y);
+    cv::Point ipos = static_cast<cv::Point>(pos);
     //转换到绝对坐标
     if (mapId == 0)
         pos = TianLi::Utils::TransferAxes_inv(pos, genshin_avatar_position.target_map_world_center, genshin_avatar_position.target_map_world_scale);
 
     //获取附近的地图
     cv::Mat gi_map = resource->MapTemplate;
-    cv::Mat subMap = TianLi::Utils::get_some_map(gi_map, pos, 150).clone();
+    cv::Mat subMap = TianLi::Utils::get_some_map(gi_map, ipos, 150).clone();
 
     cv::Point2i center(subMap.size[1] / 2, subMap.size[0] / 2);
 
