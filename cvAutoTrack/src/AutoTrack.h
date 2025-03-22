@@ -59,7 +59,7 @@ public:
     bool DebugCapture();
     bool DebugCapturePath(const char* path_buff, int buff_size);
 
-    bool SetThirdPartyDllPath(const char* path, int buff_size);
+    static bool SetThirdPartyDllPath(const char* path, int buff_size);
 #pragma endregion
 private:
     GenshinHandle genshin_handle;

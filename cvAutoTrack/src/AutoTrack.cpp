@@ -324,9 +324,14 @@ bool AutoTrack::SetThirdPartyDllPath(const char* path, int buff_size)
         }
     }
 
+    //设置默认DLL的搜索方式，优先用户自定义的DLL搜索路径
+    SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS
+        | LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_USER_DIRS);
+
     //设置dll路径
     std::wstring wdll_path{ reinterpret_cast<const wchar_t*>(fs::u8path(dll_path).u16string().c_str()) };
     AddDllDirectory(wdll_path.c_str());
+
     return true;
 }
 

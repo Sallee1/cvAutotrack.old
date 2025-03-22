@@ -126,6 +126,7 @@ bool __stdcall GetMapIsEmbedded()
 {
     INSTALL_DUMP(AutoTrack::getInstance().GetMapIsEmbedded());
 }
+
 bool __stdcall DebugCapture()
 {
     INSTALL_DUMP(AutoTrack::getInstance().DebugCapture());
@@ -137,7 +138,7 @@ bool __stdcall DebugCapturePath(const char* path_buff, int buff_size)
 
 bool __stdcall SetThirdPartyDllPath(const char* path, int buff_size)
 {
-    INSTALL_DUMP(AutoTrack::getInstance().SetThirdPartyDllPath(path, buff_size));
+    INSTALL_DUMP(AutoTrack::SetThirdPartyDllPath(path, buff_size));
 }
 
 bool __stdcall startServe()
@@ -147,4 +148,51 @@ bool __stdcall startServe()
 bool __stdcall stopServe()
 {
     INSTALL_DUMP(AutoTrack::getInstance().stopServe());
+}
+
+CVAUTOTRACK_API cvAutoTrackContextV1* create_cvAutoTrack_context_v1()
+{
+    cvAutoTrackContextV1* context = new cvAutoTrackContextV1();
+    //TODO: 旧版接口尚未完全兼容新接口，部分接口使用了代替实现，部分接口缺失，后续需要改造
+
+    context->DebugLoadMapImagePath = nullptr;
+    context->InitResource = init;
+    context->UnInitResource = uninit;
+    context->SetCoreCachePath = nullptr;
+    context->GetCoreCachePath = nullptr;
+    context->SetDisableFileLog = SetDisableFileLog;
+    context->SetEnableFileLog = SetEnableFileLog;
+    context->SetUseBitbltCaptureMode = SetUseBitbltCaptureMode;
+    context->SetUseGraphicsCaptureMode = SetUseDx11CaptureMode;         // 接口兼容使用
+    context->SetUseDwmCaptureMode = nullptr;
+    context->SetUseLocalPictureMode = nullptr;
+    context->SetUseLocalVideoMode = nullptr;
+    context->SetCaptureHandle = SetHandle;
+    context->SetCaptureHandleCallback = nullptr;
+    context->SetScreenSourceCallback = nullptr;
+    context->SetScreenSourceCallbackEx = nullptr;
+    context->SetScreenSourceImage = nullptr;
+    context->SetScreenSourceImageEx = nullptr;
+    context->SetScreenClientRectCallback = nullptr;
+    context->SetWorldCenter = SetWorldCenter;
+    context->SetWorldScale = SetWorldScale;
+    context->GetTransformOfMap = GetTransformOfMap;
+    context->GetPositionOfMap = GetPositionOfMap;
+    context->GetDirection = GetDirection;
+    context->GetRotation = GetRotation;
+    context->GetUID = GetUID;
+    context->GetAllInfo = GetAllInfo;
+    context->DebugCapture = DebugCapture;
+    context->GetLastErr = GetLastErr;
+    context->GetLastErrMsg = GetLastErrMsg;
+    context->GetLastErrJson = GetLastErrJson;
+    context->GetCompileVersion = GetCompileVersion;
+    context->GetCompileTime = GetCompileTime;
+    context->GetCoreModulePath = nullptr;
+    context->LoadDependModuleFromPath = SetThirdPartyDllPath;
+    return context;
+}
+CVAUTOTRACK_API void destroy_cvAutoTrack_context_v1(cvAutoTrackContextV1* context)
+{
+    delete context;
 }
