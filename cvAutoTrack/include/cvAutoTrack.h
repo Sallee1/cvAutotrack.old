@@ -150,13 +150,6 @@ extern "C"
     bool CVAUTOTRACK_API DebugCapturePath(const char* path_buff, int buff_size);
 
     /**
-     * @brief 设置第三方dll路径
-     * @param path 第三方dll路径
-     * @return 设置后将会尝试加载dll，如果加载失败，将返回false
-     */
-    bool CVAUTOTRACK_API SetThirdPartyDllPath(const char* path, int buff_size);
-
-    /**
      * @brief 获取最后一次错误码
      * @return 错误码
      */
@@ -200,6 +193,20 @@ extern "C"
 
     //__declspec(deprecated("** Not implemented**"))
     bool CVAUTOTRACK_API GetMapIsEmbedded();
+
+    /**
+     * @brief 设置第三方模块路径，用于延迟加载
+     * @param path 第三方模块路径
+     * @return 加载成功返回true，否则返回false
+     */
+    bool CVAUTOTRACK_API LoadDependModuleFromPath(const char* path);
+
+    /**
+     * @brief 设置资源路径
+     * @param path 资源路径
+     * @return 资源存在返回true，否则返回false
+     */
+    bool CVAUTOTRACK_API SetResourcePath(const char* path);
 #ifdef __cplusplus
 }
 #endif
@@ -282,7 +289,8 @@ extern "C"
         bool (*GetCoreModulePath)(char*, int);
 
         // + 2025-3-23 添加指定模块路径接口
-        bool (*LoadDependModuleFromPath)(const char*, int);
+        bool (*LoadDependModuleFromPath)(const char*);
+        bool (*SetResourcePath)(const char*);
     };
 
     // 定义上下文初始化函数

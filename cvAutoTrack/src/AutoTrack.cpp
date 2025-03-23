@@ -295,7 +295,7 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
     return clear_error_logs();
 }
 
-bool AutoTrack::SetThirdPartyDllPath(const char* path, int buff_size)
+bool AutoTrack::LoadDependModuleFromPath(const char* path)
 {
     static std::vector<std::string> dll_list{
         "opencv_core4100.dll",
@@ -309,7 +309,7 @@ bool AutoTrack::SetThirdPartyDllPath(const char* path, int buff_size)
         "opencv_xfeatures2d4100.dll",
     };
 
-    std::string dll_path(path, path + buff_size);
+    std::string dll_path(path);
     if (!fs::exists(fs::u8path(dll_path)))
     {
         return false;
@@ -333,6 +333,11 @@ bool AutoTrack::SetThirdPartyDllPath(const char* path, int buff_size)
     AddDllDirectory(wdll_path.c_str());
 
     return true;
+}
+
+bool AutoTrack::SetResourcePath(const char* path)
+{
+    return false;
 }
 
 bool AutoTrack::GetTransformOfMap(double& x, double& y, double& a, int& mapId)

@@ -136,9 +136,14 @@ bool __stdcall DebugCapturePath(const char* path_buff, int buff_size)
     INSTALL_DUMP(AutoTrack::getInstance().DebugCapturePath(path_buff, buff_size));
 }
 
-bool __stdcall SetThirdPartyDllPath(const char* path, int buff_size)
+bool __stdcall LoadDependModuleFromPath(const char* path)
 {
-    INSTALL_DUMP(AutoTrack::SetThirdPartyDllPath(path, buff_size));
+    INSTALL_DUMP(AutoTrack::LoadDependModuleFromPath(path));
+}
+
+bool CVAUTOTRACK_API SetResourcePath(const char* path)
+{
+    INSTALL_DUMP(AutoTrack::getInstance()::SetResourcePath(path));
 }
 
 bool __stdcall startServe()
@@ -189,7 +194,7 @@ CVAUTOTRACK_API cvAutoTrackContextV1* create_cvAutoTrack_context_v1()
     context->GetCompileVersion = GetCompileVersion;
     context->GetCompileTime = GetCompileTime;
     context->GetCoreModulePath = nullptr;
-    context->LoadDependModuleFromPath = SetThirdPartyDllPath;
+    context->LoadDependModuleFromPath = LoadDependModuleFromPath;
     return context;
 }
 CVAUTOTRACK_API void destroy_cvAutoTrack_context_v1(cvAutoTrackContextV1* context)
