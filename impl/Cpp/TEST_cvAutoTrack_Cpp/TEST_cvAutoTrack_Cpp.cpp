@@ -349,7 +349,7 @@ int main(int argc, char* argv[])
     // 初始化上下文
     ctx = create_cvAutoTrack_context_v1();
     // 设置dll加载路径（目前硬编码）
-    ctx->LoadDependModuleFromPath(u8"C:/Users/Sallee/AppData/LocalLow/空荧酒馆/Map/ThirdParty", 256);
+    //ctx->LoadDependModuleFromPath(u8"C:/Users/Sallee/AppData/LocalLow/空荧酒馆/Map/ThirdParty", 256);
 
     for (int i = 0; i < argc; i++)
     {

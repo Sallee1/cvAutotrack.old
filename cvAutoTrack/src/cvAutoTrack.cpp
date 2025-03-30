@@ -138,12 +138,13 @@ bool __stdcall DebugCapturePath(const char* path_buff, int buff_size)
 
 bool __stdcall LoadDependModuleFromPath(const char* path)
 {
-    INSTALL_DUMP(AutoTrack::LoadDependModuleFromPath(path));
+    //INSTALL_DUMP(AutoTrack::LoadDependModuleFromPath(path));
+    return true;
 }
 
 bool CVAUTOTRACK_API SetResourcePath(const char* path)
 {
-    INSTALL_DUMP(AutoTrack::getInstance()::SetResourcePath(path));
+    INSTALL_DUMP(AutoTrack::getInstance().SetResourcePath(path));
 }
 
 bool __stdcall startServe()

@@ -302,14 +302,7 @@ namespace TianLi::Utils
 
             if (srcRect.contains(dstPoint))
             {
-                if (key == "渊下宫")
-                    id = 1;
-                else if (key == "地下层岩")
-                    id = 2;
-                else if (key == "旧日之海")
-                    id = 3;
-                else
-                    id = 0;
+                id = key.second;
                 dstPoint = {
                     ((double)dstRect.width / srcRect.width) * (dstPoint.x - srcRect.x) + dstRect.x,
                     ((double)dstRect.height / srcRect.height) * (dstPoint.y - srcRect.y) + dstRect.y };
