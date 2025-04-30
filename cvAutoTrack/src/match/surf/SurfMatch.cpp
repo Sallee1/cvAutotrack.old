@@ -74,7 +74,9 @@ void SurfMatch::match()
             isMatchAllMap = false;
         }
         else
+        {
             isContinuity = true;
+        }
 
         is_success_match = true;
     }
@@ -87,6 +89,7 @@ void SurfMatch::match()
         if (continuity_retry >= max_continuity_retry)
         {
             isMatchAllMap = true;
+            isContinuity = false;
             continuity_retry = 0;
         }
     }
@@ -149,33 +152,32 @@ cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatP
         return all_map_pos;
     }
     // 匹配特征点
-    std::vector<std::vector<cv::DMatch>> KNN_m = matcher.match(keypoint_object, keypoint_scene);
+    std::vector<std::vector<cv::DMatch>> KNN_m = matcher.match(keypoint_object, keypoint_scene, isContinuity);
 
     std::vector<cv::Point2f> good_matched_scene;
     std::vector<cv::Point2f> good_matched_object;
     TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, SURF_MATCH_RATIO_THRESH, good_matched_scene, good_matched_object);
-    // 算法需求将good_matched_object做原点平移
-    std::transform(good_matched_object.begin(), good_matched_object.end(), good_matched_object.begin(), [&img_object](cv::Point2f p) {
-        return p - static_cast<cv::Point2f>(img_object.size()) / 2;
-        });
 
-    if (good_matched_scene.size() < 10)
+    if (good_matched_scene.size() < 6)
     {
         return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
     }
 
     cv::Mat H, mask;
-    H = cv::findHomography(cv::Mat(good_matched_object), cv::Mat(good_matched_scene), cv::RANSAC, 3.0, mask);
+    H = cv::estimateAffinePartial2D(cv::Mat(good_matched_object), cv::Mat(good_matched_scene), mask, cv::RANSAC);
+
+    cv::Mat test_out(img_scene.size(), CV_8UC3);
+    cv::warpAffine(img_object, test_out, H, img_scene.size());
 
     int accept_count = cv::countNonZero(mask);
-    if (accept_count < 6 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
+    if (accept_count < 3 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
     {
         //矩阵的置信度不高，使用旧版的筛选算法
         return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
     }
     else {
-        std::vector<cv::Point2f> out_pt{ cv::Point2f(0, 0) };
-        cv::perspectiveTransform(out_pt, out_pt, H);
+        std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2, img_object.rows / 2) };
+        cv::transform(out_pt, out_pt, H);
         return out_pt[0];
     }
 }
@@ -234,17 +236,24 @@ Match::Match(double hessian_threshold, int octaves, int octave_layers, bool exte
     //matcher  = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
 }
 
-std::vector<std::vector<cv::DMatch>> Match::match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors)
+std::vector<std::vector<cv::DMatch>> Match::match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool bfmatch)
 {
     std::vector<std::vector<cv::DMatch>> match_group;
-    matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
+    if (bfmatch)
+    {
+        matcher = cv::BFMatcher::create(cv::NORM_L1);
+    }
+    else
+    {
+        matcher = cv::FlannBasedMatcher::create();
+    }
     matcher->knnMatch(query_descriptors, train_descriptors, match_group, 2);
     return match_group;
 }
 
-std::vector<std::vector<cv::DMatch>> Match::match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point)
+std::vector<std::vector<cv::DMatch>> Match::match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point, bool bfmatch)
 {
-    return match(query_key_mat_point.descriptors, train_key_mat_point.descriptors);
+    return match(query_key_mat_point.descriptors, train_key_mat_point.descriptors, bfmatch);
 }
 
 bool Match::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)

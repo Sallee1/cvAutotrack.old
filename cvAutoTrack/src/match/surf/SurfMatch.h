@@ -27,8 +27,8 @@ public:
     KeyMatPoint query;
     KeyMatPoint train;
 public:
-    std::vector<std::vector<cv::DMatch>> match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors);
-    std::vector<std::vector<cv::DMatch>> match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point);
+    std::vector<std::vector<cv::DMatch>> match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool bfmatch = false);
+    std::vector<std::vector<cv::DMatch>> match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point, bool bfmatch = false);
     bool detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
     bool detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point);
 };
