@@ -1,27 +1,29 @@
 #include "pch.h"
-#include "SurfMatch.h"
+#include "SiftMatch.h"
 #include "match/type/MatchType.h"
 #include "resources/Resources.h"
+#include "algorithms/algorithm.match_preprocess.h"
 #include "utils/Utils.h"
 
-void SurfMatch::setMap(cv::Mat gi_map)
+void SiftMatch::setMap(cv::Mat gi_map)
 {
     _mapMat = gi_map;
 }
 
-void SurfMatch::setMiniMap(cv::Mat miniMapMat)
+void SiftMatch::setMiniMap(cv::Mat miniMapMat)
 {
     _miniMapMat = miniMapMat;
+    //matchPreProcess(_miniMapMat, _miniMapMat);
 }
 
-void SurfMatch::Init()
+void SiftMatch::Init()
 {
     if (isInit)return;
     matcher.detect_and_compute(_mapMat, map.keypoints, map.descriptors);
     isInit = true;
 }
 
-void SurfMatch::Init(std::vector<cv::KeyPoint>& gi_map_keypoints, cv::Mat& gi_map_descriptors)
+void SiftMatch::Init(std::vector<cv::KeyPoint>& gi_map_keypoints, cv::Mat& gi_map_descriptors)
 {
     if (isInit)return;
     map.keypoints = std::move(gi_map_keypoints);
@@ -29,7 +31,7 @@ void SurfMatch::Init(std::vector<cv::KeyPoint>& gi_map_keypoints, cv::Mat& gi_ma
     isInit = true;
 }
 
-void SurfMatch::UnInit()
+void SiftMatch::UnInit()
 {
     if (!isInit)return;
     _mapMat.release();
@@ -39,7 +41,7 @@ void SurfMatch::UnInit()
     isInit = false;
 }
 
-void SurfMatch::match()
+void SiftMatch::match()
 {
     bool calc_is_faile = false;
     is_success_match = false;
@@ -95,7 +97,7 @@ void SurfMatch::match()
     }
 }
 
-cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
+cv::Point2d SiftMatch::match_continuity(bool& calc_continuity_is_faile)
 {
     static cv::Mat img_scene(_mapMat);
     int real_some_map_size_r = DEFAULT_SOME_MAP_SIZE_R;
@@ -130,7 +132,7 @@ cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
 /// </summary>
 /// <param name="calc_is_faile"></param>
 /// <returns></returns>
-cv::Point2d SurfMatch::match_no_continuity(bool& calc_is_faile)
+cv::Point2d SiftMatch::match_no_continuity(bool& calc_is_faile)
 {
     cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
     matcher.detect_and_compute(img_object, mini_map);
@@ -142,7 +144,7 @@ cv::Point2d SurfMatch::match_no_continuity(bool& calc_is_faile)
     return match_impl(_mapMat, map, img_object, mini_map, calc_is_faile);
 }
 
-cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const Match::KeyMatPoint& keypoint_object, bool& calc_is_faile)
+cv::Point2d SiftMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const Match::KeyMatPoint& keypoint_object, bool& calc_is_faile)
 {
     cv::Point2d all_map_pos;
     // 没有提取到特征点直接返回，结果无效
@@ -182,7 +184,7 @@ cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatP
     }
 }
 
-cv::Point2d SurfMatch::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
+cv::Point2d SiftMatch::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
 {
     cv::Point2d all_map_pos{};
 
@@ -220,19 +222,21 @@ cv::Point2d SurfMatch::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_mat
     return all_map_pos;
 }
 
-cv::Point2d SurfMatch::getLocalPos()
+cv::Point2d SiftMatch::getLocalPos()
 {
     return pos;
 }
 
-bool SurfMatch::getIsContinuity()
+bool SiftMatch::getIsContinuity()
 {
     return isContinuity;
 }
 
-Match::Match(double hessian_threshold, int octaves, int octave_layers, bool extended, bool upright)
+Match::Match(int nfeatures, int nOctaveLayers,
+    double contrastThreshold, double edgeThreshold,
+    double sigma, bool enable_precise_upscale)
 {
-    detector = cv::xfeatures2d::SURF::create(hessian_threshold, octaves, octave_layers, extended, upright);
+    detector = cv::SIFT::create(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma, enable_precise_upscale);
     //matcher  = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
 }
 
@@ -241,7 +245,7 @@ std::vector<std::vector<cv::DMatch>> Match::match(const cv::Mat& query_descripto
     std::vector<std::vector<cv::DMatch>> match_group;
     if (bfmatch)
     {
-        matcher = cv::BFMatcher::create(cv::NORM_L1);
+        matcher = cv::BFMatcher::create(cv::NORM_L2);
     }
     else
     {
@@ -261,6 +265,10 @@ bool Match::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& ke
     if (img.empty()) return  false;
     detector->detectAndCompute(img, cv::noArray(), keypoints, descriptors);
     if (keypoints.size() == 0) return false;
+    //使用rootSIFT增强健壮性
+    cv::normalize(descriptors, descriptors, 1.0, cv::NORM_L1);
+    cv::sqrt(descriptors, descriptors);
+
     return true;
 }
 

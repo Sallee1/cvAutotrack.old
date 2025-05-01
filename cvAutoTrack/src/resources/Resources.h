@@ -44,11 +44,13 @@ class MapKeypointCache {
 public:
     std::string bulid_time;
     std::string bulid_version;
-    float hessian_threshold;
-    WORD octave;
-    WORD octave_layers;
-    WORD extended;
-    WORD upRight;
+    int nfeatures;
+    int nOctaveLayers;
+    double contrastThreshold;
+    double edgeThreshold;
+    double sigma;
+    bool enable_precise_upscale;
+
     std::vector<cv::KeyPoint> keyPoints;
     cv::Mat descriptors;
     std::string bulid_version_end;
@@ -56,23 +58,22 @@ public:
     MapKeypointCache() {}
 
     MapKeypointCache(std::string bulid_time,
-        std::string bulid_version,
-        float hessian_threshold,
-        WORD octave,
-        WORD octave_layer,
-        WORD extended,
-        WORD upRight,
+        std::string bulid_version, int nfeatures, int nOctaveLayers,
+        double contrastThreshold, double edgeThreshold,
+        double sigma, bool enable_precise_upscale,
         std::vector<cv::KeyPoint> keyPoints,
         cv::Mat descriptors) :
-        bulid_time(bulid_time), bulid_version(bulid_version), hessian_threshold(hessian_threshold),
-        octave(octave), octave_layers(octave_layer), extended(extended), upRight(upRight),
+        bulid_time(bulid_time), bulid_version(bulid_version), nfeatures(nfeatures),
+        nOctaveLayers(nOctaveLayers), contrastThreshold(contrastThreshold), edgeThreshold(edgeThreshold), sigma(sigma), enable_precise_upscale(enable_precise_upscale),
         keyPoints(keyPoints), descriptors(descriptors), bulid_version_end(bulid_version) {}
 
     void serialize(std::string outfileName);
     void deSerialize(std::string infileName);
 };
 
-bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, float hessian_threshold = 1, int octaves = 1, int octave_layers = 1, bool extended = false, bool upright = true);
+bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, int nfeatures = 0, int nOctaveLayers = 3,
+    double contrastThreshold = 0.04, double edgeThreshold = 10,
+    double sigma = 1.6, bool enable_precise_upscale = false);
 bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
 bool get_map_keypoint(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);

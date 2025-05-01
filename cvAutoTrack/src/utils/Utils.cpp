@@ -328,6 +328,7 @@ namespace TianLi::Utils
 
     void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
     {
+#define _DEBUG
 #ifdef _DEBUG
         std::vector<cv::DMatch> good_matches;
 #endif
@@ -348,7 +349,7 @@ namespace TianLi::Utils
         UNREFERENCED_PARAMETER(img_scene);
         UNREFERENCED_PARAMETER(img_object);
 #endif
-    }
+        }
 
     // 注册表读取
     bool getRegValue_REG_SZ(HKEY root, std::wstring item, std::wstring key, std::string& ret, int max_length)
@@ -415,4 +416,4 @@ namespace TianLi::Utils
         RegCloseKey(hKey);
         return true;
     }
-}
+    }
