@@ -2,7 +2,7 @@
 #include "genshin.match.position.h"
 
 #include "resources/Resources.h"
-#include "Match/sift/SiftMatch.h"
+#include "Match/surf/SurfMatch.h"
 #include "filter/kalman/Kalman.h"
 
 cv::Mat to_color(cv::Mat& img_object)
@@ -128,7 +128,7 @@ cv::Point2d match_no_continuity_2nd(bool& calc_is_faile)
 
 void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position)
 {
-    static SiftMatch surf_match;
+    static SurfMatch surf_match;
     static bool is_init = false;
     if (genshin_minimap.is_run_init_start == true || is_init == false)
     {

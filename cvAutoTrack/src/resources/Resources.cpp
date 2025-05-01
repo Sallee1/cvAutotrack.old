@@ -2,9 +2,7 @@
 #include "Resources.h"
 #include "resource.h"
 #include "resources/import/resources.import.h"
-#include "algorithms/algorithm.match_preprocess.h"
 #include <wincodec.h>
-#include "match/sift/SiftMatch.h"
 
 #include "serialize.h"
 #include "version/Version.h"
@@ -152,9 +150,6 @@ void Resources::install()
     if (is_installed == false)
     {
         LoadImg_ID2Mat(IDB_JPG_GIMAP, MapTemplate, L"JPG");
-
-        // 对底图做自适应增强处理
-        //matchPreProcess(MapTemplate, MapTemplate);
         is_installed = true;
     }
 }
@@ -180,12 +175,11 @@ inline void MapKeypointCache::serialize(std::string outFileName)
     Tianli::Resources::Utils::serializeStream ss(ofs);
     ss << this->bulid_time;
     ss << this->bulid_version;
-    ss << this->nfeatures;
-    ss << this->nOctaveLayers;
-    ss << this->contrastThreshold;
-    ss << this->edgeThreshold;
-    ss << this->sigma;
-    ss << this->enable_precise_upscale;
+    ss << this->hessian_threshold;
+    ss << this->octave;
+    ss << this->octave_layers;
+    ss << this->extended;
+    ss << this->upRight;
     ss << this->keyPoints;
     ss << this->descriptors;
     ss << this->bulid_version_end;
@@ -199,28 +193,27 @@ inline void MapKeypointCache::deSerialize(std::string infileName)
     Tianli::Resources::Utils::deSerializeStream dss(ifs);
     dss >> this->bulid_time;
     dss >> this->bulid_version;
-    dss >> this->nfeatures;
-    dss >> this->nOctaveLayers;
-    dss >> this->contrastThreshold;
-    dss >> this->edgeThreshold;
-    dss >> this->sigma;
-    dss >> this->enable_precise_upscale;
+    dss >> this->hessian_threshold;
+    dss >> this->octave;
+    dss >> this->octave_layers;
+    dss >> this->extended;
+    dss >> this->upRight;
     dss >> this->keyPoints;
     dss >> this->descriptors;
     dss >> this->bulid_version_end;
     ifs.close();
 }
 
-bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, int nfeatures, int nOctaveLayers,
-    double contrastThreshold, double edgeThreshold,
-    double sigma, bool enable_precise_upscale)
-
+bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, float hessian_threshold, int octaves, int octave_layers, bool extended, bool upright)
 {
-    Match match(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma, enable_precise_upscale);
-    match.detect_and_compute(Resources::getInstance().MapTemplate, keypoints, descriptors);
+    cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(hessian_threshold, octaves, octave_layers, extended, upright);
+    detector->detectAndCompute(Resources::getInstance().MapTemplate, cv::noArray(), keypoints, descriptors);
+
     std::string build_time = __DATE__ " " __TIME__;
+
     MapKeypointCache cache(
-        build_time, TianLi::Version::build_version, nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma, enable_precise_upscale,
+        build_time, TianLi::Version::build_version, hessian_threshold,
+        (WORD)octaves, (WORD)octave_layers, (WORD)extended, (WORD)upright,
         keypoints, descriptors);
     std::filesystem::remove("cvAutoTrack_Cache.xml");
     cache.serialize("cvAutoTrack_Cache.xml");

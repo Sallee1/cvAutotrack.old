@@ -17,6 +17,9 @@
     <Filter Include="src\utils">
       <UniqueIdentifier>{eb43bce9-bfd0-402a-b861-47a6b71b007c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\match\surf">
+      <UniqueIdentifier>{b44a52c1-eb36-44d4-9d60-9653e25b9a34}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\match\type">
       <UniqueIdentifier>{3c973a25-eb85-4aad-a785-98e5dff329a7}</UniqueIdentifier>
     </Filter>
@@ -37,6 +40,9 @@
     </Filter>
     <Filter Include="src\filter\untouched">
       <UniqueIdentifier>{507751c9-0c0a-40f3-a833-f2d62a3f00a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\match\surf\filter">
+      <UniqueIdentifier>{dcabbda0-572b-43c0-a67e-0964167f83d0}</UniqueIdentifier>
     </Filter>
     <Filter Include="pch">
       <UniqueIdentifier>{0e2db87d-ed3a-4eb6-8700-f4adf8f64a35}</UniqueIdentifier>
@@ -110,12 +116,6 @@
     <Filter Include="src\resources\binary\image\star">
       <UniqueIdentifier>{7b046303-de42-44b4-9425-39f8ee450b9b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\match\sift">
-      <UniqueIdentifier>{b44a52c1-eb36-44d4-9d60-9653e25b9a34}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\match\sift\filter">
-      <UniqueIdentifier>{dcabbda0-572b-43c0-a67e-0964167f83d0}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="resource\Source.def">
@@ -142,9 +142,6 @@
     <None Include="src\resources\binary\image_to_binary.bat">
       <Filter>src\resources\binary</Filter>
     </None>
-    <None Include="src\algorithms\algorithm.match_preprocess.h">
-      <Filter>src\algorithms</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\cvAutoTrack.h">
@@ -161,6 +158,9 @@
     </ClInclude>
     <ClInclude Include="src\ErrorCode.h">
       <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\match\surf\SurfMatch.h">
+      <Filter>src\match\surf</Filter>
     </ClInclude>
     <ClInclude Include="src\match\type\MatchType.h">
       <Filter>src\match\type</Filter>
@@ -300,9 +300,6 @@
     <ClInclude Include="src\utils\map_mapper.h">
       <Filter>src\utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\match\sift\SiftMatch.h">
-      <Filter>src\match\sift</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AutoTrack.cpp">
@@ -319,6 +316,9 @@
     </ClCompile>
     <ClCompile Include="src\ErrorCode.cpp">
       <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\match\surf\SurfMatch.cpp">
+      <Filter>src\match\surf</Filter>
     </ClCompile>
     <ClCompile Include="src\match\diff\DiffMatch.cpp">
       <Filter>src\match\diff</Filter>
@@ -371,9 +371,6 @@
     </ClCompile>
     <ClCompile Include="src\frame\capture\capture.window_graphics.cpp">
       <Filter>src\frame\capture</Filter>
-    </ClCompile>
-    <ClCompile Include="src\match\sift\SiftMatch.cpp">
-      <Filter>src\match\sift</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,7 @@
 #include "utils/Utils.h"
 
 // 特征点匹配的剔除因子，越大越严格
-constexpr double SURF_MATCH_RATIO_THRESH = 0.8;
+constexpr double SURF_MATCH_RATIO_THRESH = 0.66;
 // 地图和小地图野外的缩放比例，（大地图 / 小地图野外）得到，注意城镇内小地图是野外的两倍，所以是城镇内比例是1.3/2
 constexpr double MAP_BOTH_SCALE_RATE = 1.0;
 // 地图中取小部分区域的半径，目前为小地图标准半径
@@ -19,12 +19,10 @@ public:
         auto size() { return keypoints.size(); }
     };
 public:
-    Match(int nfeatures = 0, int nOctaveLayers = 1,
-        double contrastThreshold = 0.02, double edgeThreshold = 30,
-        double sigma = 1.6, bool enable_precise_upscale = false);
+    Match(double hessian_threshold = 1, int octaves = 1, int octave_layers = 1, bool extended = false, bool upright = true);
     ~Match() = default;
 public:
-    cv::Ptr<cv::Feature2D> detector;
+    cv::Ptr<cv::xfeatures2d::SURF> detector;
     cv::Ptr<cv::DescriptorMatcher> matcher;
     KeyMatPoint query;
     KeyMatPoint train;
@@ -35,7 +33,7 @@ public:
     bool detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point);
 };
 
-class SiftMatch
+class SurfMatch
 {
     cv::Mat _mapMat;
     cv::Mat _miniMapMat;
@@ -45,8 +43,8 @@ class SiftMatch
     cv::Point2d last_pos;		// 上一次匹配的地点，匹配失败，返回上一次的结果
     cv::Rect rect_continuity_map;
 public:
-    SiftMatch() = default;
-    ~SiftMatch() = default;
+    SurfMatch() = default;
+    ~SurfMatch() = default;
 
 public:
     Match matcher;

@@ -84,7 +84,6 @@ namespace TianLi::Genshin
                             genshin_handle.is_exist = true;
                             now_class = genshin_window_class;
                             giHandle = hWnd;
-                            break;
                         }
                     }
                 }
