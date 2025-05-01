@@ -12,13 +12,11 @@ enum GenshinWindowClass
     Qt,
 };
 
-const std::vector<std::pair<std::wstring, GenshinWindowClass>> GenshinWindowNameList =
+const std::vector<std::pair<std::wstring, GenshinWindowClass>> GenshinProcessNameList =
 {
-    {L"原神",GenshinWindowClass::Unity},
-    {L"云·原神", GenshinWindowClass::Qt} ,
-    {L"원신", GenshinWindowClass::Unity},
-    {L"Genshin Impact", GenshinWindowClass::Unity},
-    {L"原神-调试", GenshinWindowClass::None}
+    {L"YuanShen.exe",GenshinWindowClass::Unity},
+    {L"GenshinImpact.exe", GenshinWindowClass::Unity} ,
+    {L"Genshin Impact Cloud Game.exe", GenshinWindowClass::Qt},
 };
 const cv::Rect MatchPaimonKeyPointRect =
 {
@@ -68,7 +66,7 @@ struct GenshinHandleConfig
     HWND genshin_handle = nullptr;
     std::shared_ptr<tianli::frame::frame_source> frame_source;
 
-    std::vector<std::pair<std::wstring, GenshinWindowClass>> genshin_window_name_list = GenshinWindowNameList;
+    std::vector<std::pair<std::wstring, GenshinWindowClass>> genshin_process_list = GenshinProcessNameList;
 };
 // 用于匹配原神窗口的句柄相关变量
 struct GenshinHandle

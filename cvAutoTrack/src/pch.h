@@ -10,7 +10,7 @@
 #define WIN32_LEAN_AND_MEAN             // 从 Windows 头文件中排除极少使用的内容
 // Windows 头文件
 #include <windows.h>
-
+#include <tlhelp32.h>
 // Opencv
 // 如果使用了c++14以上版本，关闭以下警告
 #ifdef _HAS_CXX17

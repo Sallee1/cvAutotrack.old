@@ -830,6 +830,7 @@ bool AutoTrack::try_get_genshin_windows()
     if (!getGengshinImpactScreen())
     {
         ErrorCode::getInstance() = { 103, "获取原神画面失败" };
+        genshin_handle.is_exist = false;
         return false;
     }
     return true;
