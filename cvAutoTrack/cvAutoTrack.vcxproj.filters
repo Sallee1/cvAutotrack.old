@@ -53,38 +53,11 @@
     <Filter Include="src\genshin">
       <UniqueIdentifier>{ba89a0f8-f136-4cfc-9d3c-bbee05dbf89e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\genshin\check">
-      <UniqueIdentifier>{efb6d952-b0d5-4ae8-bb47-1676baa1343c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\check\paimon">
-      <UniqueIdentifier>{2b485667-c329-48c1-a20b-f8cfb2217de2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\cailb">
-      <UniqueIdentifier>{8ef684b6-d2e1-486c-a200-64e6900c6f3b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\cailb\minimap">
-      <UniqueIdentifier>{428dd79d-f94e-4154-a3d7-b1fde1bb6fbe}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\match">
-      <UniqueIdentifier>{c63d4b3c-f264-4ad8-b5a9-4be12ccd53e6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\match\avatar">
-      <UniqueIdentifier>{01f5fa5f-d4e3-4f4d-b2c3-1083cbe1c079}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\match\star">
-      <UniqueIdentifier>{ed4b587f-03a3-4faa-92dc-9183960daa9b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\match\uid">
-      <UniqueIdentifier>{772c1ff8-82a2-4e07-92c0-1db3790b000a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\utils\workflow">
       <UniqueIdentifier>{a3d4089a-bcb4-408c-b848-fa28dc81ebba}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\utils\log">
       <UniqueIdentifier>{057367a2-53dc-43de-8d05-1d3790daef72}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\genshin\match\position">
-      <UniqueIdentifier>{0638de7f-89ef-45cd-b3e8-6d8cfac31b22}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\frame">
       <UniqueIdentifier>{dab1e440-aefc-4c57-aba1-f28c90365601}</UniqueIdentifier>
@@ -115,6 +88,9 @@
     </Filter>
     <Filter Include="src\resources\binary\image\star">
       <UniqueIdentifier>{7b046303-de42-44b4-9425-39f8ee450b9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\match\position">
+      <UniqueIdentifier>{f663eda4-221c-4884-9ce9-adc056047f63}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -204,12 +180,6 @@
     <ClInclude Include="src\genshin\genshin.handle.h">
       <Filter>src\genshin</Filter>
     </ClInclude>
-    <ClInclude Include="src\genshin\check\paimon\genshin.check.paimon.h">
-      <Filter>src\genshin\check\paimon</Filter>
-    </ClInclude>
-    <ClInclude Include="src\genshin\cailb\minimap\genshin.cailb.minimap.h">
-      <Filter>src\genshin\cailb\minimap</Filter>
-    </ClInclude>
     <ClInclude Include="src\resources\binary\resources.binary.h">
       <Filter>src\resources\binary</Filter>
     </ClInclude>
@@ -267,9 +237,6 @@
     <ClInclude Include="src\utils\log\utils.log.h">
       <Filter>src\utils\log</Filter>
     </ClInclude>
-    <ClInclude Include="src\genshin\match\position\genshin.match.position.h">
-      <Filter>src\genshin\match\position</Filter>
-    </ClInclude>
     <ClInclude Include="src\Ver.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -299,6 +266,12 @@
     </ClInclude>
     <ClInclude Include="src\utils\map_mapper.h">
       <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\genshin\genshin.minimap.h">
+      <Filter>src\genshin</Filter>
+    </ClInclude>
+    <ClInclude Include="src\genshin\match\position\genshin.match.position.h">
+      <Filter>src\match\position</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -344,23 +317,14 @@
     <ClCompile Include="src\genshin\genshin.screen.cpp">
       <Filter>src\genshin</Filter>
     </ClCompile>
-    <ClCompile Include="src\genshin\check\paimon\genshin.check.paimon.cpp">
-      <Filter>src\genshin\check\paimon</Filter>
-    </ClCompile>
     <ClCompile Include="src\resources\binary\resources.binary.cpp">
       <Filter>src\resources\binary</Filter>
-    </ClCompile>
-    <ClCompile Include="src\genshin\cailb\minimap\genshin.cailb.minimap.cpp">
-      <Filter>src\genshin\cailb\minimap</Filter>
     </ClCompile>
     <ClCompile Include="src\resources\resources.load.cpp">
       <Filter>src\resources</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\log\utils.log.cpp">
       <Filter>src\utils\log</Filter>
-    </ClCompile>
-    <ClCompile Include="src\genshin\match\position\genshin.match.position.cpp">
-      <Filter>src\genshin\match\position</Filter>
     </ClCompile>
     <ClCompile Include="src\resources\import\resources.import.cpp" />
     <ClCompile Include="src\dllmain.cpp">
@@ -371,6 +335,12 @@
     </ClCompile>
     <ClCompile Include="src\frame\capture\capture.window_graphics.cpp">
       <Filter>src\frame\capture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\genshin\genshin.minimap.cpp">
+      <Filter>src\genshin</Filter>
+    </ClCompile>
+    <ClCompile Include="src\genshin\match\position\genshin.match.position.cpp">
+      <Filter>src\match\position</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

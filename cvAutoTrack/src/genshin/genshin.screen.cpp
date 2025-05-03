@@ -2,44 +2,90 @@
 #include "genshin.screen.h"
 #include <chrono>
 
-void TianLi::Genshin::get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen)
-{
-	static HBITMAP hBmp;
+namespace TianLi::Genshin {
+    void init_screen_frames(GenshinScreen& out_genshin_screen);
 
-	//auto& giHandle = genshin_handle.handle;
-	auto& giRect = genshin_handle.rect;
-	auto& giRectClient = genshin_handle.rect_client;
-	//auto& giScale = genshin_handle.scale;
-	auto& giFrame = out_genshin_screen.img_screen;
-	
+    void get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen)
+    {
+        static HBITMAP hBmp;
 
-	auto now_time = std::chrono::system_clock::now();
-	if (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - out_genshin_screen.last_time).count() > 20 || giFrame.empty())
-	{
-		out_genshin_screen.last_time = now_time;
-		genshin_handle.config.frame_source->get_frame(giFrame);
-	}
+        //auto& giHandle = genshin_handle.handle;
+        auto& giRect = genshin_handle.rect;
+        auto& giRectClient = genshin_handle.rect_client;
+        //auto& giScale = genshin_handle.scale;
+        auto& giFrame = out_genshin_screen.img_screen;
 
+        auto now_time = std::chrono::system_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - out_genshin_screen.last_time).count() > 20 || giFrame.empty())
+        {
+            out_genshin_screen.last_time = now_time;
+            genshin_handle.config.frame_source->get_frame(giFrame);
+        }
 
-	{
-		if (giFrame.empty())return;
-		cv::resize(giFrame, giFrame, genshin_handle.size_frame);
+        {
+            if (giFrame.empty())return;
+            cv::resize(giFrame, giFrame, genshin_handle.size_frame);
 
-		out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
+            out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
+            init_screen_frames(out_genshin_screen);
+        }
+    }
 
-		// 获取maybe区域
-		out_genshin_screen.img_paimon_maybe = giFrame(genshin_handle.rect_paimon_maybe);
-		out_genshin_screen.img_minimap_cailb_maybe = giFrame(genshin_handle.rect_minimap_cailb_maybe);
-		out_genshin_screen.img_minimap_maybe = giFrame(genshin_handle.rect_minimap_maybe);
-		out_genshin_screen.img_uid_maybe = giFrame(genshin_handle.rect_uid_maybe);
-		out_genshin_screen.img_left_give_items_maybe = giFrame(genshin_handle.rect_left_give_items_maybe);
-		out_genshin_screen.img_right_pick_items_maybe = giFrame(genshin_handle.rect_right_pick_items_maybe);
+    void init_screen_frames(GenshinScreen& out_genshin_screen)
+    {
+        auto& giFrame = out_genshin_screen.img_screen;
+        int x = giFrame.cols;
+        int y = giFrame.rows;
 
-		out_genshin_screen.config.rect_paimon_maybe = genshin_handle.rect_paimon_maybe;
-		out_genshin_screen.config.rect_minimap_cailb_maybe = genshin_handle.rect_minimap_cailb_maybe;
-		out_genshin_screen.config.rect_minimap_maybe = genshin_handle.rect_minimap_maybe;
+        // 小地图标定可能性区域计算参数
+        int icon_sight_mayArea_left = static_cast<int>(x * 0.08);
+        int icon_sight_mayArea_top = 0;
+        int icon_sight_mayArea_width = static_cast<int>(x * 0.10);
+        int icon_sight_mayArea_height = static_cast<int>(y * 0.10);
+        // 小地图标定可能性区域
+        cv::Rect Area_icon_sight_mayArea(
+            icon_sight_mayArea_left,
+            icon_sight_mayArea_top,
+            icon_sight_mayArea_width,
+            icon_sight_mayArea_height);
+        out_genshin_screen.rects.icon_sight_maybe = Area_icon_sight_mayArea;
 
-		out_genshin_screen.img_uid = giFrame(genshin_handle.rect_uid);
+        // 小地图可能性区域计算参数
+        int miniMap_mayArea_left = 0;
+        int miniMap_mayArea_top = 0;
+        int miniMap_mayArea_width = static_cast<int>(x * 0.18);
+        int miniMap_mayArea_height = static_cast<int>(y * 0.22);
+        // 小地图可能性区域
+        cv::Rect Area_MiniMap_mayArea(
+            miniMap_mayArea_left,
+            miniMap_mayArea_top,
+            miniMap_mayArea_width,
+            miniMap_mayArea_height);
+        out_genshin_screen.rects.minimap_maybe = Area_MiniMap_mayArea;
 
-	}
+        // UID可能性区域计算参数
+        int UID_mayArea_left = static_cast<int>(x * 0.88);
+        int UID_mayArea_top = static_cast<int>(y * 0.97);
+        int UID_mayArea_width = x - UID_mayArea_left;
+        int UID_mayArea_height = y - UID_mayArea_top;
+        // UID可能性区域
+        cv::Rect Area_UID_mayArea(
+            UID_mayArea_left,
+            UID_mayArea_top,
+            UID_mayArea_width,
+            UID_mayArea_height);
+        out_genshin_screen.rects.uid_maybe = Area_UID_mayArea;
+
+        int UID_Rect_x = cvCeil(x - x * (1.0 - 0.865));
+        int UID_Rect_y = cvCeil(y - 1080.0 * (1.0 - 0.9755));
+        int UID_Rect_w = cvCeil(1920 * 0.11);
+        int UID_Rect_h = cvCeil(1920 * 0.0938 * 0.11);
+        out_genshin_screen.rects.uid = cv::Rect(UID_Rect_x, UID_Rect_y, UID_Rect_w, UID_Rect_h);
+
+        // 获取maybe区域
+        out_genshin_screen.imgs.icon_sight_maybe = giFrame(out_genshin_screen.rects.icon_sight_maybe);
+        out_genshin_screen.imgs.minimap_maybe = giFrame(out_genshin_screen.rects.minimap_maybe);
+        out_genshin_screen.imgs.uid_maybe = giFrame(out_genshin_screen.rects.uid_maybe);
+        out_genshin_screen.imgs.uid = giFrame(out_genshin_screen.rects.uid);
+    }
 }

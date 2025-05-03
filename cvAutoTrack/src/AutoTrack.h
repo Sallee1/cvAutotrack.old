@@ -66,7 +66,6 @@ public:
 private:
     GenshinHandle genshin_handle;
     GenshinScreen genshin_screen;
-    GenshinPaimon genshin_paimon;
     GenshinMinimap genshin_minimap;
     GenshinAvatarPosition genshin_avatar_position;
 

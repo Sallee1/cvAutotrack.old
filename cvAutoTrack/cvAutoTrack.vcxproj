@@ -132,7 +132,7 @@
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</ExternalIncludePath>
-    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
+    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgUseStatic>true</VcpkgUseStatic>
@@ -376,10 +376,9 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\frame\capture\utils\utils.window_graphics.h" />
     <ClInclude Include="src\frame\capture\utils\utils.window_scale.h" />
     <ClInclude Include="src\frame\frame.include.h" />
-    <ClInclude Include="src\genshin\cailb\minimap\genshin.cailb.minimap.h" />
-    <ClInclude Include="src\genshin\check\paimon\genshin.check.paimon.h" />
     <ClInclude Include="src\genshin\genshin.h" />
     <ClInclude Include="src\genshin\genshin.handle.h" />
+    <ClInclude Include="src\genshin\genshin.minimap.h" />
     <ClInclude Include="src\genshin\match\position\genshin.match.position.h" />
     <ClInclude Include="src\match\diff\DiffMatch.h" />
     <ClInclude Include="src\match\match.include.h" />
@@ -427,9 +426,8 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClCompile Include="src\filter\untouched\Untouched.cpp" />
     <ClCompile Include="src\frame\capture\capture.window_graphics.cpp" />
     <ClCompile Include="src\frame\frame.include.cpp" />
-    <ClCompile Include="src\genshin\cailb\minimap\genshin.cailb.minimap.cpp" />
-    <ClCompile Include="src\genshin\check\paimon\genshin.check.paimon.cpp" />
     <ClCompile Include="src\genshin\genshin.handle.cpp" />
+    <ClCompile Include="src\genshin\genshin.minimap.cpp" />
     <ClCompile Include="src\genshin\genshin.screen.cpp" />
     <ClCompile Include="src\genshin\match\position\genshin.match.position.cpp" />
     <ClCompile Include="src\match\diff\DiffMatch.cpp" />

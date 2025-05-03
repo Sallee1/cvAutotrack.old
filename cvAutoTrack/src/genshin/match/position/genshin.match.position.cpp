@@ -154,11 +154,6 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
         return;
     }
 
-    if (genshin_minimap.config.is_find_paimon == false)
-    {
-        return;
-    }
-
     if (genshin_minimap.img_minimap.empty())
     {
         return;

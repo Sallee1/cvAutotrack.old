@@ -246,7 +246,7 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
     case tianli::frame::frame_source::source_type::bitblt:
     {
         // 绘制paimon Rect
-        cv::rectangle(out_info_img, genshin_paimon.rect_paimon, cv::Scalar(0, 0, 255), 2);
+        cv::rectangle(out_info_img, genshin_screen.rects.icon_sight, cv::Scalar(0, 0, 255), 2);
         // 绘制miniMap Rect
         cv::rectangle(out_info_img, genshin_minimap.rect_minimap, cv::Scalar(0, 0, 255), 2);
         cv::Rect Avatar = genshin_minimap.rect_avatar;
@@ -256,13 +256,13 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
         // 绘制avatar Rect
         cv::rectangle(out_info_img, Avatar, cv::Scalar(0, 0, 255), 2);
         // 绘制UID Rect
-        cv::rectangle(out_info_img, genshin_handle.rect_uid, cv::Scalar(0, 0, 255), 2);
+        cv::rectangle(out_info_img, genshin_screen.rects.uid, cv::Scalar(0, 0, 255), 2);
         break;
     }
     case tianli::frame::frame_source::source_type::window_graphics:
     {
         // 绘制paimon Rect
-        cv::rectangle(out_info_img, genshin_paimon.rect_paimon, cv::Scalar(0, 0, 255), 2);
+        cv::rectangle(out_info_img, genshin_screen.rects.icon_sight, cv::Scalar(0, 0, 255), 2);
         // 绘制miniMap Rect
         cv::rectangle(out_info_img, genshin_minimap.rect_minimap, cv::Scalar(0, 0, 255), 2);
         cv::Rect Avatar = genshin_minimap.rect_avatar;
@@ -272,7 +272,7 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
         // 绘制avatar Rect
         cv::rectangle(out_info_img, Avatar, cv::Scalar(0, 0, 255), 2);
         // 绘制UID Rect
-        cv::rectangle(out_info_img, genshin_handle.rect_uid, cv::Scalar(0, 0, 255), 2);
+        cv::rectangle(out_info_img, genshin_screen.rects.uid, cv::Scalar(0, 0, 255), 2);
     }
     }
 
@@ -337,6 +337,7 @@ bool AutoTrack::LoadDependModuleFromPath(const char* path)
 
 bool AutoTrack::SetResourcePath(const char* path)
 {
+    UNREFERENCED_PARAMETER(path);
     return false;
 }
 
@@ -383,7 +384,6 @@ bool AutoTrack::GetPosition(double& x, double& y)
         ErrorCode::getInstance() = { 5, "原神小地图区域为空" };
         return false;
     }
-    genshin_minimap.config.is_find_paimon = true;
 
     TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
 
@@ -650,7 +650,7 @@ bool AutoTrack::GetUID(int& uid)
         return false;
     }
 
-    cv::Mat& giUIDRef = genshin_screen.img_uid;
+    cv::Mat& giUIDRef = genshin_screen.imgs.uid;
 
     std::vector<cv::Mat> channels;
 
@@ -704,7 +704,6 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
 
     // x,y,mapId
     {
-        genshin_minimap.config.is_find_paimon = true;
         GetPositionOfMap(x, y, mapId);
     }
 
@@ -726,7 +725,7 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
             ErrorCode::getInstance() = config.err;
         }
     }
-    cv::Mat& giUIDRef = genshin_screen.img_uid;
+    cv::Mat& giUIDRef = genshin_screen.imgs.uid;
     // uid
     {
         std::vector<cv::Mat> channels;
@@ -877,18 +876,18 @@ bool AutoTrack::getMiniMapRefMat()
 
     // 检测派蒙 -> 计算小地图坐标
     // 检测派蒙的同时，判断是不是原神窗口
-    if (TianLi::Genshin::Check::check_paimon(genshin_screen, genshin_paimon) == false)
-    {
-        return false;
-    }
-    if (genshin_paimon.is_visial == false)
-    {
-        return false;
-    }
+    // TODO: 重写此处检测代码
+    //if (TianLi::Genshin::Check::match_minimap_cailb(genshin_screen, genshin_paimon) == false)
+    //{
+    //    return false;
+    //}
+    //if (genshin_paimon.is_visial == false)
+    //{
+    //    return false;
+    //}
 
-    genshin_screen.config.rect_paimon = genshin_paimon.rect_paimon;
-    genshin_screen.config.is_handle_mode = genshin_paimon.is_handle_mode;
-    genshin_screen.config.is_search_mode = genshin_paimon.is_search_mode;
+    //genshin_screen.config.is_handle_mode = genshin_paimon.is_handle_mode;
+    //genshin_screen.config.is_search_mode = genshin_paimon.is_search_mode;
 
     if (TianLi::Genshin::Cailb::cailb_minimap(genshin_screen, genshin_minimap) == false)
     {
