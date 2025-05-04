@@ -40,6 +40,12 @@ namespace tianli::frame::capture
             if (m_item == nullptr)
                 return false;
 
+            if (m_item.Size().Width < 100 || m_item.Size().Height < 100)
+            {
+                //帧尺寸太小，可能是最小化状态，放弃初始化防止帧池出错
+                return false;
+            }
+
             m_lastSize = m_item.Size();
             m_swapChain = utils::window_graphics::CreateDXGISwapChain(utils::window_graphics::graphics_global::get_instance().d3d_device, static_cast<uint32_t>(m_lastSize.Width),
                 static_cast<uint32_t>(m_lastSize.Height), DXGI_FORMAT_B8G8R8A8_UNORM, 2);

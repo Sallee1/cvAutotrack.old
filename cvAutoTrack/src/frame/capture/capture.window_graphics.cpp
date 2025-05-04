@@ -21,9 +21,18 @@ namespace tianli::frame::capture
 
         new_frame = m_framePool.TryGetNextFrame();
         if (new_frame == nullptr)
+        {
             return false;
+        }
 
         auto frame_size = new_frame.ContentSize();
+        if (frame_size.Width < 100 || frame_size.Height < 100)
+        {
+            //帧尺寸太小，可能是最小化状态，放弃初始化防止帧池出错
+            uninitialized();
+            return false;
+        }
+
         auto& desc = utils::window_graphics::graphics_global::get_instance().desc_type;
         if (desc.Width != static_cast<UINT>(m_lastSize.Width) || desc.Height != static_cast<UINT>(m_lastSize.Height))
         {
