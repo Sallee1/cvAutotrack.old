@@ -28,7 +28,7 @@ AutoTrack::AutoTrack()
     genshin_avatar_position.target_map_world_center = Resources::getInstance().map_relative_center;
     genshin_avatar_position.target_map_world_scale = Resources::getInstance().map_relative_scale;
 
-    genshin_handle.config.frame_source = std::make_shared<tianli::frame::capture::capture_bitblt>();
+    genshin_handle.config.frame_source = std::make_shared<tianli::frame::capture::capture_window_graphics>();
     genshin_handle.config.frame_source->initialization();
     genshin_avatar_position.config.pos_filter = std::make_shared<Kalman>();
 }
@@ -874,32 +874,17 @@ bool AutoTrack::getMiniMapRefMat()
         genshin_screen.config.is_used_alpha = true;
     }
 
-    // 检测派蒙 -> 计算小地图坐标
-    // 检测派蒙的同时，判断是不是原神窗口
-    // TODO: 重写此处检测代码
-    //if (TianLi::Genshin::Check::match_minimap_cailb(genshin_screen, genshin_paimon) == false)
-    //{
-    //    return false;
-    //}
-    //if (genshin_paimon.is_visial == false)
-    //{
-    //    return false;
-    //}
-
-    //genshin_screen.config.is_handle_mode = genshin_paimon.is_handle_mode;
-    //genshin_screen.config.is_search_mode = genshin_paimon.is_search_mode;
-
-    if (TianLi::Genshin::Cailb::cailb_minimap(genshin_screen, genshin_minimap) == false)
+    if (TianLi::Genshin::find_minimap(genshin_screen, genshin_minimap) == false)
     {
         return false;
     }
 
     // 根据当前使用的模式，调整minimap的大小
-    if (genshin_screen.config.is_handle_mode == true)
+    if (genshin_screen.config.is_controller_mode == true)
     {
-        const auto& controller_ui_scale = Resources::getInstance().controller_ui_scale;
+        const auto& controller_ui_scale = genshin_screen.config.controller_ui_scale;
         cv::resize(genshin_minimap.img_minimap, genshin_minimap.img_minimap, cv::Size(),
-            controller_ui_scale, controller_ui_scale, cv::INTER_AREA);
+            1.0 / controller_ui_scale, 1.0 / controller_ui_scale, cv::INTER_AREA);
     }
     return true;
 }

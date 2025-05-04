@@ -255,9 +255,6 @@
     <ClInclude Include="src\frame\capture\capture.include.h">
       <Filter>src\frame\capture</Filter>
     </ClInclude>
-    <ClInclude Include="src\frame\capture\capture.window_graphics.h">
-      <Filter>src\frame\capture</Filter>
-    </ClInclude>
     <ClInclude Include="src\frame\capture\utils\utils.window_graphics.h">
       <Filter>src\frame\capture\utils</Filter>
     </ClInclude>
@@ -272,6 +269,9 @@
     </ClInclude>
     <ClInclude Include="src\genshin\match\position\genshin.match.position.h">
       <Filter>src\match\position</Filter>
+    </ClInclude>
+    <ClInclude Include="src\frame\capture\capture.window_graphics.h">
+      <Filter>src\frame\capture</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -333,14 +333,14 @@
     <ClCompile Include="src\frame\frame.include.cpp">
       <Filter>src\frame</Filter>
     </ClCompile>
-    <ClCompile Include="src\frame\capture\capture.window_graphics.cpp">
-      <Filter>src\frame\capture</Filter>
-    </ClCompile>
     <ClCompile Include="src\genshin\genshin.minimap.cpp">
       <Filter>src\genshin</Filter>
     </ClCompile>
     <ClCompile Include="src\genshin\match\position\genshin.match.position.cpp">
       <Filter>src\match\position</Filter>
+    </ClCompile>
+    <ClCompile Include="src\frame\capture\capture.window_graphics.cpp">
+      <Filter>src\frame\capture</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

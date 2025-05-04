@@ -24,7 +24,9 @@ bool __stdcall uninit()
 }
 bool __stdcall SetUseBitbltCaptureMode()
 {
-    INSTALL_DUMP(AutoTrack::getInstance().SetUseBitbltCaptureMode());
+    //Bitblt已弃用，接口将重定向到DXGI
+    //INSTALL_DUMP(AutoTrack::getInstance().SetUseBitbltCaptureMode());
+    INSTALL_DUMP(AutoTrack::getInstance().SetUseWindowGraphics());
 }
 bool __stdcall SetUseDx11CaptureMode()
 {
