@@ -17,7 +17,8 @@ public:
 
 public:
     cv::Mat PaimonTemplate;
-    cv::Mat MinimapCailbTemplate;
+    cv::Mat IconSightTemplate;
+    cv::Mat IconQuestTemplate;
     cv::Mat StarTemplate;
     cv::Mat MapTemplate;
     cv::Mat UID;

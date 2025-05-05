@@ -72,7 +72,8 @@ Resources::Resources()
 #ifdef USED_BINARY_IMAGE
     PaimonTemplate = TianLi::Resources::Load::load_image("paimon");
     StarTemplate = TianLi::Resources::Load::load_image("star");
-    MinimapCailbTemplate = TianLi::Resources::Load::load_image("cailb");
+    IconSightTemplate = TianLi::Resources::Load::load_image("icon_sight");
+    IconQuestTemplate = TianLi::Resources::Load::load_image("icon_quest");
     UID = TianLi::Resources::Load::load_image("uid_");
     UIDnumber[0] = TianLi::Resources::Load::load_image("uid0");
     UIDnumber[1] = TianLi::Resources::Load::load_image("uid1");
@@ -95,7 +96,8 @@ Resources::Resources()
     LoadBitmap_ID2Mat(IDB_BITMAP_PAIMON, PaimonTemplate);
     LoadBitmap_ID2Mat(IDB_BITMAP_STAR, StarTemplate);
 
-    LoadImg_ID2Mat(IDB_PNG_MINIMAP_CAILB, MinimapCailbTemplate);
+    LoadImg_ID2Mat(IDB_PNG_ICON_SIGHT, IconSightTemplate);
+    LoadImg_ID2Mat(IDB_PNG_ICON_QUEST, IconQuestTemplate);
 
     LoadBitmap_ID2Mat(IDB_BITMAP_UID_, UID);
     LoadBitmap_ID2Mat(IDB_BITMAP_UID0, UIDnumber[0]);
@@ -122,7 +124,7 @@ Resources::Resources()
 Resources::~Resources()
 {
     PaimonTemplate.release();
-    MinimapCailbTemplate.release();
+    IconSightTemplate.release();
     StarTemplate.release();
 
     UID.release();
