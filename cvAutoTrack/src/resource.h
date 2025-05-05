@@ -18,13 +18,14 @@
 #define IDB_BITMAP_UID_                 120
 
 #define IDB_PNG_GIMAP                   130
-#define IDB_PNG_ICON_SIGHT           131
+#define IDB_PNG_ICON_SIGHT              131
 #define IDB_JPG_GIMAP                   132
+#define IDB_PNG_ICON_QUEST              133
 
 // #define IDR_XML_GIMAP_COMPUTE           140
 
 // Next default values for new objects
-// 
+//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        104

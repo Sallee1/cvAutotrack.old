@@ -19,15 +19,6 @@ const std::vector<std::pair<std::wstring, GenshinWindowClass>> GenshinProcessNam
     {L"Genshin Impact Cloud Game.exe", GenshinWindowClass::Qt},
 };
 
-const cv::Rect MiniMapRect =
-{
-    59,15,218,218
-};
-const cv::Rect MiniMapHandleRect =
-{
-    117,45,182,182
-};
-
 struct GenshinHandleConfig
 {
     bool is_auto_find_genshin = true;
@@ -52,8 +43,11 @@ struct GenshinHandle
 struct GenshinScreenConfig
 {
     bool is_used_alpha = true;
-    bool is_handle_mode = false;
-    bool is_search_mode = false;
+    bool is_controller_mode = false;
+    bool is_search_mode = true;
+    double controller_ui_scale = 0.83333;
+    int icon_size = 54;    //键鼠模式下图标尺寸
+    int icon_size_ctrl = 45;    //手柄模式下图标尺寸
 };
 // 用于获取原神画面的相关变量
 struct GenshinScreen
@@ -89,14 +83,26 @@ struct GenshinScreen
 struct GenshinIconSightConfig
 {
     bool is_need_find = true;
-    double check_match_icon_sight_params = 0.85;
+    double icon_sight_threshold_low = 0.90;   //低亮度下的匹配阈值
+    double icon_sight_threshold_high = 0.95;    //高亮度下的匹配阈值
+    double ratio = 1.05;            //容许的模板图像尺寸比
+    double min_distance = 0.005;    //形状的最大差异
+    double tplmatch_max_diff = 0.05;   //模板匹配允许的最大差异
+    int min_size = 35;  //容许模板图像的最小尺寸
+    int max_size = 51;  //容许模板图像的最大尺寸
+    int ctrl_size = 44; //区分控制器的尺寸
 };
 
 struct GenshinIconSight
 {
     bool is_visial = false;
+    bool is_ctrl_mode = false;
     cv::Rect rect_Icon_sight;
     GenshinIconSightConfig config;
+};
+
+struct GenshinMinimapConfig {
+    cv::Size minimap_size = { 218,218 };
 };
 
 struct GenshinMinimap
@@ -112,9 +118,9 @@ struct GenshinMinimap
     cv::Mat img_avatar;
     cv::Rect rect_viewer;
     cv::Mat img_viewer;
-    cv::Rect rect_stars;
-    cv::Mat img_stars;
+    GenshinMinimapConfig config;
 };
+
 struct GenshinAvatarDirectionConfig
 {
 };
