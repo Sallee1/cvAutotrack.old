@@ -12,7 +12,7 @@ namespace TianLi::Utils
 
     inline const std::map<std::string, std::pair<cv::Rect2i, cv::Rect2i>> area_mappers{
         { "蒙德城", { cv::Rect2i(2432, -2163, 800, 600),cv::Rect2i(560, -1800, 267, 200)} },
-        { "望舒客栈", { cv::Rect2i(1532,-2132, 400, 400),cv::Rect2i(-28, -955, 133, 133)} },
+        { "望舒客栈", { cv::Rect2i(1532,-2163, 400, 400),cv::Rect2i(-28, -955, 133, 133)} },
         { "璃月港", { cv::Rect2i(1532, -963, 900, 1100),cv::Rect2i(-68, -288, 300, 367)} },
         { "遗珑埠", { cv::Rect2i(832, -3363, 600, 800),cv::Rect2i(-1260, -1944, 200, 267)} },
         { "离岛", { cv::Rect2i(2632,-363,600,700),cv::Rect2i(2348,975,200,233)} },
@@ -222,5 +222,6 @@ namespace TianLi::Utils
         {"UI_Map_LayeredMap_3250102.png",{cv::Rect2i(-1280,4573,555,493), cv::Rect2i(-2206,-64,268,241)}},
         {"UI_Map_LayeredMap_3220201.png",{cv::Rect2i(-222,5110,325,450), cv::Rect2i(-2124,-368,159,220)}},
         {"UI_Map_LayeredMap_116000401.png",{cv::Rect2i(-2402,8008,354,200), cv::Rect2i(-1709,2431,328,178)}},
+        {"5.6island.png",{cv::Rect2i(-6368,2237,400,400), cv::Rect2i(-6968,1637,400,400)}},
     };
 }
