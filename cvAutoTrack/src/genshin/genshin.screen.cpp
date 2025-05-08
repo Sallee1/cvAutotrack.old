@@ -5,6 +5,12 @@
 namespace TianLi::Genshin {
     void init_screen_frames(GenshinScreen& out_genshin_screen);
 
+    /**
+     * @brief 预处理原始帧
+     * @param mat 待处理的帧
+     */
+    void preprocess_raw_frame(cv::Mat& mat);
+
     void get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen)
     {
         static HBITMAP hBmp;
@@ -27,6 +33,7 @@ namespace TianLi::Genshin {
             cv::resize(giFrame, giFrame, genshin_handle.size_frame);
 
             out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
+            preprocess_raw_frame(giFrame);
             init_screen_frames(out_genshin_screen);
         }
     }
@@ -87,5 +94,29 @@ namespace TianLi::Genshin {
         out_genshin_screen.imgs.minimap_maybe = giFrame(out_genshin_screen.rects.minimap_maybe);
         out_genshin_screen.imgs.uid_maybe = giFrame(out_genshin_screen.rects.uid_maybe);
         out_genshin_screen.imgs.uid = giFrame(out_genshin_screen.rects.uid);
+    }
+
+    void preprocess_raw_frame(cv::Mat& mat)
+    {
+        //四通道强制三通道
+        if (mat.channels() == 4)
+        {
+            cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR);
+        }
+
+        //目前主要工作是提亮，因为画面中有标准白，不是问题，但没有标准黑是个问题
+        double min_col, max_col;
+        cv::Mat grayscale_mat;
+        cv::cvtColor(mat, grayscale_mat, cv::COLOR_RGB2GRAY);
+        cv::minMaxLoc(grayscale_mat, &min_col, &max_col);
+        if (max_col > 250)
+        {
+            return;
+        }
+        cv::Mat f_mat;
+        mat.convertTo(f_mat, CV_32FC3);
+        f_mat = f_mat * (255.0 / max_col);
+        f_mat.convertTo(mat, CV_8UC3);
+        return;
     }
 }
