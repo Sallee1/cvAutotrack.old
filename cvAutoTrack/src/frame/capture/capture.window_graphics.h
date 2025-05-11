@@ -56,6 +56,11 @@ namespace tianli::frame::capture
                 static_cast<winrt::Windows::Graphics::DirectX::DirectXPixelFormat>(87), 2, m_lastSize);
             m_session = m_framePool.CreateCaptureSession(m_item);
 
+            if (m_session == nullptr)
+            {
+                return false;
+            }
+
             utils::window_graphics::set_capture_session_property(m_session);
 
             m_session.StartCapture();

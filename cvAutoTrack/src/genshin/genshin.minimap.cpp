@@ -295,20 +295,27 @@ namespace TianLi::Genshin {
                 }
                 //旗子检查通过，有小地图，则给小地图相关参数赋值
                 cv::Rect rect_Icon_sight_screen = genshin_icon_sight.rect_Icon_sight + genshin_screen.rects.icon_sight_maybe.tl();
+                cv::Rect minimap_rect_maybe;
                 if (genshin_icon_sight.is_ctrl_mode)
                 {
-                    minimap_rect.x = rect_Icon_sight_screen.x + rect_Icon_sight_screen.width / 2 - static_cast<int>(out_genshin_minimap.config.minimap_size.width * genshin_screen.config.controller_ui_scale);
-                    minimap_rect.y = rect_Icon_sight_screen.y;
-                    minimap_rect.width = static_cast<int>(out_genshin_minimap.config.minimap_size.width * genshin_screen.config.controller_ui_scale);
-                    minimap_rect.height = static_cast<int>(out_genshin_minimap.config.minimap_size.height * genshin_screen.config.controller_ui_scale);
+                    minimap_rect_maybe.x = rect_Icon_sight_screen.x + rect_Icon_sight_screen.width / 2 - static_cast<int>(out_genshin_minimap.config.minimap_size.width * genshin_screen.config.controller_ui_scale);
+                    minimap_rect_maybe.y = rect_Icon_sight_screen.y;
+                    minimap_rect_maybe.width = static_cast<int>(out_genshin_minimap.config.minimap_size.width * genshin_screen.config.controller_ui_scale);
+                    minimap_rect_maybe.height = static_cast<int>(out_genshin_minimap.config.minimap_size.height * genshin_screen.config.controller_ui_scale);
                 }
                 else
                 {
-                    minimap_rect.x = rect_Icon_sight_screen.x + rect_Icon_sight_screen.width / 2 - static_cast<int>(out_genshin_minimap.config.minimap_size.width);
-                    minimap_rect.y = rect_Icon_sight_screen.y;
-                    minimap_rect.width = static_cast<int>(out_genshin_minimap.config.minimap_size.width);
-                    minimap_rect.height = static_cast<int>(out_genshin_minimap.config.minimap_size.height);
+                    minimap_rect_maybe.x = rect_Icon_sight_screen.x + rect_Icon_sight_screen.width / 2 - static_cast<int>(out_genshin_minimap.config.minimap_size.width);
+                    minimap_rect_maybe.y = rect_Icon_sight_screen.y;
+                    minimap_rect_maybe.width = static_cast<int>(out_genshin_minimap.config.minimap_size.width);
+                    minimap_rect_maybe.height = static_cast<int>(out_genshin_minimap.config.minimap_size.height);
                 }
+
+                if (minimap_rect_maybe.x < 0 || minimap_rect_maybe.y < 0)
+                {
+                    return false;
+                }
+                minimap_rect = minimap_rect_maybe;
             }
             // center point
             auto minimap_center = cv::Point(minimap_rect.x + (minimap_rect.width) / 2, minimap_rect.y + (minimap_rect.height) / 2);
