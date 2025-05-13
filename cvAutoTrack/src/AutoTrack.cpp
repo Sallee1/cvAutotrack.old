@@ -6,6 +6,7 @@
 
 #include "frame/frame.include.h"
 #include "frame/capture/capture.bitblt.h"
+#include "frame/capture/capture.dxgi.h"
 #include "frame/capture/capture.window_graphics.h"
 
 #include "filter/kalman/Kalman.h"
@@ -82,7 +83,17 @@ bool AutoTrack::SetUseBitbltCaptureMode()
 
 bool AutoTrack::SetUseDx11CaptureMode()
 {
-    return SetUseWindowGraphics();
+    if (genshin_handle.config.frame_source == nullptr)
+    {
+        genshin_handle.config.frame_source = std::make_shared<tianli::frame::capture::capture_dxgi>();
+        return true;
+    }
+    if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::dxgi)
+    {
+        return true;
+    }
+    genshin_handle.config.frame_source = std::make_shared<tianli::frame::capture::capture_dxgi>();
+    return true;
 }
 
 bool AutoTrack::SetUseWindowGraphics()
@@ -747,13 +758,13 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
         {
             ErrorCode::getInstance() = config.err;
         }
-    }
+        }
 
 #ifdef _DEBUG
     showMatchResult(x, y, mapId, a, r);
 #endif // _DEBUG
     return clear_error_logs();
-}
+    }
 
 bool AutoTrack::GetInfoLoadPicture(char* path, int& uid, double& x, double& y, double& a)
 {
@@ -851,8 +862,7 @@ bool AutoTrack::getGengshinImpactWnd()
 
 bool AutoTrack::getGengshinImpactScreen()
 {
-    TianLi::Genshin::get_genshin_screen(genshin_handle, genshin_screen);
-    if (genshin_screen.img_screen.empty())
+    if (!TianLi::Genshin::get_genshin_screen(genshin_handle, genshin_screen))
     {
         ErrorCode::getInstance() = { 433, "截图失败" };
         return false;

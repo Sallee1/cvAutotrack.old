@@ -16,8 +16,7 @@ public:
     bool uninit();
 
     bool SetUseBitbltCaptureMode();
-
-    [[deprecated("DXGI is not supported, use SetUseWindowGraphics instead")]] bool SetUseDx11CaptureMode();
+    bool SetUseDx11CaptureMode();
     bool SetUseWindowGraphics();
 
     bool ImportMapBlock(int id_x, int id_y, const char* image_data, int image_data_size, int image_width, int image_height);

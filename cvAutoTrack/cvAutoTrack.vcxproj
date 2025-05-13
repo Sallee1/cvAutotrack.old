@@ -328,7 +328,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;%(AdditionalDependencies);dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;%(AdditionalDependencies);dxgi.lib;d3d11.lib</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
@@ -371,6 +371,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\filter\smooth\Smooth.h" />
     <ClInclude Include="src\filter\untouched\Untouched.h" />
     <ClInclude Include="src\frame\capture\capture.bitblt.h" />
+    <ClInclude Include="src\frame\capture\capture.dxgi.h" />
     <ClInclude Include="src\frame\capture\capture.include.h" />
     <ClInclude Include="src\frame\capture\capture.window_graphics.h" />
     <ClInclude Include="src\frame\capture\utils\utils.window_graphics.h" />

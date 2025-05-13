@@ -3,5 +3,5 @@
 
 namespace TianLi::Genshin
 {
-	void get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen);
+    bool get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen);
 }

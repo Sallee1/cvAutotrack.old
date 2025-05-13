@@ -273,6 +273,9 @@
     <ClInclude Include="src\frame\capture\capture.window_graphics.h">
       <Filter>src\frame\capture</Filter>
     </ClInclude>
+    <ClInclude Include="src\frame\capture\capture.dxgi.h">
+      <Filter>src\frame\capture</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AutoTrack.cpp">

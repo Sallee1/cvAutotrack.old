@@ -11,7 +11,7 @@ namespace TianLi::Genshin {
      */
     void preprocess_raw_frame(cv::Mat& mat);
 
-    void get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen)
+    bool get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen)
     {
         static HBITMAP hBmp;
 
@@ -25,17 +25,21 @@ namespace TianLi::Genshin {
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - out_genshin_screen.last_time).count() > 20 || giFrame.empty())
         {
             out_genshin_screen.last_time = now_time;
-            genshin_handle.config.frame_source->get_frame(giFrame);
+            if (!genshin_handle.config.frame_source->get_frame(giFrame))
+            {
+                return false;
+            }
         }
 
         {
-            if (giFrame.empty())return;
+            if (giFrame.empty())return false;
             cv::resize(giFrame, giFrame, genshin_handle.size_frame);
 
             out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
             preprocess_raw_frame(giFrame);
             init_screen_frames(out_genshin_screen);
         }
+        return true;
     }
 
     void init_screen_frames(GenshinScreen& out_genshin_screen)
