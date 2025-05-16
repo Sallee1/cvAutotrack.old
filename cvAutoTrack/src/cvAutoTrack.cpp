@@ -29,6 +29,7 @@ bool __stdcall SetUseBitbltCaptureMode()
 }
 bool __stdcall SetUseDx11CaptureMode()
 {
+    //INSTALL_DUMP(AutoTrack::getInstance().SetUseBitbltCaptureMode());
     INSTALL_DUMP(AutoTrack::getInstance().SetUseWindowGraphics());
     //INSTALL_DUMP(AutoTrack::getInstance().SetUseDx11CaptureMode());
 }
