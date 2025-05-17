@@ -73,8 +73,8 @@ void Tracking::match()
 
     // 尝试连续匹配，匹配角色附近小范围区域
     bool calc_continuity_is_faile = false;
-    pos = match_no_continuity(calc_continuity_is_faile);
-    //pos = match_continuity(calc_continuity_is_faile);
+    //pos = match_no_continuity(calc_continuity_is_faile);
+    pos = match_continuity(calc_continuity_is_faile);
 
     if (!calc_continuity_is_faile)
     {
@@ -167,7 +167,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
         return all_map_pos;
     }
     // 匹配特征点
-    std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->match(keypoint_object, keypoint_scene, false);
+    std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->match(keypoint_object, keypoint_scene, isContinuity);
     // 绘制关键点
     //cv::Mat match_results;
     //cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
@@ -176,7 +176,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
     std::vector<cv::Point2f> good_matched_object;
     TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
 
-    auto good_matched_count = good_matched_scene.size();
+    //auto good_matched_count = good_matched_scene.size();
 
     if (good_matched_scene.size() < 6)
     {
@@ -190,12 +190,26 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
     cv::warpAffine(img_object, test_out, H, img_scene.size());
 
     int accept_count = cv::countNonZero(mask);
+    double H_scale = (H.ptr<double>(0)[0] + H.ptr<double>(1)[1]) / 2;
+    double H_maxerr = 0.05;
+    double H_min_scale = 0.7;
+
     if (accept_count < 3 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
     {
         //矩阵的置信度不高，使用旧版的筛选算法
         return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
     }
-    else {
+    else if (
+        H_scale < H_min_scale ||
+        abs(H.ptr<double>(0)[0] - H.ptr<double>(1)[1]) > H_scale * H_maxerr ||
+        abs(H.ptr<double>(0)[1]) > H_scale * H_maxerr ||
+        abs(H.ptr<double>(0)[1]) > H_scale * H_maxerr)
+    {
+        //矩阵与经验不符（无旋转，无缩放，无斜切）
+        return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+    }
+    else
+    {
         std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2, img_object.rows / 2) };
         cv::transform(out_pt, out_pt, H);
         return out_pt[0];
