@@ -2,7 +2,7 @@
 #include "genshin.match.position.h"
 
 #include "resources/Resources.h"
-#include "Match/surf/SurfMatch.h"
+#include "Match/tracking.h"
 #include "filter/kalman/Kalman.h"
 
 cv::Mat to_color(cv::Mat& img_object)
@@ -128,7 +128,7 @@ cv::Point2d match_no_continuity_2nd(bool& calc_is_faile)
 
 void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position)
 {
-    static SurfMatch surf_match;
+    static Tracking surf_match;
     static bool is_init = false;
     if (genshin_minimap.is_run_init_start == true || is_init == false)
     {
@@ -139,8 +139,10 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
         cv::Mat gi_map_descriptors;
 
         surf_match.setMap(Resources::getInstance().MapTemplate);
-        get_map_keypoint(gi_map_keypoints, gi_map_descriptors);
-        surf_match.Init(gi_map_keypoints, gi_map_descriptors);
+        get_map_keypoint(genshin_minimap, gi_map_keypoints, gi_map_descriptors);
+        surf_match.Init(genshin_minimap.matcher,
+            std::move(gi_map_keypoints),
+            std::move(gi_map_descriptors));
 
         is_init = true;
         return;
@@ -159,7 +161,7 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
         return;
     }
 
-    surf_match.setMiniMap(genshin_minimap.img_minimap);
+    surf_match.setMiniMap(genshin_minimap.img_minimap_padding);
 
     surf_match.match();
 

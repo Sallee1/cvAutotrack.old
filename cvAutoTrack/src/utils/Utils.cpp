@@ -325,7 +325,6 @@ namespace TianLi::Utils
         drawKeypoints(img_object, keypoint_object, imgminmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     }
-
     void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
     {
 #ifdef _DEBUG
@@ -333,7 +332,7 @@ namespace TianLi::Utils
 #endif
         for (auto& m : KNN_m)
         {
-            if (m[0].distance < ratio_thresh * m[1].distance)
+            if (m.size() == 2 && m[0].distance < ratio_thresh * m[1].distance)
             {
                 scene_goodmatch.emplace_back(keypoint_scene[m[0].trainIdx].pt);
                 object_goodmatch.emplace_back(keypoint_object[m[0].queryIdx].pt);

@@ -1,4 +1,5 @@
 #pragma once
+#include <match/type/MatchType.h>
 
 //图片资源 加载类
 class Resources
@@ -45,11 +46,6 @@ class MapKeypointCache {
 public:
     std::string bulid_time;
     std::string bulid_version;
-    float hessian_threshold;
-    WORD octave;
-    WORD octave_layers;
-    WORD extended;
-    WORD upRight;
     std::vector<cv::KeyPoint> keyPoints;
     cv::Mat descriptors;
     std::string bulid_version_end;
@@ -58,22 +54,21 @@ public:
 
     MapKeypointCache(std::string bulid_time,
         std::string bulid_version,
-        float hessian_threshold,
-        WORD octave,
-        WORD octave_layer,
-        WORD extended,
-        WORD upRight,
         std::vector<cv::KeyPoint> keyPoints,
         cv::Mat descriptors) :
-        bulid_time(bulid_time), bulid_version(bulid_version), hessian_threshold(hessian_threshold),
-        octave(octave), octave_layers(octave_layer), extended(extended), upRight(upRight),
+        bulid_time(bulid_time), bulid_version(bulid_version),
         keyPoints(keyPoints), descriptors(descriptors), bulid_version_end(bulid_version) {}
 
     void serialize(std::string outfileName);
-    void deSerialize(std::string infileName);
+    /**
+     * @brief 解码缓存
+     * @param infileName 输入文件名
+     * @param version_only 是否只解析版本，防止数据结构不一致而崩溃
+     */
+    void deSerialize(std::string infileName, bool version_only = false);
 };
 
-bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, float hessian_threshold = 1, int octaves = 1, int octave_layers = 1, bool extended = false, bool upright = true);
+bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
-bool get_map_keypoint(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
+bool get_map_keypoint(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);

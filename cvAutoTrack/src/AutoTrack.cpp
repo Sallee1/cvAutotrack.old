@@ -21,6 +21,8 @@
 #include "genshin/genshin.h"
 
 #include "version/Version.h"
+#include "match/matcher_impl/AkazeMatcher.h"
+//#include "match/matcher_impl/SURFMatcher.h"
 
 AutoTrack::AutoTrack()
 {
@@ -36,14 +38,21 @@ AutoTrack::AutoTrack()
 
 bool AutoTrack::init()
 {
-    if (third_is_load)
-    {
-        ErrorCode::getInstance() = { 10000,"调用init之前必须使用SetThirdPartyDllPath加载动态库" };
-        return false;
-    }
+    //if (!third_is_load)
+    //{
+    //    ErrorCode::getInstance() = { 10000,"调用init之前必须使用SetThirdPartyDllPath加载动态库" };
+    //    return false;
+    //}
 
     if (!genshin_minimap.is_init_finish)
     {
+        genshin_minimap.matcher = std::shared_ptr<IMatcher>(new AKAZEMatcher(
+            cv::AKAZE::DESCRIPTOR_MLDB_UPRIGHT, 0, 3, 0.0001f, 1, 1, cv::KAZE::DIFF_PM_G2, -1
+        ));
+
+        //genshin_minimap.matcher = std::shared_ptr<IMatcher>(new SURFMatcher(
+        //    1, 1, 1, false, true
+        //));
         genshin_minimap.is_run_init_start = true;
         TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
         genshin_minimap.is_run_init_start = false;
@@ -758,13 +767,13 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
         {
             ErrorCode::getInstance() = config.err;
         }
-        }
+    }
 
 #ifdef _DEBUG
     showMatchResult(x, y, mapId, a, r);
 #endif // _DEBUG
     return clear_error_logs();
-    }
+}
 
 bool AutoTrack::GetInfoLoadPicture(char* path, int& uid, double& x, double& y, double& a)
 {

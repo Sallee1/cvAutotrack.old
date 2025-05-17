@@ -255,6 +255,28 @@ namespace TianLi::Genshin {
             return true;
         }
 
+        /**
+         * @brief 填充地图
+         * @param minimap 小地图图形
+         * @param out_minimap 输出地图图形
+         * @param inner_size 收缩尺寸
+         * @param padding_size 填充尺寸
+         * @return
+         */
+        bool paddingminimap(const cv::Mat& minimap, cv::Mat& out_minimap, int inner_size, int padding_size)
+        {
+            //1. 小地图使用圆形填充
+            out_minimap = minimap.clone();
+            cv::Mat mask_circle = cv::Mat::ones(out_minimap.size(), CV_8UC1);
+            cv::circle(mask_circle, out_minimap.size() / 2, out_minimap.rows / 2 - inner_size,
+                cv::Scalar(0, 0, 0, 0), cv::FILLED, cv::LineTypes::LINE_AA);
+
+            out_minimap.setTo(cv::Scalar(0, 0, 0), mask_circle);
+
+            cv::copyMakeBorder(out_minimap, out_minimap, padding_size, padding_size, padding_size, padding_size, cv::BORDER_CONSTANT);
+            return true;
+        }
+
     public:
         bool cailb_minimap_impl(const GenshinScreen& genshin_screen, GenshinMinimap& out_genshin_minimap)
         {
@@ -320,6 +342,8 @@ namespace TianLi::Genshin {
             // center point
             auto minimap_center = cv::Point(minimap_rect.x + (minimap_rect.width) / 2, minimap_rect.y + (minimap_rect.height) / 2);
             out_genshin_minimap.img_minimap = genshin_screen.img_screen(minimap_rect);
+            paddingminimap(out_genshin_minimap.img_minimap, out_genshin_minimap.img_minimap_padding, static_cast<int>(out_genshin_minimap.img_minimap.rows * 0.05), 32);
+
             out_genshin_minimap.rect_minimap = minimap_rect;
             out_genshin_minimap.point_minimap_center = minimap_center;
 

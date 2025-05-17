@@ -3,6 +3,7 @@ class Capture;
 class Filter;
 
 #include "frame/frame.include.h"
+#include <match/IMatcher.h>
 
 enum GenshinWindowClass
 {
@@ -113,11 +114,16 @@ struct GenshinMinimap
     bool is_cailb = false;
     cv::Mat img_minimap;
     cv::Rect rect_minimap;
+    cv::Mat img_minimap_padding;        //新增，用于匹配。部分匹配算法对边距要求严格
+    cv::Rect rect_minimap_padding;
     cv::Point point_minimap_center;
     cv::Rect rect_avatar;
     cv::Mat img_avatar;
     cv::Rect rect_viewer;
     cv::Mat img_viewer;
+
+    //匹配器
+    std::shared_ptr<IMatcher> matcher;
     GenshinMinimapConfig config;
 };
 

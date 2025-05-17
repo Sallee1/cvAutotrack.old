@@ -1,35 +1,47 @@
 #include "pch.h"
-#include "SurfMatch.h"
+#include "tracking.h"
 #include "match/type/MatchType.h"
 #include "resources/Resources.h"
 #include "utils/Utils.h"
 
-void SurfMatch::setMap(cv::Mat gi_map)
+void Tracking::setMap(cv::Mat gi_map)
 {
     _mapMat = gi_map;
 }
 
-void SurfMatch::setMiniMap(cv::Mat miniMapMat)
+void Tracking::setMiniMap(cv::Mat miniMapMat)
 {
     _miniMapMat = miniMapMat;
 }
 
-void SurfMatch::Init()
+bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 {
-    if (isInit)return;
-    matcher.detect_and_compute(_mapMat, map.keypoints, map.descriptors);
+    if (isInit)return true;
+    m_matcher->detect_and_compute(_mapMat, map.keypoints, map.descriptors);
+    if (matcher == nullptr)
+    {
+        return false;
+    }
+    m_matcher = matcher;
     isInit = true;
+    return true;
 }
 
-void SurfMatch::Init(std::vector<cv::KeyPoint>& gi_map_keypoints, cv::Mat& gi_map_descriptors)
+bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors)
 {
-    if (isInit)return;
+    if (isInit)return true;
     map.keypoints = std::move(gi_map_keypoints);
     map.descriptors = std::move(gi_map_descriptors);
+    if (matcher == nullptr)
+    {
+        return false;
+    }
+    m_matcher = matcher;
     isInit = true;
+    return true;
 }
 
-void SurfMatch::UnInit()
+void Tracking::UnInit()
 {
     if (!isInit)return;
     _mapMat.release();
@@ -39,7 +51,7 @@ void SurfMatch::UnInit()
     isInit = false;
 }
 
-void SurfMatch::match()
+void Tracking::match()
 {
     bool calc_is_faile = false;
     is_success_match = false;
@@ -61,7 +73,8 @@ void SurfMatch::match()
 
     // 尝试连续匹配，匹配角色附近小范围区域
     bool calc_continuity_is_faile = false;
-    pos = match_continuity(calc_continuity_is_faile);
+    pos = match_no_continuity(calc_continuity_is_faile);
+    //pos = match_continuity(calc_continuity_is_faile);
 
     if (!calc_continuity_is_faile)
     {
@@ -95,22 +108,23 @@ void SurfMatch::match()
     }
 }
 
-cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
+cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 {
     static cv::Mat img_scene(_mapMat);
     int real_some_map_size_r = DEFAULT_SOME_MAP_SIZE_R;
 
     cv::Point2d pos_not_on_city;
 
-    cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
+    //cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
+    cv::Mat img_object = _miniMapMat;
     //不在城镇中时
     cv::Point some_map_center_pos = pos;
     cv::Mat someMap = TianLi::Utils::get_some_map(img_scene, some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
     cv::Mat miniMap(img_object);
     cv::Mat miniMap_scale = img_object.clone();
 
-    matcher.detect_and_compute(someMap, some_map);
-    matcher.detect_and_compute(miniMap_scale, mini_map);
+    m_matcher->detect_and_compute(someMap, some_map);
+    m_matcher->detect_and_compute(miniMap_scale, mini_map);
 
     // 如果搜索范围内可识别特征点数量少于2，则认为计算失败
     if (some_map.size() <= 2 || mini_map.size() <= 2)
@@ -130,10 +144,11 @@ cv::Point2d SurfMatch::match_continuity(bool& calc_continuity_is_faile)
 /// </summary>
 /// <param name="calc_is_faile"></param>
 /// <returns></returns>
-cv::Point2d SurfMatch::match_no_continuity(bool& calc_is_faile)
+cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 {
-    cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
-    matcher.detect_and_compute(img_object, mini_map);
+    //cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
+    cv::Mat img_object = _miniMapMat;
+    m_matcher->detect_and_compute(img_object, mini_map);
     if (mini_map.size() <= 2)
     {
         calc_is_faile = true;
@@ -142,7 +157,7 @@ cv::Point2d SurfMatch::match_no_continuity(bool& calc_is_faile)
     return match_impl(_mapMat, map, img_object, mini_map, calc_is_faile);
 }
 
-cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const Match::KeyMatPoint& keypoint_object, bool& calc_is_faile)
+cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile)
 {
     cv::Point2d all_map_pos;
     // 没有提取到特征点直接返回，结果无效
@@ -152,11 +167,16 @@ cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatP
         return all_map_pos;
     }
     // 匹配特征点
-    std::vector<std::vector<cv::DMatch>> KNN_m = matcher.match(keypoint_object, keypoint_scene, isContinuity);
+    std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->match(keypoint_object, keypoint_scene, false);
+    // 绘制关键点
+    //cv::Mat match_results;
+    //cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
 
     std::vector<cv::Point2f> good_matched_scene;
     std::vector<cv::Point2f> good_matched_object;
-    TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, SURF_MATCH_RATIO_THRESH, good_matched_scene, good_matched_object);
+    TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
+
+    auto good_matched_count = good_matched_scene.size();
 
     if (good_matched_scene.size() < 6)
     {
@@ -182,7 +202,7 @@ cv::Point2d SurfMatch::match_impl(const cv::Mat& img_scene, const Match::KeyMatP
     }
 }
 
-cv::Point2d SurfMatch::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
+cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
 {
     cv::Point2d all_map_pos{};
 
@@ -220,51 +240,12 @@ cv::Point2d SurfMatch::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_mat
     return all_map_pos;
 }
 
-cv::Point2d SurfMatch::getLocalPos()
+cv::Point2d Tracking::getLocalPos()
 {
     return pos;
 }
 
-bool SurfMatch::getIsContinuity()
+bool Tracking::getIsContinuity()
 {
     return isContinuity;
-}
-
-Match::Match(double hessian_threshold, int octaves, int octave_layers, bool extended, bool upright)
-{
-    detector = cv::xfeatures2d::SURF::create(hessian_threshold, octaves, octave_layers, extended, upright);
-    //matcher  = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
-}
-
-std::vector<std::vector<cv::DMatch>> Match::match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool bfmatch)
-{
-    std::vector<std::vector<cv::DMatch>> match_group;
-    if (bfmatch)
-    {
-        matcher = cv::BFMatcher::create(cv::NORM_L1);
-    }
-    else
-    {
-        matcher = cv::FlannBasedMatcher::create();
-    }
-    matcher->knnMatch(query_descriptors, train_descriptors, match_group, 2);
-    return match_group;
-}
-
-std::vector<std::vector<cv::DMatch>> Match::match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point, bool bfmatch)
-{
-    return match(query_key_mat_point.descriptors, train_key_mat_point.descriptors, bfmatch);
-}
-
-bool Match::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
-{
-    if (img.empty()) return  false;
-    detector->detectAndCompute(img, cv::noArray(), keypoints, descriptors);
-    if (keypoints.size() == 0) return false;
-    return true;
-}
-
-bool Match::detect_and_compute(const cv::Mat& img, Match::KeyMatPoint& key_mat_point)
-{
-    return detect_and_compute(img, key_mat_point.keypoints, key_mat_point.descriptors);
 }

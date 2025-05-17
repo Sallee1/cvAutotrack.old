@@ -66,6 +66,7 @@ using namespace TianLi::Resource::Utils;
 #ifdef USED_BINARY_IMAGE
 #include "resources.load.h"
 #endif //
+#include <match/type/MatchType.h>
 
 Resources::Resources()
 {
@@ -177,11 +178,6 @@ inline void MapKeypointCache::serialize(std::string outFileName)
     Tianli::Resources::Utils::serializeStream ss(ofs);
     ss << this->bulid_time;
     ss << this->bulid_version;
-    ss << this->hessian_threshold;
-    ss << this->octave;
-    ss << this->octave_layers;
-    ss << this->extended;
-    ss << this->upRight;
     ss << this->keyPoints;
     ss << this->descriptors;
     ss << this->bulid_version_end;
@@ -189,33 +185,34 @@ inline void MapKeypointCache::serialize(std::string outFileName)
     ofs.close();
 }
 
-inline void MapKeypointCache::deSerialize(std::string infileName)
+inline void MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 {
     std::ifstream ifs(infileName, std::fstream::out | std::fstream::binary);
     Tianli::Resources::Utils::deSerializeStream dss(ifs);
     dss >> this->bulid_time;
     dss >> this->bulid_version;
-    dss >> this->hessian_threshold;
-    dss >> this->octave;
-    dss >> this->octave_layers;
-    dss >> this->extended;
-    dss >> this->upRight;
+
+    if (version_only)
+    {
+        ifs.close();
+        return;
+    }
+
     dss >> this->keyPoints;
     dss >> this->descriptors;
     dss >> this->bulid_version_end;
     ifs.close();
 }
 
-bool save_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, float hessian_threshold, int octaves, int octave_layers, bool extended, bool upright)
+bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
-    cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create(hessian_threshold, octaves, octave_layers, extended, upright);
-    detector->detectAndCompute(Resources::getInstance().MapTemplate, cv::noArray(), keypoints, descriptors);
+    auto& matcher = genshin_minimap.matcher;
+    matcher->detect_and_compute(Resources::getInstance().MapTemplate, keypoints, descriptors);
 
     std::string build_time = __DATE__ " " __TIME__;
 
     MapKeypointCache cache(
-        build_time, TianLi::Version::build_version, hessian_threshold,
-        (WORD)octaves, (WORD)octave_layers, (WORD)extended, (WORD)upright,
+        build_time, TianLi::Version::build_version,
         keypoints, descriptors);
     std::filesystem::remove("cvAutoTrack_Cache.xml");
     cache.serialize("cvAutoTrack_Cache.xml");
@@ -231,7 +228,7 @@ bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& desc
 
     MapKeypointCache cache;
     try {
-        cache.deSerialize("cvAutoTrack_Cache.xml");
+        cache.deSerialize("cvAutoTrack_Cache.xml", true);
     }
     catch (std::exception) {   //缓存损坏
         return false;
@@ -239,6 +236,8 @@ bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& desc
 
     if (cache.bulid_version != TianLi::Version::build_version)    //版本不一致
         return false;
+
+    cache.deSerialize("cvAutoTrack_Cache.xml");
 
     if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
         return false;
@@ -248,11 +247,11 @@ bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& desc
     return true;
 }
 
-bool get_map_keypoint(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+bool get_map_keypoint(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
     if (load_map_keypoint_cache(keypoints, descriptors) == false)
     {
-        return save_map_keypoint_cache(keypoints, descriptors);
+        return save_map_keypoint_cache(genshin_minimap, keypoints, descriptors);
     }
     else
     {
