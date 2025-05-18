@@ -676,13 +676,13 @@ bool AutoTrack::GetUID(int& uid)
 
     split(giUIDRef, channels);
 
-    if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics)
+    if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::bitblt)
     {
-        cv::cvtColor(giUIDRef, giUIDRef, cv::COLOR_RGBA2GRAY);
+        giUIDRef = channels[3];
     }
     else
     {
-        giUIDRef = channels[3];
+        cv::cvtColor(giUIDRef, giUIDRef, cv::COLOR_RGBA2GRAY);
     }
 
     uid_calculation_config config;

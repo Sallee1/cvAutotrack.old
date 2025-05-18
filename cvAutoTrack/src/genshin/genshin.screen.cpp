@@ -102,25 +102,49 @@ namespace TianLi::Genshin {
 
     void preprocess_raw_frame(cv::Mat& mat)
     {
-        //四通道强制三通道
-        if (mat.channels() == 4)
+        //提取alpha通道
+        bool is_grayscale = (mat.channels() == 1);
+        bool has_alpha = (mat.channels() == 4);
+
+        cv::Mat bgr_mat;
+        cv::Mat alpha_mat;
+        std::vector<cv::Mat> bgr_a_channels;
+        if (has_alpha)
         {
-            cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR);
+            bgr_mat = cv::Mat(mat.size(), CV_8UC3);
+            alpha_mat = cv::Mat(mat.size(), CV_8UC1);
+            bgr_a_channels = std::vector{ bgr_mat,alpha_mat };
+            cv::mixChannels(mat, bgr_a_channels, { 0,0,1,1,2,2,3,3 });
+        }
+        else {
+            bgr_mat = mat;
         }
 
         //目前主要工作是提亮，因为画面中有标准白，不是问题，但没有标准黑是个问题
         double min_col, max_col;
         cv::Mat grayscale_mat;
-        cv::cvtColor(mat, grayscale_mat, cv::COLOR_RGB2GRAY);
+        if (!is_grayscale) {
+            cv::cvtColor(bgr_mat, grayscale_mat, cv::COLOR_RGB2GRAY);
+        }
+
         cv::minMaxLoc(grayscale_mat, &min_col, &max_col);
         if (max_col > 250)
         {
             return;
         }
         cv::Mat f_mat;
-        mat.convertTo(f_mat, CV_32FC3);
+        bgr_mat.convertTo(f_mat, CV_32FC3);
         f_mat = f_mat * (255.0 / max_col);
-        f_mat.convertTo(mat, CV_8UC3);
+        f_mat.convertTo(bgr_mat, CV_8UC3);
+
+        if (has_alpha)
+        {
+            cv::mixChannels(bgr_a_channels, mat, { 0,0,1,1,2,2,3,3 });
+        }
+        else {
+            mat = bgr_mat;
+        }
+
         return;
     }
 }
