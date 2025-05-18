@@ -113,7 +113,7 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
     static cv::Mat img_scene(_mapMat);
     int real_some_map_size_r = DEFAULT_SOME_MAP_SIZE_R;
 
-    cv::Point2d pos_not_on_city;
+    cv::Point2d pos_object;
 
     //cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
     cv::Mat img_object = _miniMapMat;
@@ -130,13 +130,26 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
     if (some_map.size() <= 2 || mini_map.size() <= 2)
     {
         calc_continuity_is_faile = true;
-        return pos_not_on_city;
+        return pos_object;
     }
 
     cv::Point2d p = match_impl(someMap, some_map, img_object, mini_map, calc_continuity_is_faile);
+    if (calc_continuity_is_faile)
+    {
+        return {};
+    }
 
-    pos_not_on_city = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
-    return pos_not_on_city;
+    pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+
+    double last_distance = std::sqrt(std::pow(static_cast<double>(pos_object.x) - last_pos.x, 2) +
+        std::pow(static_cast<double>(pos_object.y) - last_pos.y, 2));
+    if (!isMatchAllMap && last_pos.x != 0 && last_pos.y != 0 && last_distance > 200)
+    {
+        calc_continuity_is_faile = true;
+        return {};
+    }
+
+    return pos_object;
 }
 
 /// <summary>
