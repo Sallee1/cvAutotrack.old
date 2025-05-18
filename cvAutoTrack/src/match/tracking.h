@@ -3,7 +3,7 @@
 #include <match/IMatcher.h>
 
 // 特征点匹配的剔除因子，越大越宽松
-constexpr double LOWE_RATIO_THRESH = 0.7;
+constexpr double LOWE_RATIO_THRESH = 0.66;
 constexpr double LOWE_RATIO_THRESH_CONTINUITY = 0.8;
 
 // 地图和小地图野外的缩放比例，（大地图 / 小地图野外）得到，注意城镇内小地图是野外的两倍，所以是城镇内比例是1.3/2

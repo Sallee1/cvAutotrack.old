@@ -174,7 +174,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 
     std::vector<cv::Point2f> good_matched_scene;
     std::vector<cv::Point2f> good_matched_object;
-    TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, isContinuity ? LOWE_RATIO_THRESH_CONTINUITY : LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
+    TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
 
     //auto good_matched_count = good_matched_scene.size();
 
