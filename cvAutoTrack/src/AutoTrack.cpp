@@ -408,6 +408,11 @@ bool AutoTrack::GetPosition(double& x, double& y)
     TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
 
     cv::Point2d pos = genshin_avatar_position.position;
+    if (!genshin_avatar_position.config.is_exist_last_match_minimap)
+    {
+        ErrorCode::getInstance() = { 20, "追踪失败，且没有历史信息" };
+        return false;
+    }
 
     x = pos.x;
     y = pos.y;
@@ -724,7 +729,10 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
 
     // x,y,mapId
     {
-        GetPositionOfMap(x, y, mapId);
+        if (!GetPositionOfMap(x, y, mapId))
+        {
+            return false;
+        }
     }
 
     // a
@@ -767,13 +775,13 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
         {
             ErrorCode::getInstance() = config.err;
         }
-    }
+        }
 
 #ifdef _DEBUG
     showMatchResult(x, y, mapId, a, r);
 #endif // _DEBUG
     return clear_error_logs();
-}
+    }
 
 bool AutoTrack::GetInfoLoadPicture(char* path, int& uid, double& x, double& y, double& a)
 {
@@ -938,5 +946,5 @@ inline void AutoTrack::showMatchResult(double x, double y, int mapId, double ang
 
     //在图中显示坐标信息
     cv::imshow("Visual Debug", subMap);
-}
+    }
 #endif

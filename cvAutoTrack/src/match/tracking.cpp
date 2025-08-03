@@ -199,38 +199,57 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
     cv::Mat H, mask;
     H = cv::estimateAffinePartial2D(cv::Mat(good_matched_object), cv::Mat(good_matched_scene), mask, cv::RANSAC);
 
-    cv::Mat test_out(img_scene.size(), CV_8UC3);
-    cv::warpAffine(img_object, test_out, H, img_scene.size());
-
     int accept_count = cv::countNonZero(mask);
-    double H_scale = (H.ptr<double>(0)[0] + H.ptr<double>(1)[1]) / 2;
-    double H_maxerr = 0.05;
-    double H_min_scale = 0.7;
 
-    if (accept_count < 3 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
+    if (accept_count < 4 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
     {
         //矩阵的置信度不高，使用旧版的筛选算法
         return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
     }
-    else if (
-        H_scale < H_min_scale ||
-        abs(H.ptr<double>(0)[0] - H.ptr<double>(1)[1]) > H_scale * H_maxerr ||
-        abs(H.ptr<double>(0)[1]) > H_scale * H_maxerr ||
-        abs(H.ptr<double>(0)[1]) > H_scale * H_maxerr)
-    {
-        //矩阵与经验不符（无旋转，无缩放，无斜切）
-        return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+    // 新增几何约束检查
+    if (!H.empty() && H.type() == CV_64F) {
+        // 提取旋转缩放矩阵部分
+        cv::Mat R = H(cv::Rect(0, 0, 2, 2));
+
+        // 使用SVD分解计算旋转角度
+        cv::Mat W, U, Vt;
+        cv::SVD::compute(R, W, U, Vt);
+        cv::Mat R_norm = U * Vt;  // 去除缩放的正交旋转矩阵
+
+        // 计算旋转角度（弧度转角度）
+        double angle = std::atan2(R_norm.at<double>(1, 0), R_norm.at<double>(0, 0));
+        double angle_deg = std::abs(angle * 180.0 / CV_PI);
+
+        // 计算缩放因子（取两个主方向的均值）
+        double scale_x = cv::norm(R.col(0));
+        double scale_y = cv::norm(R.col(1));
+        double scale = (scale_x + scale_y) / 2.0;
+
+        // 约束条件阈值
+        const double MAX_ANGLE = 2.0;    // ±5度
+        const double MIN_SCALE = 0.95;    // 最小缩放
+        const double MAX_SCALE = 1.2;    // 最大缩放
+
+        if (angle_deg <= MAX_ANGLE && scale >= MIN_SCALE && scale <= MAX_SCALE)
+        {
+            std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0, img_object.rows / 2.0) };
+            cv::transform(out_pt, out_pt, H);
+            return out_pt[0];
+        }
     }
-    else
-    {
-        std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2, img_object.rows / 2) };
-        cv::transform(out_pt, out_pt, H);
-        return out_pt[0];
-    }
+    //不满足约束
+    return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
 }
 
 cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
 {
+    if (isContinuity)
+    {
+        // 连续匹配情况下，不使用旧版稀疏算法，以防止陷入局部最优
+        calc_is_faile = true;
+        return {};
+    }
+
     cv::Point2d all_map_pos{};
 
     std::vector<double> lisx;

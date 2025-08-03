@@ -68,6 +68,15 @@ namespace TianLi::Genshin
                 return;
             }
 
+            //云原神有多个窗口，还是用老算法
+            if (giHandle = get_cloud_window())
+            {
+                genshin_handle.is_exist = true;
+                now_class = GenshinWindowClass::Qt;
+                set_genshin_window_variable(genshin_handle);
+                return;
+            }
+
             do {
                 std::wstring exeName(pe.szExeFile);
                 std::transform(exeName.begin(), exeName.end(), exeName.begin(), ::towlower);

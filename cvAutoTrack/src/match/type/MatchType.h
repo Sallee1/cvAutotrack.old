@@ -17,7 +17,7 @@ const std::vector<std::pair<std::wstring, GenshinWindowClass>> GenshinProcessNam
 {
     {L"YuanShen.exe",GenshinWindowClass::Unity},
     {L"GenshinImpact.exe", GenshinWindowClass::Unity} ,
-    {L"Genshin Impact Cloud Game.exe", GenshinWindowClass::Qt},
+    //{L"Genshin Impact Cloud Game.exe", GenshinWindowClass::Qt},
 };
 
 struct GenshinHandleConfig
