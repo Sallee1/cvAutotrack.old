@@ -318,7 +318,6 @@ namespace TianLi::Utils
         return { dstPoint, 0 };
     }
 
-#define _DEBUG
     void draw_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<cv::DMatch>& good_matches)
     {
         cv::Mat img_matches, imgmap, imgminmap;
@@ -328,7 +327,7 @@ namespace TianLi::Utils
     }
     void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
     {
-#ifdef _DEBUG
+#ifdef _DEBUG_MATCH
         std::vector<cv::DMatch> good_matches;
 #endif
         for (auto& m : KNN_m)
@@ -337,12 +336,12 @@ namespace TianLi::Utils
             {
                 scene_goodmatch.emplace_back(keypoint_scene[m[0].trainIdx].pt);
                 object_goodmatch.emplace_back(keypoint_object[m[0].queryIdx].pt);
-#ifdef _DEBUG
+#ifdef _DEBUG_MATCH
                 good_matches.emplace_back(m[0]);
 #endif
             }
         }
-#ifdef _DEBUG
+#ifdef _DEBUG_MATCH
         draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
 #else
         UNREFERENCED_PARAMETER(img_scene);
