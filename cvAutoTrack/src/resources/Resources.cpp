@@ -55,8 +55,8 @@ namespace TianLi::Resource::Utils
         size_t imageFileSize = SizeofResource(hModu, imageResHandle);
 
         // 直接使用OpenCV的imdecode函数从二进制数据加载图像
-        std::vector<char> buf = { (char*)pImageFile, (char*)pImageFile + imageFileSize };
-        mat = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
+        std::vector<uint8_t> buf = { (uint8_t*)pImageFile, (uint8_t*)pImageFile + imageFileSize };
+        mat = cv::imdecode(buf, cv::IMREAD_COLOR);
 
         UnlockResource(pImageFile);
         FreeResource(imageResDataHandle);
@@ -152,7 +152,7 @@ void Resources::install()
 {
     if (is_installed == false)
     {
-        LoadImg_ID2Mat(IDB_JPG_GIMAP, MapTemplate, L"JPG");
+        LoadImg_ID2Mat(IDB_WEBP_GIMAP, MapTemplate, L"WEBP");
         is_installed = true;
     }
 }

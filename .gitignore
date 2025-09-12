@@ -277,3 +277,6 @@ __pycache__/
 /out/build
 /CMakeSettings.json
 /*.code-workspace
+cvat_rc*
+/rclone.conf
+*.zip

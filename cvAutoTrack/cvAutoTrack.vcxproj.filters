@@ -89,6 +89,9 @@
     <Filter Include="src\match\type">
       <UniqueIdentifier>{b49b1982-0f1f-4863-bd45-9f568f2e08f3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\downloader">
+      <UniqueIdentifier>{0c97a8d2-dd0f-435a-b178-61416fe5737f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="resource\Source.def">
@@ -281,6 +284,12 @@
     </ClInclude>
     <ClInclude Include="src\match\type\MatchType.h">
       <Filter>src\match\type</Filter>
+    </ClInclude>
+    <ClInclude Include="src\downloader\cfiledownloader.h">
+      <Filter>src\downloader</Filter>
+    </ClInclude>
+    <ClInclude Include="src\downloader\cfiledownloaderasync.h">
+      <Filter>src\downloader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

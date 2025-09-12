@@ -1,0 +1,158 @@
+#pragma once
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <openssl/md5.h>
+#include <curl/curl.h>
+
+namespace tianli {
+    class FileDownloader {
+    public:
+        FileDownloader(const std::string& filePath,
+            const std::string& url,
+            const std::string& md5 = "")
+            : m_file_path(filePath), m_url(url), m_md5(md5) {}
+
+        bool download() {
+            // 检查MD5匹配情况
+            if (!m_md5.empty() && fileExists() && checkMD5()) {
+                last_error_code = 0;
+                m_last_error_msg = "File already exists and MD5 matches";
+                return true;
+            }
+
+            // 执行下载
+            bool download_success = downloadFile();
+
+            // 需要MD5校验但下载失败
+            if (!m_md5.empty() && !download_success) {
+                return false;
+            }
+
+            // 需要MD5校验且下载成功
+            if (!m_md5.empty()) {
+                return checkMD5();
+            }
+
+            // 不需要MD5校验
+            return download_success;
+        }
+
+        int getLastErrorCode() const { return last_error_code; }
+        std::string getLastErrorMsg() const { return m_last_error_msg; }
+
+    private:
+        int last_error_code{ 0 };
+        std::string m_last_error_msg;
+        std::string m_file_path;
+        std::string m_url;
+        std::string m_md5;
+
+        // 检查文件是否存在
+        bool fileExists() const {
+            std::ifstream file(m_file_path, std::ios::binary);
+            return file.good();
+        }
+
+        // 计算文件MD5
+        std::string calculateMD5() const {
+            std::ifstream file(m_file_path, std::ios::binary);
+            if (!file) return "";
+
+            MD5_CTX context;
+            MD5_Init(&context);
+
+            char buffer[4096];
+            while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
+                MD5_Update(&context, buffer, file.gcount());
+            }
+
+            unsigned char digest[MD5_DIGEST_LENGTH];
+            MD5_Final(digest, &context);
+
+            char md5_str[33]{};
+            for (int i = 0; i < MD5_DIGEST_LENGTH; ++i) {
+                sprintf(&md5_str[i * 2], "%02x", digest[i]);
+            }
+            return std::string(md5_str, 32);
+        }
+
+        // 校验MD5
+        bool checkMD5() const {
+            if (m_md5.empty()) return true; // 未提供MD5时不校验
+            std::string file_md5 = calculateMD5();
+            if (file_md5.empty()) return false;
+            return file_md5 == m_md5;
+        }
+
+        // CURL回调函数
+        static size_t writeData(void* ptr, size_t size, size_t nmemb, void* stream) {
+            std::ofstream* file = static_cast<std::ofstream*>(stream);
+            size_t written = file->write(static_cast<char*>(ptr), size * nmemb).tellp();
+            return written / size; // 返回处理的数据块数量
+        }
+
+        // 下载文件核心函数
+        bool downloadFile() {
+            CURL* curl = curl_easy_init();
+            if (!curl) {
+                last_error_code = -1;
+                m_last_error_msg = "CURL initialization failed";
+                return false;
+            }
+
+            std::ofstream output_file(m_file_path, std::ios::binary);
+            if (!output_file.is_open()) {
+                last_error_code = -2;
+                m_last_error_msg = "Failed to open file: " + m_file_path;
+                curl_easy_cleanup(curl);
+                return false;
+            }
+
+            // 设置CURL选项
+            curl_easy_setopt(curl, CURLOPT_URL, m_url.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output_file);
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+            curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+
+            // 执行下载
+            CURLcode res = curl_easy_perform(curl);
+            output_file.close();
+
+            // 处理结果
+            if (res != CURLE_OK) {
+                last_error_code = res;
+                m_last_error_msg = curl_easy_strerror(res);
+
+                // 获取重定向URL（如果有）
+                char* redirectUrl = nullptr;
+                if (curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirectUrl) == CURLE_OK && redirectUrl) {
+                    m_last_error_msg += " (Redirected to: " + std::string(redirectUrl) + ")";
+                }
+
+                remove(m_file_path.c_str());
+                curl_easy_cleanup(curl);
+                return false;
+            }
+
+            // 验证下载是否真的成功
+            long http_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            if (http_code >= 400) {
+                last_error_code = http_code;
+                m_last_error_msg = "HTTP error: " + std::to_string(http_code);
+                remove(m_file_path.c_str());
+                curl_easy_cleanup(curl);
+                return false;
+            }
+
+            curl_easy_cleanup(curl);
+            last_error_code = 0;
+            m_last_error_msg = "Download succeeded";
+            return true;
+        }
+    };
+}

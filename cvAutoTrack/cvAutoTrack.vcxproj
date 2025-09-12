@@ -132,7 +132,7 @@
     <IncludePath>$(ProjectDir)src;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</ExternalIncludePath>
-    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
+    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgUseStatic>true</VcpkgUseStatic>
@@ -171,7 +171,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <AdditionalOptions>/utf-8 /Zc:char8_t- %(AdditionalOptions)</AdditionalOptions>
@@ -262,7 +262,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <BrowseInformation>false</BrowseInformation>
       <CallingConvention>Cdecl</CallingConvention>
       <UseFullPaths>false</UseFullPaths>
-      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl-static\include;C:\Packages\openssl-static\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -274,11 +274,11 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;%(AdditionalDependencies);dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <Version>3.4</Version>
-      <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
@@ -312,7 +312,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <BrowseInformation>false</BrowseInformation>
       <CallingConvention>Cdecl</CallingConvention>
       <UseFullPaths>false</UseFullPaths>
-      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl-static\include;C:\Packages\openssl-static\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
@@ -328,12 +328,12 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;%(AdditionalDependencies);dxgi.lib;d3d11.lib</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
       <Version>3.4</Version>
-      <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
@@ -365,6 +365,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\algorithms\algorithms.rotation.h" />
     <ClInclude Include="src\algorithms\algorithms.include.h" />
     <ClInclude Include="src\AutoTrack.h" />
+    <ClInclude Include="src\downloader\cfiledownloaderasync.h" />
     <ClInclude Include="src\ErrorCode.h" />
     <ClInclude Include="src\filter\Filter.h" />
     <ClInclude Include="src\filter\kalman\Kalman.h" />
@@ -423,6 +424,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     </ClCompile>
     <ClCompile Include="src\cvAutoTrack.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
+    <ClInclude Include="src\downloader\cfiledownloader.h" />
     <ClCompile Include="src\ErrorCode.cpp" />
     <ClCompile Include="src\filter\Filter.cpp" />
     <ClCompile Include="src\filter\kalman\Kalman.cpp" />
