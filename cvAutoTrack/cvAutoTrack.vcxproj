@@ -281,6 +281,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
+      <UseDynamicDebugging>true</UseDynamicDebugging>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
