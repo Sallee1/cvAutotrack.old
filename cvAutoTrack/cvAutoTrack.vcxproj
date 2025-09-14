@@ -274,14 +274,13 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <Version>3.4</Version>
       <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
-      <UseDynamicDebugging>true</UseDynamicDebugging>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -329,7 +328,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
