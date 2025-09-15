@@ -69,7 +69,7 @@ namespace TianLi::Genshin
             }
 
             //云原神有多个窗口，还是用老算法
-            if (giHandle = get_cloud_window())
+            if ((giHandle = get_cloud_window()))
             {
                 genshin_handle.is_exist = true;
                 now_class = GenshinWindowClass::Qt;
