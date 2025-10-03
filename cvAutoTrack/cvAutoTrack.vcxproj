@@ -185,6 +185,7 @@
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <Version>3.0</Version>
       <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>./src</AdditionalIncludeDirectories>
@@ -282,6 +283,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <UseDynamicDebugging>true</UseDynamicDebugging>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -337,6 +339,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
+      <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>./src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -446,6 +449,8 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     </ClCompile>
     <ClCompile Include="src\resources\binary\resources.binary.cpp" />
     <ClCompile Include="src\resources\import\resources.import.cpp" />
+    <ClCompile Include="src\resources\KeypointsCache.cpp" />
+    <ClInclude Include="src\resources\KeypointsCache.h" />
     <ClCompile Include="src\resources\Resources.cpp" />
     <ClCompile Include="src\resources\resources.load.cpp" />
     <ClCompile Include="src\utils\log\utils.log.cpp" />

@@ -36,39 +36,7 @@ public:
     void install();
     void release();
 public:
-    //void get_map_keypoint_cache();
     bool map_is_embedded();
 private:
     bool is_installed = false;
 };
-
-class MapKeypointCache {
-public:
-    std::string bulid_time;
-    std::string bulid_version;
-    std::vector<cv::KeyPoint> keyPoints;
-    cv::Mat descriptors;
-    std::string bulid_version_end;
-
-    MapKeypointCache() {}
-
-    MapKeypointCache(std::string bulid_time,
-        std::string bulid_version,
-        std::vector<cv::KeyPoint> keyPoints,
-        cv::Mat descriptors) :
-        bulid_time(bulid_time), bulid_version(bulid_version),
-        keyPoints(keyPoints), descriptors(descriptors), bulid_version_end(bulid_version) {}
-
-    void serialize(std::string outfileName);
-    /**
-     * @brief 解码缓存
-     * @param infileName 输入文件名
-     * @param version_only 是否只解析版本，防止数据结构不一致而崩溃
-     */
-    void deSerialize(std::string infileName, bool version_only = false);
-};
-
-bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
-bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
-
-bool get_map_keypoint(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);

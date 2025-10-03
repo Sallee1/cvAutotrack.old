@@ -291,6 +291,9 @@
     <ClInclude Include="src\downloader\cfiledownloaderasync.h">
       <Filter>src\downloader</Filter>
     </ClInclude>
+    <ClInclude Include="src\resources\KeypointsCache.h">
+      <Filter>src\resources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AutoTrack.cpp">
@@ -359,6 +362,9 @@
     </ClCompile>
     <ClCompile Include="src\match\tracking.cpp">
       <Filter>src\match</Filter>
+    </ClCompile>
+    <ClCompile Include="src\resources\KeypointsCache.cpp">
+      <Filter>src\resources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
