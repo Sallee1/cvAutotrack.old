@@ -7,8 +7,6 @@ import shutil
 url = "https://kyjg-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta"
 directory = "../cvat_rc_beta"
 output_file = os.path.join(directory, "dependents.json")
-diff_directory = "../cvat_rc_beta.diff"
-removed_file = os.path.join(diff_directory, "removed.txt")
 
 # Function to calculate MD5 hash of a file
 def calculate_md5(filepath):
@@ -30,10 +28,6 @@ def increment_version(version):
     major, minor, patch = map(int, version.split('.'))
     patch += 1
     return f"{major}.{minor}.{patch}"
-
-# Ensure diff directory exists
-if not os.path.exists(diff_directory):
-    os.makedirs(diff_directory)
 
 # Main logic
 def main():
@@ -76,21 +70,6 @@ def main():
             data["version"] = increment_version(data["version"])
             data["sumMD5"] = sum_md5
             data["filelist"] = filelist
-
-            # Identify added and removed files
-            added_files = current_files - existing_files
-            removed_files = existing_files - current_files
-
-            # Copy added files to diff directory
-            for added_file in added_files:
-                src = os.path.join(directory, added_file)
-                dst = os.path.join(diff_directory, added_file)
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                shutil.copy2(src, dst)
-
-            # Write removed files to removed.txt
-            with open(removed_file, "w") as rf:
-                rf.writelines(f"{file}\n" for file in removed_files)
 
             with open(output_file, "w") as f:
                 json.dump(data, f, indent=4)

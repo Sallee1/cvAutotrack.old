@@ -69,7 +69,6 @@ def split_map(img:np.ndarray,
     spatial["origin"] = [origin[0],origin[1]]
     spatial["center"] = [center[0] + left_pad,center[1]+top_pad]
     spatial["img_size"] = [pad_width, pad_height]
-    spatial["padding_col"] = list(padding_col)
     spatial["scale"] = gimap_json["scale"]
     spatial["tile_range_x"] = [-left_count,rigth_count - 1]
     spatial["tile_range_y"] = [-top_count,bottom_count - 1]
