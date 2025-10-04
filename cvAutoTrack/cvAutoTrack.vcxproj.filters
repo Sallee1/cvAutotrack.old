@@ -366,6 +366,13 @@
     <ClCompile Include="src\resources\KeypointsCache.cpp">
       <Filter>src\resources</Filter>
     </ClCompile>
+    <ClCompile Include="src\match\matcher_impl\AkazeMatcher.cpp">
+      <Filter>src\match\matcher_impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\match\IMatcher.cpp">
+      <Filter>src\match</Filter>
+    </ClCompile>
+    <ClCompile Include="src\match\matcher_impl\SURFMatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource\cvAutoTrack.rc">

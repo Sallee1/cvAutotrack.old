@@ -9,7 +9,7 @@
 #include "version/Version.h"
 #include "serialize.h"
 
-class MapKeypointCache {
+struct MapKeypointCache {
 public:
 	std::string bulid_time;
 	std::string bulid_version;

@@ -46,10 +46,8 @@ bool AutoTrack::init()
 
 	if (!genshin_minimap.is_init_finish)
 	{
-		genshin_minimap.matcher = std::shared_ptr<IMatcher>(new AKAZEMatcher(cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT, 0, 3, 0.0001f, 1, 1, cv::KAZE::DIFF_PM_G2, -1));
-		//genshin_minimap.matcher = std::shared_ptr<IMatcher>(new SURFMatcher(
-		//	0.01, 1, 1, false, true
-		//));
+		//genshin_minimap.matcher = std::shared_ptr<IMatcher>(new AKAZEMatcher(cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT, 0, 3, 0.0001f, 1, 1, cv::KAZE::DIFF_PM_G2, -1));
+		genshin_minimap.matcher = std::shared_ptr<IMatcher>(new SURFMatcher(0.01, 1, 1, false, true));
 		genshin_minimap.is_run_init_start = true;
 		TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
 		genshin_minimap.is_run_init_start = false;
