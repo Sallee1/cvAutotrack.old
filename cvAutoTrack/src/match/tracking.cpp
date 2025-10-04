@@ -60,6 +60,10 @@ void Tracking::match()
 	if (isMatchAllMap)
 	{
 		pos = match_no_continuity(calc_is_faile);
+		if (std::isnan(pos.x) || std::isnan(pos.y))
+		{
+			calc_is_faile = true;
+		}
 
 		// 没有有效结果，结束
 		if (calc_is_faile)
@@ -75,6 +79,10 @@ void Tracking::match()
 	bool calc_continuity_is_faile = false;
 	//pos = match_no_continuity(calc_continuity_is_faile);
 	pos = match_continuity(calc_continuity_is_faile);
+	if (std::isnan(pos.x) || std::isnan(pos.y))
+	{
+		calc_continuity_is_faile = true;
+	}
 
 	if (!calc_continuity_is_faile)
 	{
@@ -120,6 +128,12 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 	//不在城镇中时
 	cv::Point some_map_center_pos = pos;
 	cv::Mat someMap = TianLi::Utils::get_some_map(img_scene, some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
+	if (someMap.empty())
+	{
+		calc_continuity_is_faile = true;
+		return {};
+	}
+
 	cv::Mat miniMap(img_object);
 	cv::Mat miniMap_scale = img_object.clone();
 
@@ -172,24 +186,32 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 
 cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile)
 {
-	cv::Point2d all_map_pos;
 	// 没有提取到特征点直接返回，结果无效
 	if (keypoint_object.keypoints.size() == 0)
 	{
 		calc_is_faile = true;
-		return all_map_pos;
+		return {};
 	}
-	// 匹配特征点
-	std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->match(keypoint_object, keypoint_scene, isContinuity);
-	// 绘制关键点
-	//cv::Mat match_results;
-	//cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
 
 	std::vector<cv::Point2f> good_matched_scene;
 	std::vector<cv::Point2f> good_matched_object;
-	TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
+	// 匹配特征点
+	if (isContinuity)  //连续匹配下图像较小，使用互匹配提高质量
+	{
+		std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, true);
+		TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matched_scene, good_matched_object);
+		//auto good_matched_count = good_matched_scene.size();
+	}
+	else {  //全图匹配较大，优先使用速度更快的lowe
+		std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, false);
+		// 绘制关键点
+		//cv::Mat match_results;
+		//cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
 
-	//auto good_matched_count = good_matched_scene.size();
+		TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
+
+		//auto good_matched_count = good_matched_scene.size();
+	}
 
 	if (good_matched_scene.size() < 6)
 	{
