@@ -5,25 +5,32 @@
 class IMatcher {
 public:
 
-    virtual ~IMatcher() = default;
-    struct KeyMatPoint
-    {
-        std::vector<cv::KeyPoint> keypoints;
-        cv::Mat descriptors;
-        bool empty() { return keypoints.size() == 0; }
-        auto size() { return keypoints.size(); }
-    };
+	virtual ~IMatcher() = default;
+	struct KeyMatPoint
+	{
+		std::vector<cv::KeyPoint> keypoints;
+		cv::Mat descriptors;
+		bool empty() { return keypoints.size() == 0; }
+		auto size() { return keypoints.size(); }
+	};
 
 public:
-    virtual std::vector<std::vector<cv::DMatch>> match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool bfmatch = false) = 0;
+	virtual std::vector<std::vector<cv::DMatch>> knnmatch(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, int k = 2, bool bfmatch = false);
 
-    virtual std::vector<std::vector<cv::DMatch>> match(const KeyMatPoint& query_key_mat_point, const KeyMatPoint& train_key_mat_point, bool bfmatch = false) {
-        return match(query_key_mat_point.descriptors, train_key_mat_point.descriptors, bfmatch);
-    }
+	virtual std::vector<std::vector<cv::DMatch>> knnmatch(const KeyMatPoint& query, const KeyMatPoint& train, int k = 2, bool bfmatch = false);
 
-    virtual bool detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) = 0;
+	virtual std::vector<cv::DMatch> match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool bfmatch = false, bool cross_check = false);
 
-    virtual bool detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point) {
-        return detect_and_compute(img, key_mat_point.keypoints, key_mat_point.descriptors);
-    }
+	virtual std::vector<cv::DMatch> match(const KeyMatPoint& query, const KeyMatPoint& train, bool bfmatch = false, bool cross_check = false);
+
+	virtual bool detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
+
+	virtual bool detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point);
+
+	virtual cv::Ptr<cv::Feature2D> getFeature2D() = 0;
+
+	virtual bool getIsBinaryDescriptor() = 0;
+
+protected:
+	cv::Ptr<cv::DescriptorMatcher> getMatcher(bool bfmatch = false, bool cross_check = false);
 };

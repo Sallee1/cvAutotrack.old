@@ -18,28 +18,6 @@ public:
 	virtual ~SURFMatcher() = default;
 
 	// 通过 IMatcher 继承
-	std::vector<std::vector<cv::DMatch>> match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool bfmatch) override {
-		std::vector<std::vector<cv::DMatch>> match_group;
-		if (!is_bf_matcher && bfmatch)
-		{
-			matcher = cv::BFMatcher::create(cv::NORM_L2);
-			is_bf_matcher = true;
-		}
-		else if (is_bf_matcher && !bfmatch)
-		{
-			cv::Ptr<cv::flann::KDTreeIndexParams> index_params{ cv::makePtr<cv::flann::KDTreeIndexParams>(6) };
-			cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(32,0, true) };
-			matcher = cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
-			is_bf_matcher = false;
-		}
-		matcher->knnMatch(query_descriptors, train_descriptors, match_group, 2);
-		return match_group;
-	}
-
-	bool detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) override {
-		if (img.empty()) return  false;
-		detector->detectAndCompute(img, cv::noArray(), keypoints, descriptors);
-		if (keypoints.size() == 0) return false;
-		return true;
-	}
+	cv::Ptr<cv::Feature2D> getFeature2D() override;
+	bool getIsBinaryDescriptor() override;
 };
