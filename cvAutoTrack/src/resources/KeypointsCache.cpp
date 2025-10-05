@@ -5,6 +5,7 @@
 #include "version/Version.h"
 #include "serialize.h"
 #include "resources/Resources.h"
+#include "resources/map_mapper.h"
 
 void MapKeypointCache::serialize(std::string outFileName)
 {
@@ -37,6 +38,7 @@ void MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 	dss >> this->bulid_version_end;
 	ifs.close();
 }
+
 namespace {
 	/**
 	 * @brief 将输入的rect分块成子rect，且包含重叠区域
@@ -80,14 +82,99 @@ namespace {
 		int block_size = 1200;
 		int padding = 64; //64像素重叠
 		auto rects = getRects(cv::Rect2i(0, 0, map_template.cols, map_template.rows), cv::Size2i(block_size, block_size), cv::Size2i(padding, padding));
+
+		for (auto& rect : rects)
+		{
+			cv::Rect2i padded_rect = rect.first;
+			cv::Rect2i inner_rect = rect.second;
+
+			std::vector<cv::KeyPoint> kps;
+			cv::Mat desc;
+
+			//生成特征点
+			cv::Mat roi_map_template = map_template(padded_rect);
+			matcher->detect(roi_map_template, kps);
+
+			//清除填充区域的关键点
+			auto inner_rect_align = inner_rect;
+			inner_rect_align.x -= padded_rect.x;
+			inner_rect_align.y -= padded_rect.y;
+			kps.erase(std::remove_if(kps.begin(), kps.end(), [&](const cv::KeyPoint& kp) {
+				return inner_rect_align.contains(kp.pt) == false;
+				}), kps.end());
+
+			if (kps.empty())
+				continue;
+
+			//计算描述子
+			matcher->compute(map_template(rect.first), kps, desc);
+
+			//调整关键点坐标到全图坐标系
+			for (auto& kp : kps)
+			{
+				kp.pt.x += rect.first.x;
+				kp.pt.y += rect.first.y;
+			}
+			//合并关键点和描述子
+			if (keypoints.empty())
+			{
+				keypoints = kps;
+				descriptors = desc;
+			}
+			else
+			{
+				//合并描述子
+				cv::vconcat(descriptors, desc, descriptors);
+				//合并关键点
+				keypoints.insert(keypoints.end(), kps.begin(), kps.end());
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * @brief 使用映射表重映射关键点坐标
+	 * @param keypoints 关键点
+	 * @return 映射后的关键点
+	 */
+	void remap_keypoints(std::vector<cv::KeyPoint>& keypoints)
+	{
+		auto& layer_mapper = TianLi::Utils::layer_mapper;
+		std::vector<cv::KeyPoint> remapped_keypoints;
+		remapped_keypoints.reserve(keypoints.size());
+
+		cv::Point2i center = Resources::getInstance().map_relative_center;
+		cv::parallel_for_({ 0,static_cast<int>(keypoints.size()) },
+			[&](const cv::Range& range)
+			{
+				for (int i = range.start; i < range.end; i++)
+				{
+					auto& kp = keypoints[i];
+					auto& pt = kp.pt;
+					//图层映射
+					for (auto& [key, value] : layer_mapper)
+					{
+						auto srcRect = value.first + center;
+						auto dstRect = value.second + center;
+
+						if (srcRect.contains(pt))
+						{
+							pt = cv::Point2f{
+								((float)dstRect.width / srcRect.width) * (pt.x - srcRect.x) + dstRect.x,
+								((float)dstRect.height / srcRect.height) * (pt.y - srcRect.y) + dstRect.y };
+							break;
+						}
+					}
+				}
+			}
+		);
 	}
 }
 
 bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
-	auto& matcher = genshin_minimap.matcher;
-	matcher->detect_and_compute(Resources::getInstance().MapTemplate, keypoints, descriptors);
-
+	gen_map_keypoint_cache(genshin_minimap, keypoints, descriptors);
+	remap_keypoints(keypoints);
 	std::string build_time = __DATE__ " " __TIME__;
 
 	MapKeypointCache cache(

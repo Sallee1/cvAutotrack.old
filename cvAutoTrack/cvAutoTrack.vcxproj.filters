@@ -255,9 +255,6 @@
     <ClInclude Include="src\frame\capture\utils\utils.window_scale.h">
       <Filter>src\frame\capture\utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\utils\map_mapper.h">
-      <Filter>src\utils</Filter>
-    </ClInclude>
     <ClInclude Include="src\genshin\genshin.minimap.h">
       <Filter>src\genshin</Filter>
     </ClInclude>
@@ -292,6 +289,9 @@
       <Filter>src\downloader</Filter>
     </ClInclude>
     <ClInclude Include="src\resources\KeypointsCache.h">
+      <Filter>src\resources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\map_mapper.h">
       <Filter>src\resources</Filter>
     </ClInclude>
   </ItemGroup>

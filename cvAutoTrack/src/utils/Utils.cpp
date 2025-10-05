@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Utils.h"
-#include "map_mapper.h"
+#include "resources/map_mapper.h"
 #include <resources/Resources.h>
 
 namespace TianLi::Utils
@@ -268,20 +268,22 @@ namespace TianLi::Utils
 		int id = 0;
 		cv::Point2d dstPoint = cv::Point2d(x, y);
 		cv::Point2i center = Resources::getInstance().map_relative_center;
-		//先检查在哪个洞内
-		for (auto& [key, value] : area_mappers)
-		{
-			auto srcRect = value.first + center;
-			auto dstRect = value.second + center;
 
-			if (srcRect.contains(cv::Point2d(dstPoint.x, dstPoint.y)))
-			{
-				dstPoint = {
-					((double)dstRect.width / srcRect.width) * (dstPoint.x - srcRect.x) + dstRect.x,
-					((double)dstRect.height / srcRect.height) * (dstPoint.y - srcRect.y) + dstRect.y };
-				break;
-			}
-		}
+		//特征点已经做了坐标映射，这里不再映射图层
+		//先检查在哪个洞内
+		//for (auto& [key, value] : layer_mapper)
+		//{
+		//	auto srcRect = value.first + center;
+		//	auto dstRect = value.second + center;
+
+		//	if (srcRect.contains(cv::Point2d(dstPoint.x, dstPoint.y)))
+		//	{
+		//		dstPoint = {
+		//			((double)dstRect.width / srcRect.width) * (dstPoint.x - srcRect.x) + dstRect.x,
+		//			((double)dstRect.height / srcRect.height) * (dstPoint.y - srcRect.y) + dstRect.y };
+		//		break;
+		//	}
+		//}
 
 		//然后检查在哪个地图内
 		for (auto& [key, value] : map_mappers)
@@ -310,10 +312,11 @@ namespace TianLi::Utils
 	void draw_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<cv::DMatch>& good_matches)
 	{
 		cv::Mat img_matches, imgmap, imgminmap;
-		drawKeypoints(img_scene, keypoint_scene, imgmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-		drawKeypoints(img_object, keypoint_object, imgminmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+		drawKeypoints(img_scene, keypoint_scene, imgmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
+		drawKeypoints(img_object, keypoint_object, imgminmap, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
 		drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	}
+
 	void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
 	{
 #ifdef _DEBUG_MATCH

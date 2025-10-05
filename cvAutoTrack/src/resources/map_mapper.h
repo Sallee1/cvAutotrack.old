@@ -10,7 +10,7 @@ namespace TianLi::Utils
 		{ {"远古圣山（地下）",4 }, { cv::Rect2i(-5868, 1838, 2300, 1800),cv::Rect2i(916,780,1533,1200) }}
 	};
 
-	inline const std::map<std::string, std::pair<cv::Rect2i, cv::Rect2i>> area_mappers{
+	inline const std::map<std::string, std::pair<cv::Rect2i, cv::Rect2i>> layer_mapper{
 		{"5.6无名岛",{cv::Rect2i(-6368,2237,400,400), cv::Rect2i(-6968,1637,400,400)}},
 		{"悠悠度假村",{cv::Rect2i(-68,2138,1300,1500), cv::Rect2i(-8867,-1562,1300,1500)}},
 		{"蒙德城", { cv::Rect2i(2432, -2163, 800, 600),cv::Rect2i(560, -1800, 267, 200)} },

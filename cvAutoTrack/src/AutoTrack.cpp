@@ -431,6 +431,7 @@ bool AutoTrack::GetPositionOfMap(double& x, double& y, int& mapId)
 	}
 
 	auto raw_pos = TianLi::Utils::ConvertSpecialMapsPosition(x, y);
+	//auto raw_pos = std::pair<cv::Point2d, int>{ cv::Point2d{ x,y },0 };
 
 	mapId = raw_pos.second;
 	if (mapId == 0)
