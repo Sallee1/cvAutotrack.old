@@ -23,6 +23,10 @@ public:
 
 	virtual std::vector<cv::DMatch> match(const KeyMatPoint& query, const KeyMatPoint& train, bool bfmatch = false, bool cross_check = false);
 
+	virtual bool detect(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints);
+
+	virtual bool compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
+
 	virtual bool detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors);
 
 	virtual bool detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point);

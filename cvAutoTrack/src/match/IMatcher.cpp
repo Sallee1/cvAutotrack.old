@@ -23,6 +23,22 @@ std::vector<cv::DMatch> IMatcher::match(const KeyMatPoint& query, const KeyMatPo
 	return match(query.descriptors, train.descriptors, bfmatch, cross_check);
 }
 
+bool IMatcher::detect(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints)
+{
+	if (img.empty()) return  false;
+	auto detector = getFeature2D();
+	detector->detect(img, keypoints);
+	return true;
+}
+
+bool IMatcher::compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+{
+	if (img.empty() || keypoints.size() == 0) return  false;
+	auto detector = getFeature2D();
+	detector->compute(img, keypoints, descriptors);
+	return true;
+}
+
 bool IMatcher::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
 	if (img.empty()) return  false;
