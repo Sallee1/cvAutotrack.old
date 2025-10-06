@@ -65,6 +65,50 @@ namespace Tianli::Resources::Utils
 			const uchar* bytes = buf.data();
 			fileOut.write((char*)bytes, size);
 		}
+
+		// New helpers for common OpenCV/STD types
+		void operator <<(const cv::Rect2i& r)
+		{
+			*this << r.x; *this << r.y; *this << r.width; *this << r.height;
+		}
+
+		void operator <<(const cv::Size2i& s)
+		{
+			*this << s.width; *this << s.height;
+		}
+
+		void operator <<(const std::vector<int>& v)
+		{
+			align(sizeof(DWORD));
+			DWORD size = static_cast<DWORD>(v.size());
+			fileOut.write((char*)&size, sizeof(DWORD));
+			if (!v.empty())
+			{
+				fileOut.write((const char*)v.data(), sizeof(int) * v.size());
+			}
+		}
+
+		void operator <<(const std::vector<std::vector<int>>& vv)
+		{
+			align(sizeof(DWORD));
+			DWORD outer = static_cast<DWORD>(vv.size());
+			fileOut.write((char*)&outer, sizeof(DWORD));
+			for (const auto& v : vv)
+			{
+				*this << v;
+			}
+		}
+
+		void operator <<(const std::vector<cv::Rect2i>& vr)
+		{
+			align(sizeof(DWORD));
+			DWORD size = static_cast<DWORD>(vr.size());
+			fileOut.write((char*)&size, sizeof(DWORD));
+			for (const auto& r : vr)
+			{
+				*this << r;
+			}
+		}
 	};
 
 	class deSerializeStream
@@ -147,5 +191,60 @@ namespace Tianli::Resources::Utils
 
 			delete[] bytes;
 		}
+
+		// New helpers for common OpenCV/STD types
+		void operator >>(cv::Rect2i& r)
+		{
+			*this >> r.x; *this >> r.y; *this >> r.width; *this >> r.height;
+		}
+
+		void operator >>(cv::Size2i& s)
+		{
+			*this >> s.width; *this >> s.height;
+		}
+
+		void operator >>(std::vector<int>& v)
+		{
+			align(sizeof(DWORD));
+			DWORD size;
+			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
+			fileIn.read((char*)&size, sizeof(DWORD));
+			v.resize(size);
+			if (size > 0)
+			{
+				if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
+				fileIn.read((char*)v.data(), sizeof(int) * size);
+			}
+		}
+
+		void operator >>(std::vector<std::vector<int>>& vv)
+		{
+			align(sizeof(DWORD));
+			DWORD outer;
+			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
+			fileIn.read((char*)&outer, sizeof(DWORD));
+			vv.resize(outer);
+			for (DWORD i = 0; i < outer; ++i)
+			{
+				*this >> vv[i];
+			}
+		}
+
+		void operator >>(std::vector<cv::Rect2i>& vr)
+		{
+			align(sizeof(DWORD));
+			DWORD size;
+			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
+			fileIn.read((char*)&size, sizeof(DWORD));
+			vr.resize(size);
+			for (DWORD i = 0; i < size; ++i)
+			{
+				*this >> vr[i];
+			}
+		}
+
+		// expose eof check
+		bool eof() const { return fileIn.eof(); }
+		std::istream& stream() { return fileIn; }
 	};
 }

@@ -5,30 +5,10 @@
 
 namespace TianLi::Utils
 {
-	cv::Mat get_some_map(const cv::Mat& map, cv::Point& pos, int size_r)
+	cv::Rect2i get_some_map_rect(const cv::Mat& map, cv::Point& pos, int size_r)
 	{
 		cv::Rect rect(pos.x - size_r, pos.y - size_r, size_r + size_r, size_r + size_r);
-		if (rect.x < 0)
-		{
-			pos.x += -rect.x;
-			rect.x = 0;
-		}
-		if (rect.y < 0)
-		{
-			pos.y += -rect.y;
-			rect.y = 0;
-		}
-		if (rect.x + rect.width > map.cols)
-		{
-			pos.x -= rect.x + rect.width - map.cols;
-			rect.x = map.cols - rect.width;
-		}
-		if (rect.y + rect.height > map.rows)
-		{
-			pos.y -= rect.y + rect.height - map.rows;
-			rect.y = map.rows - rect.height;
-		}
-		return map(rect);
+		return rect & cv::Rect2i{ 0,0,map.cols,map.rows };
 	}
 	double dis(cv::Point2d p)
 	{
@@ -319,7 +299,7 @@ namespace TianLi::Utils
 
 	void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
 	{
-#ifdef _DEBUG_MATCH
+#ifdef _CVAT_DEBUG
 		std::vector<cv::DMatch> good_matches;
 #endif
 		for (auto& m : KNN_m)
@@ -328,12 +308,12 @@ namespace TianLi::Utils
 			{
 				scene_goodmatch.emplace_back(keypoint_scene[m[0].trainIdx].pt);
 				object_goodmatch.emplace_back(keypoint_object[m[0].queryIdx].pt);
-#ifdef _DEBUG_MATCH
+#ifdef _CVAT_DEBUG
 				good_matches.emplace_back(m[0]);
 #endif
 			}
 		}
-#ifdef _DEBUG_MATCH
+#ifdef _CVAT_DEBUG
 		draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
 #else
 		UNREFERENCED_PARAMETER(img_scene);

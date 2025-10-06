@@ -140,10 +140,10 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 		cv::Mat gi_map_descriptors;
 
 		surf_match.setMap(Resources::getInstance().MapTemplate);
-		get_map_keypoint(genshin_minimap, gi_map_keypoints, gi_map_descriptors);
+		//读取关键点缓存
+		MapKeypointCache map_keypoints_cache = get_map_keypoint(genshin_minimap);
 		surf_match.Init(genshin_minimap.matcher,
-			std::move(gi_map_keypoints),
-			std::move(gi_map_descriptors));
+			std::move(map_keypoints_cache));
 
 		is_init = true;
 		return;

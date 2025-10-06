@@ -2,6 +2,8 @@
 #include "KeypointsCache.h"
 #include <fstream>
 #include <filesystem>
+#include <algorithm>
+#include <execution>
 #include "version/Version.h"
 #include "serialize.h"
 #include "resources/Resources.h"
@@ -13,8 +15,18 @@ void MapKeypointCache::serialize(std::string outFileName)
 	Tianli::Resources::Utils::serializeStream ss(ofs);
 	ss << this->bulid_time;
 	ss << this->bulid_version;
-	ss << this->keyPoints;
+	ss << this->keypoints;
 	ss << this->descriptors;
+
+	// LSH元数据相关信息（兼容旧版结构）
+	ss << this->map_size;
+	ss << this->lsh_cell;
+	ss << this->lsh_grid_dims;
+	ss << this->lsh_cell_offsets;
+	ss << this->lsh_kp_indices;
+	ss << this->block_rects;
+	ss << this->block_offsets;
+
 	ss << this->bulid_version_end;
 	ss.align();
 	ofs.close();
@@ -33,8 +45,30 @@ void MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 		return;
 	}
 
-	dss >> this->keyPoints;
+	dss >> this->keypoints;
 	dss >> this->descriptors;
+
+	//读取LSH元数据相关信息（可选）
+	try {
+		// 成功读取
+		dss >> this->map_size;
+		dss >> this->lsh_cell;
+		dss >> this->lsh_grid_dims;
+		dss >> this->lsh_cell_offsets;
+		dss >> this->lsh_kp_indices;
+		dss >> this->block_rects;
+		dss >> this->block_offsets;
+	}
+	catch (...) {
+		// 读取失败，则可能是旧版本缓存
+		this->map_size = {};
+		this->lsh_cell = {};
+		this->lsh_grid_dims = {};
+		this->lsh_cell_offsets.clear();
+		this->lsh_kp_indices.clear();
+		this->block_rects.clear();
+		this->block_offsets.clear();
+	}
 	dss >> this->bulid_version_end;
 	ifs.close();
 }
@@ -73,7 +107,8 @@ namespace {
 		return rects;
 	}
 
-	bool gen_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+	bool gen_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors,
+		std::vector<cv::Rect2i>& block_rects, std::vector<int>& block_offsets)
 	{
 		auto& matcher = genshin_minimap.matcher;
 		auto& map_template = Resources::getInstance().MapTemplate;
@@ -82,6 +117,10 @@ namespace {
 		int block_size = 1200;
 		int padding = 64; //64像素重叠
 		auto rects = getRects(cv::Rect2i(0, 0, map_template.cols, map_template.rows), cv::Size2i(block_size, block_size), cv::Size2i(padding, padding));
+
+		block_rects.clear();
+		block_offsets.clear();
+		block_offsets.push_back(0);
 
 		for (auto& rect : rects)
 		{
@@ -104,7 +143,11 @@ namespace {
 				}), kps.end());
 
 			if (kps.empty())
+			{
+				block_rects.push_back(inner_rect);
+				block_offsets.push_back(block_offsets.back());
 				continue;
+			}
 
 			//计算描述子
 			matcher->compute(map_template(rect.first), kps, desc);
@@ -115,7 +158,7 @@ namespace {
 				kp.pt.x += rect.first.x;
 				kp.pt.y += rect.first.y;
 			}
-			//合并关键点和描述子
+			//合并关键点和描述子，确保同一分块的描述子是连续追加
 			if (keypoints.empty())
 			{
 				keypoints = kps;
@@ -123,11 +166,12 @@ namespace {
 			}
 			else
 			{
-				//合并描述子
 				cv::vconcat(descriptors, desc, descriptors);
-				//合并关键点
 				keypoints.insert(keypoints.end(), kps.begin(), kps.end());
 			}
+
+			block_rects.push_back(inner_rect);
+			block_offsets.push_back(block_offsets.back() + static_cast<int>(kps.size()));
 		}
 		return true;
 	}
@@ -171,29 +215,177 @@ namespace {
 	}
 }
 
-bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+// Build a simple grid based LSH on keypoints
+void KeypointGridLSH::build(const std::vector<cv::KeyPoint>& kps, const cv::Mat& desc, const cv::Rect2i& bounds_, const cv::Size2i& cell_)
 {
-	gen_map_keypoint_cache(genshin_minimap, keypoints, descriptors);
-	remap_keypoints(keypoints);
-	std::string build_time = __DATE__ " " __TIME__;
+	bounds = bounds_;
+	cell = cell_;
 
-	MapKeypointCache cache(
-		build_time, TianLi::Version::build_version,
-		keypoints, descriptors);
+	int gw = std::max(1, (bounds.width + cell.width - 1) / cell.width);
+	int gh = std::max(1, (bounds.height + cell.height - 1) / cell.height);
+	dims = { gw, gh };
+	int cells = gw * gh;
+	std::vector<int> counts(cells, 0);
+
+	auto cell_index = [&](const cv::Point2f& pt) {
+		int cx = std::clamp((int)((pt.x - bounds.x) / cell.width), 0, gw - 1);
+		int cy = std::clamp((int)((pt.y - bounds.y) / cell.height), 0, gh - 1);
+		return cy * gw + cx;
+		};
+
+	for (const auto& kp : kps)
+	{
+		counts[cell_index(kp.pt)]++;
+	}
+
+	cell_offsets.assign(cells + 1, 0);
+	for (int i = 0; i < cells; ++i) cell_offsets[i + 1] = cell_offsets[i] + counts[i];
+	kp_indices.assign(kps.size(), -1);
+
+	std::vector<int> cursor = cell_offsets;
+	for (int i = 0; i < (int)kps.size(); ++i)
+	{
+		int c = cell_index(kps[i].pt);
+		kp_indices[cursor[c]++] = i;
+	}
+
+	kp_pos.assign(kps.size(), { 0,0 });
+	cv::parallel_for_({ 0, static_cast<int>(kps.size()) }, [&](const cv::Range& r)
+		{
+			for (int i = r.start; i < r.end; ++i)
+			{
+				kp_pos[i] = kps[i].pt;
+			}
+		});
+}
+
+void KeypointGridLSH::fromCache(const MapKeypointCache& cache)
+{
+	bounds = { 0, 0, cache.map_size.width, cache.map_size.height };
+	cell = cache.lsh_cell;
+	dims = cache.lsh_grid_dims;
+	cell_offsets = cache.lsh_cell_offsets;
+	kp_indices = cache.lsh_kp_indices;
+
+	auto& kps = cache.keypoints;
+	kp_pos.assign(kps.size(), { 0,0 });
+	cv::parallel_for_({ 0, static_cast<int>(kps.size()) }, [&](const cv::Range& r)
+		{
+			for (int i = r.start; i < r.end; ++i)
+			{
+				kp_pos[i] = kps[i].pt;
+			}
+		});
+}
+
+std::vector<int> KeypointGridLSH::query(const cv::Rect2i& bbox) const
+{
+	std::vector<int> result;
+	if (kp_pos.empty() && kp_indices.empty()) return result;
+	int gw = dims.width, gh = dims.height;
+	if (gw == 0 || gh == 0) return result;
+	cv::Rect2i clip = bbox & bounds;
+
+	if (clip.width <= 0 || clip.height <= 0) return result;
+	int x0 = std::clamp((clip.x - bounds.x) / cell.width, 0, gw - 1);
+	int y0 = std::clamp((clip.y - bounds.y) / cell.height, 0, gh - 1);
+	int x1 = std::clamp((clip.x + clip.width - 1 - bounds.x) / cell.width, 0, gw - 1);
+	int y1 = std::clamp((clip.y + clip.height - 1 - bounds.y) / cell.height, 0, gh - 1);
+
+	for (int cy = y0; cy <= y1; ++cy)
+	{
+		for (int cx = x0; cx <= x1; ++cx)
+		{
+			size_t c = static_cast<size_t>(cy * gw + cx);
+			int begin = cell_offsets[c];
+			int end = cell_offsets[c + 1];
+			for (int i = begin; i < end; ++i)
+			{
+				int idx = kp_indices[i];
+				const auto& p = kp_pos[idx];
+				if (clip.contains(p))
+					result.push_back(idx);
+			}
+		}
+	}
+	return result;
+}
+
+void KeypointGridLSH::gather_by_indices(
+	const std::vector<int>& indices, const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors,
+	std::vector<cv::KeyPoint>& out_kps,
+	cv::Mat& out_desc) const
+{
+	out_kps.resize(indices.size());
+	if (indices.empty()) { out_desc.release(); return; }
+
+	// clone descriptors header (type, cols)
+	int desc_cols = descriptors.cols;
+	int desc_type = descriptors.type();
+	out_desc.create((int)indices.size(), desc_cols, desc_type);
+
+	// parallel copy rows by indices
+	cv::parallel_for_({ 0, (int)indices.size() }, [&](const cv::Range& r)
+		{
+			for (int i = r.start; i < r.end; ++i)
+			{
+				int idx = indices[i];
+				out_kps[i] = keypoints[idx];
+				descriptors.row(idx).copyTo(out_desc.row(i));
+			}
+		});
+}
+
+void KeypointGridLSH::query_and_gather(const cv::Rect2i& bbox,
+	const std::vector<cv::KeyPoint>& keypoints, const cv::Mat& descriptors,
+	std::vector<cv::KeyPoint>& out_kps,
+	cv::Mat& out_desc) const
+{
+	auto idx = query(bbox);
+	gather_by_indices(idx, keypoints, descriptors, out_kps, out_desc);
+}
+
+bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, MapKeypointCache& cache)
+{
+	std::vector<cv::Rect2i> block_rects;
+	std::vector<int> block_offsets;
+	gen_map_keypoint_cache(genshin_minimap, cache.keypoints, cache.descriptors, block_rects, block_offsets);
+	remap_keypoints(cache.keypoints);
+	std::string build_time = __DATE__ " " __TIME__;
+	cache.bulid_time = build_time;
+	cache.bulid_version = TianLi::Version::build_version;
+
+	// fill LSH/grid metadata
+	auto cell_size = Resources::getInstance().lsh_cell_size;
+	cache.map_size = { Resources::getInstance().MapTemplate.cols, Resources::getInstance().MapTemplate.rows };
+	cache.lsh_cell = { cell_size, cell_size };
+	int gw = std::max(1, (cache.map_size.width + cache.lsh_cell.width - 1) / cache.lsh_cell.width);
+	int gh = std::max(1, (cache.map_size.height + cache.lsh_cell.height - 1) / cache.lsh_cell.height);
+	cache.lsh_grid_dims = { gw, gh };
+
+	// Build grid on remapped keypoints
+	KeypointGridLSH grid;
+	grid.build(cache.keypoints, cache.descriptors, { 0,0, cache.map_size.width, cache.map_size.height }, cache.lsh_cell);
+	cache.lsh_cell_offsets = grid.cell_offsets;
+	cache.lsh_kp_indices = grid.kp_indices;
+
+	// record block grouping
+	cache.block_rects = block_rects;
+	cache.block_offsets = block_offsets;
+
 	std::filesystem::remove("cvAutoTrack_Cache.xml");
 	cache.serialize("cvAutoTrack_Cache.xml");
 
 	return true;
 }
 
-bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+bool load_map_keypoint_cache(MapKeypointCache& cache)
 {
 	if (std::filesystem::exists("cvAutoTrack_Cache.xml") == false)
 	{
 		return false;
 	}
 
-	MapKeypointCache cache;
 	try {
 		cache.deSerialize("cvAutoTrack_Cache.xml", true);
 	}
@@ -209,19 +401,16 @@ bool load_map_keypoint_cache(std::vector<cv::KeyPoint>& keypoints, cv::Mat& desc
 	if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
 		return false;
 
-	keypoints = cache.keyPoints;
-	descriptors = cache.descriptors;
 	return true;
 }
 
-bool get_map_keypoint(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+MapKeypointCache get_map_keypoint(const GenshinMinimap& genshin_minimap)
 {
-	if (load_map_keypoint_cache(keypoints, descriptors) == false)
+	MapKeypointCache cache;
+	if (load_map_keypoint_cache(cache) == false)
 	{
-		return save_map_keypoint_cache(genshin_minimap, keypoints, descriptors);
+		cache = {};
+		save_map_keypoint_cache(genshin_minimap, cache);
 	}
-	else
-	{
-		return true;
-	}
+	return cache;
 }

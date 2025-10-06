@@ -2,6 +2,7 @@
 #include "tracking.h"
 #include "match/type/MatchType.h"
 #include "resources/Resources.h"
+#include "resources/KeypointsCache.h"
 #include "utils/Utils.h"
 
 void Tracking::setMap(cv::Mat gi_map)
@@ -17,7 +18,7 @@ void Tracking::setMiniMap(cv::Mat miniMapMat)
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 {
 	if (isInit)return true;
-	m_matcher->detect_and_compute(_mapMat, map.keypoints, map.descriptors);
+	m_matcher->detect_and_compute(_mapMat, map_kp.keypoints, map_kp.descriptors);
 	if (matcher == nullptr)
 	{
 		return false;
@@ -30,8 +31,30 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors)
 {
 	if (isInit)return true;
-	map.keypoints = std::move(gi_map_keypoints);
-	map.descriptors = std::move(gi_map_descriptors);
+	map_kp.keypoints = std::move(gi_map_keypoints);
+	map_kp.descriptors = std::move(gi_map_descriptors);
+	if (matcher == nullptr)
+	{
+		return false;
+	}
+	m_matcher = matcher;
+
+	auto cell_size = Resources::getInstance().lsh_cell_size;
+	m_lsh_index = std::make_unique<KeypointGridLSH>();
+	m_lsh_index->build(map_kp.keypoints, map_kp.descriptors, cv::Rect2i(0, 0, _mapMat.cols, _mapMat.rows), cv::Size2i(cell_size, cell_size));
+
+	isInit = true;
+	return true;
+}
+
+bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&& map_keypoints_cache)
+{
+	if (isInit) return false;
+	m_lsh_index = std::make_unique<KeypointGridLSH>();
+	m_lsh_index->fromCache(map_keypoints_cache);
+	map_kp.keypoints = std::move(map_keypoints_cache.keypoints);
+	map_kp.descriptors = std::move(map_keypoints_cache.descriptors);
+
 	if (matcher == nullptr)
 	{
 		return false;
@@ -46,8 +69,8 @@ void Tracking::UnInit()
 	if (!isInit)return;
 	_mapMat.release();
 	_mapMat = cv::Mat();
-	map.keypoints.clear();
-	map.descriptors.release();
+	map_kp.keypoints.clear();
+	map_kp.descriptors.release();
 	isInit = false;
 }
 
@@ -125,35 +148,42 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
 	cv::Mat img_object = _miniMapMat;
-	//不在城镇中时
 	cv::Point some_map_center_pos = pos;
-	cv::Mat someMap = TianLi::Utils::get_some_map(img_scene, some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
+	auto someMap_roi = TianLi::Utils::get_some_map_rect(img_scene, some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
+	cv::Mat someMap = img_scene(someMap_roi).clone();
 	if (someMap.empty())
 	{
 		calc_continuity_is_faile = true;
 		return {};
 	}
 
-	cv::Mat miniMap(img_object);
-	cv::Mat miniMap_scale = img_object.clone();
-
-	m_matcher->detect_and_compute(someMap, some_map);
-	m_matcher->detect_and_compute(miniMap_scale, mini_map);
+	cv::Mat miniMap = img_object.clone();
+	m_matcher->detect_and_compute(miniMap, mini_map_kp);
+	m_lsh_index->query_and_gather(someMap_roi, map_kp.keypoints, map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
+	//cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
+	//	for (int i = range.start; i < range.end; i++)
+	//	{
+	//		some_map_kp.keypoints[i].pt.x -= someMap_roi.x;
+	//		some_map_kp.keypoints[i].pt.y -= someMap_roi.y;
+	//	}
+	//	});
 
 	// 如果搜索范围内可识别特征点数量少于2，则认为计算失败
-	if (some_map.size() <= 2 || mini_map.size() <= 2)
+	if (some_map_kp.size() <= 2 || mini_map_kp.size() <= 2)
 	{
 		calc_continuity_is_faile = true;
 		return pos_object;
 	}
 
-	cv::Point2d p = match_impl(someMap, some_map, img_object, mini_map, calc_continuity_is_faile);
+	cv::Point2d p = match_impl(someMap, some_map_kp, img_object, mini_map_kp, calc_continuity_is_faile);
 	if (calc_continuity_is_faile)
 	{
 		return {};
 	}
 
-	pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+	//由于使用了绝对坐标定位，不需要单独映射
+	//pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+	pos_object = p;
 
 	double last_distance = std::sqrt(std::pow(static_cast<double>(pos_object.x) - last_pos.x, 2) +
 		std::pow(static_cast<double>(pos_object.y) - last_pos.y, 2));
@@ -175,13 +205,13 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 {
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
 	cv::Mat img_object = _miniMapMat;
-	m_matcher->detect_and_compute(img_object, mini_map);
-	if (mini_map.size() <= 2)
+	m_matcher->detect_and_compute(img_object, mini_map_kp);
+	if (mini_map_kp.size() <= 2)
 	{
 		calc_is_faile = true;
 		return {};
 	}
-	return match_impl(_mapMat, map, img_object, mini_map, calc_is_faile);
+	return match_impl(_mapMat, map_kp, img_object, mini_map_kp, calc_is_faile);
 }
 
 cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile)
@@ -252,11 +282,24 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		const double MIN_SCALE = 0.95;    // 最小缩放
 		const double MAX_SCALE = 1.3;    // 最大缩放
 
-		if (angle_deg <= MAX_ANGLE && scale >= MIN_SCALE && scale <= MAX_SCALE)
+		if (angle_deg <= MAX_ANGLE)
 		{
-			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0, img_object.rows / 2.0) };
-			cv::transform(out_pt, out_pt, H);
-			return out_pt[0];
+			//由于游戏中有三种缩放，对不同的缩放范围做处理
+			bool is_scale_vaild = false;
+			for (int i = 1; i <= 3; i++)
+			{
+				if (scale >= MIN_SCALE / i && scale <= MAX_SCALE / i)
+				{
+					is_scale_vaild = true;
+					break;
+				}
+			}
+			if (is_scale_vaild)
+			{
+				std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0, img_object.rows / 2.0) };
+				cv::transform(out_pt, out_pt, H);
+				return out_pt[0];
+			}
 		}
 	}
 	//不满足约束

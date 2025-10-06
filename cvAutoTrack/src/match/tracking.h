@@ -11,6 +11,9 @@ constexpr double MAP_BOTH_SCALE_RATE = 1.0;
 // 地图中取小部分区域的半径，目前为小地图标准半径
 constexpr int DEFAULT_SOME_MAP_SIZE_R = 200;
 
+struct MapKeypointCache;
+struct KeypointGridLSH;
+
 class Tracking
 {
 	cv::Mat _mapMat;
@@ -27,7 +30,8 @@ public:
 public:
 	std::shared_ptr<IMatcher> m_matcher = nullptr;
 
-	IMatcher::KeyMatPoint map, some_map, mini_map;
+	IMatcher::KeyMatPoint map_kp, some_map_kp, mini_map_kp;
+	std::unique_ptr<KeypointGridLSH> m_lsh_index;
 
 	bool isInit = false;
 	bool isContinuity = false;
@@ -42,6 +46,7 @@ public:
 
 	bool Init(const std::shared_ptr<IMatcher>& matcher);
 	bool Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors);
+	bool Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&& map_keypoints_cache);
 	void UnInit();
 	void match();
 

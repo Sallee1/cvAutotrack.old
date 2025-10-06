@@ -5,38 +5,40 @@
 class Resources
 {
 private:
-    Resources();
+	Resources();
 public:
-    ~Resources();
+	~Resources();
 
-    Resources(const Resources&) = delete;
-    Resources& operator=(const Resources&) = delete;
-    static Resources& getInstance();
-
-public:
-    std::map<std::pair<int, int>, cv::Mat> MapBlockCache;
+	Resources(const Resources&) = delete;
+	Resources& operator=(const Resources&) = delete;
+	static Resources& getInstance();
 
 public:
-    cv::Mat PaimonTemplate;
-    cv::Mat IconSightTemplate;
-    cv::Mat IconQuestTemplate;
-    cv::Mat StarTemplate;
-    cv::Mat MapTemplate;
-    cv::Mat UID;
-    cv::Mat UIDnumber[10];
+	std::map<std::pair<int, int>, cv::Mat> MapBlockCache;
 
-    // 天理坐标映射关系参数 地图中心
-    // 地图中天理坐标中心的像素坐标
-    const cv::Point2d map_relative_center = { 6668, 3662 }; // 天理坐标中点
-    // 地图中图片像素与天理坐标系的比例
-    const double map_relative_scale = 3.413333; // 天理坐标缩放
-    // 手柄模式相对于键鼠模式ui大小的缩放值的倒数
-    const double controller_ui_scale = 1.2;
 public:
-    void install();
-    void release();
+	cv::Mat PaimonTemplate;
+	cv::Mat IconSightTemplate;
+	cv::Mat IconQuestTemplate;
+	cv::Mat StarTemplate;
+	cv::Mat MapTemplate;
+	cv::Mat UID;
+	cv::Mat UIDnumber[10];
+
+	// 天理坐标映射关系参数 地图中心
+	// 地图中天理坐标中心的像素坐标
+	const cv::Point2d map_relative_center = { 6668, 3662 }; // 天理坐标中点
+	// 地图中图片像素与天理坐标系的比例
+	const double map_relative_scale = 3.413333; // 天理坐标缩放
+	// 手柄模式相对于键鼠模式ui大小的缩放值的倒数
+	const double controller_ui_scale = 1.2;
+	//lsh的块大小
+	int lsh_cell_size = 600;
 public:
-    bool map_is_embedded();
+	void install();
+	void release();
+public:
+	bool map_is_embedded();
 private:
-    bool is_installed = false;
+	bool is_installed = false;
 };
