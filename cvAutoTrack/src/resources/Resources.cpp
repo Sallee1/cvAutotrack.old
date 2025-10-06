@@ -150,7 +150,7 @@ void Resources::install()
 {
 	if (is_installed == false)
 	{
-		LoadImg_ID2Mat(IDB_WEBP_GIMAP, MapTemplate, L"WEBP");
+		LoadImg_ID2Mat(IDB_J2000_GIMAP, MapTemplate, L"J2000");
 		is_installed = true;
 	}
 }

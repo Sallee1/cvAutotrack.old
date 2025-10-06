@@ -21,6 +21,7 @@
 #define IDB_PNG_ICON_SIGHT              131
 #define IDB_WEBP_GIMAP                   132
 #define IDB_PNG_ICON_QUEST              133
+#define IDB_J2000_GIMAP                 134
 
 // #define IDR_XML_GIMAP_COMPUTE           140
 
