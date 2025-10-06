@@ -1,4 +1,5 @@
 #pragma once
+#include <match/IMatcher.h>
 
 namespace TianLi::Utils
 {
@@ -25,6 +26,15 @@ namespace TianLi::Utils
 	double stdev_abs(std::vector<double> list);
 
 	cv::Mat crop_border(const cv::Mat& mat, double border);
+
+	/**
+	 * @brief 移除小地图的假特征点（从边缘生成），小地图是圆形的，且在图像中心
+	 * @param input_img_size 输入的图像尺寸
+	 * @param diameter 小地图的直径
+	 * @param kp 输入的关键点
+	 * @return 移除后的关键点
+	 */
+	IMatcher::KeyMatPoint remove_minimap_fake_keypoint(const cv::Size2i& input_img_size, float diameter, const IMatcher::KeyMatPoint& keypoints);
 
 	std::vector<double> extract_valid(std::vector<double> list);
 	std::vector<cv::Point2d> extract_valid(std::vector<cv::Point2d> list);

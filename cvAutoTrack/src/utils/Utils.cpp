@@ -74,6 +74,34 @@ namespace TianLi::Utils
 		return accum / (list.size() - 1);
 	}
 
+	IMatcher::KeyMatPoint remove_minimap_fake_keypoint(const cv::Size2i& input_img_size, float diameter, const IMatcher::KeyMatPoint& keypoints)
+	{
+		IMatcher::KeyMatPoint result;
+		result.descriptors = cv::Mat(0, keypoints.descriptors.cols, keypoints.descriptors.type());
+		size_t keypoint_size = keypoints.keypoints.size();
+		if (keypoint_size == 0)
+		{
+			return result;
+		}
+		float radius = diameter / 2.0f;
+		float radius_sq = radius * radius;
+		cv::Point2f center(input_img_size.width / 2.0f, input_img_size.height / 2.0f);
+
+		for (size_t i = 0; i < keypoint_size; ++i)
+		{
+			cv::Point2f pt = keypoints.keypoints[i].pt;
+			float dx = pt.x - center.x;
+			float dy = pt.y - center.y;
+			float dist_sq = dx * dx + dy * dy;
+			if (dist_sq <= radius_sq)
+			{
+				result.keypoints.push_back(keypoints.keypoints[i]);
+				result.descriptors.push_back(keypoints.descriptors.row(static_cast<int>(i)));
+			}
+		}
+		return result;
+	}
+
 	std::vector<cv::Point2d> extract_valid(std::vector<cv::Point2d> list)
 	{
 		std::vector<cv::Point2d> valid_list;

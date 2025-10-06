@@ -10,9 +10,17 @@ void Tracking::setMap(cv::Mat gi_map)
 	_mapMat = gi_map;
 }
 
-void Tracking::setMiniMap(cv::Mat miniMapMat)
+void Tracking::setMiniMap(cv::Mat miniMapMat, float diameter)
 {
 	_miniMapMat = miniMapMat;
+	if (diameter > 0)
+	{
+		_miniMapDiameter = diameter;
+	}
+	else
+	{
+		_miniMapDiameter = std::min(miniMapMat.cols, miniMapMat.rows);
+	}
 }
 
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
@@ -159,14 +167,19 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 
 	cv::Mat miniMap = img_object.clone();
 	m_matcher->detect_and_compute(miniMap, mini_map_kp);
+	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), _miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
+
 	m_lsh_index->query_and_gather(someMap_roi, map_kp.keypoints, map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
-	//cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
-	//	for (int i = range.start; i < range.end; i++)
-	//	{
-	//		some_map_kp.keypoints[i].pt.x -= someMap_roi.x;
-	//		some_map_kp.keypoints[i].pt.y -= someMap_roi.y;
-	//	}
-	//	});
+#ifdef _CVAT_DEBUG
+	// 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
+	cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
+		for (int i = range.start; i < range.end; i++)
+		{
+			some_map_kp.keypoints[i].pt.x -= someMap_roi.x;
+			some_map_kp.keypoints[i].pt.y -= someMap_roi.y;
+		}
+		});
+#endif
 
 	// 如果搜索范围内可识别特征点数量少于2，则认为计算失败
 	if (some_map_kp.size() <= 2 || mini_map_kp.size() <= 2)
@@ -181,9 +194,11 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 		return {};
 	}
 
-	//由于使用了绝对坐标定位，不需要单独映射
-	//pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+#ifdef _CVAT_DEBUG
+	pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+#else
 	pos_object = p;
+#endif
 
 	double last_distance = std::sqrt(std::pow(static_cast<double>(pos_object.x) - last_pos.x, 2) +
 		std::pow(static_cast<double>(pos_object.y) - last_pos.y, 2));
@@ -206,6 +221,7 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
 	cv::Mat img_object = _miniMapMat;
 	m_matcher->detect_and_compute(img_object, mini_map_kp);
+	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), _miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
 	if (mini_map_kp.size() <= 2)
 	{
 		calc_is_faile = true;
@@ -279,27 +295,14 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 
 		// 约束条件阈值
 		const double MAX_ANGLE = 2.0;    // ±5度
-		const double MIN_SCALE = 0.95;    // 最小缩放
+		const double MIN_SCALE = 0.31;    // 最小缩放
 		const double MAX_SCALE = 1.3;    // 最大缩放
 
-		if (angle_deg <= MAX_ANGLE)
+		if (angle_deg <= MAX_ANGLE && scale >= MIN_SCALE && scale <= MAX_SCALE)
 		{
-			//由于游戏中有三种缩放，对不同的缩放范围做处理
-			bool is_scale_vaild = false;
-			for (int i = 1; i <= 3; i++)
-			{
-				if (scale >= MIN_SCALE / i && scale <= MAX_SCALE / i)
-				{
-					is_scale_vaild = true;
-					break;
-				}
-			}
-			if (is_scale_vaild)
-			{
-				std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0, img_object.rows / 2.0) };
-				cv::transform(out_pt, out_pt, H);
-				return out_pt[0];
-			}
+			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0, img_object.rows / 2.0) };
+			cv::transform(out_pt, out_pt, H);
+			return out_pt[0];
 		}
 	}
 	//不满足约束
