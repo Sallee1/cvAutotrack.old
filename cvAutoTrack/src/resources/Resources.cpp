@@ -6,6 +6,7 @@
 #include "serialize.h"
 #include "version/Version.h"
 #include "KeypointsCache.h"
+#include "resources/gimap_downloader.h"
 
 namespace TianLi::Resource::Utils
 {
@@ -118,6 +119,7 @@ Resources::Resources()
 	{
 		cv::cvtColor(UIDnumber[i], UIDnumber[i], cv::COLOR_RGBA2GRAY);
 	}
+	install();
 }
 
 Resources::~Resources()
@@ -150,7 +152,10 @@ void Resources::install()
 {
 	if (is_installed == false)
 	{
-		LoadImg_ID2Mat(IDB_J2000_GIMAP, MapTemplate, L"J2000");
+		//auto& gimap_downloader = GIMapDownloader::getInstance();
+		//gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
+
+		LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF");
 		is_installed = true;
 	}
 }

@@ -263,7 +263,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <BrowseInformation>false</BrowseInformation>
       <CallingConvention>Cdecl</CallingConvention>
       <UseFullPaths>false</UseFullPaths>
-      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl-static\include;C:\Packages\openssl-static\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl-static\include;C:\Packages\openssl-static\include;C:\Packages\nlohmann\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -275,11 +275,11 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_core4100.lib;opencv_imgproc4100.lib;opencv_imgcodecs4100.lib;opencv_flann4100.lib;opencv_features2d4100.lib;opencv_xfeatures2d4100.lib;opencv_calib3d4100.lib;opencv_video4100.lib;avif.lib;yuv.lib;aom.lib;dav1d.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;libcrypto.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <Version>3.4</Version>
-      <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Packages\opencv-static\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <UseDynamicDebugging>true</UseDynamicDebugging>
@@ -315,7 +315,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <BrowseInformation>false</BrowseInformation>
       <CallingConvention>Cdecl</CallingConvention>
       <UseFullPaths>false</UseFullPaths>
-      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl-static\include;C:\Packages\openssl-static\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Packages\opencv-static\include;C:\Packages\curl-static\include;C:\Packages\openssl-static\include;C:\Packages\nlohmann\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
@@ -331,12 +331,12 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       </OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_world4100.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>IlmImf.lib;ippicvmt.lib;ippiw.lib;ittnotify.lib;libjpeg-turbo.lib;libopenjp2.lib;libpng.lib;libtiff.lib;libwebp.lib;opencv_img_hash4100.lib;opencv_core4100.lib;opencv_imgproc4100.lib;opencv_imgcodecs4100.lib;opencv_flann4100.lib;opencv_features2d4100.lib;opencv_xfeatures2d4100.lib;opencv_calib3d4100.lib;opencv_video4100.lib;avif.lib;yuv.lib;aom.lib;dav1d.lib;zlib.lib;dxgi.lib;libcurl.lib;libssl.lib;libcrypto.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>resource/Source.def</ModuleDefinitionFile>
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
       <Version>3.4</Version>
-      <AdditionalLibraryDirectories>C:\Packages\opencv-static\x64\vc17\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Packages\opencv-static\staticlib;C:\Packages\curl-static\lib;C:\Packages\openssl-static\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
@@ -413,6 +413,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\resources\binary\image\uid\resources.binary.image.uid9.h" />
     <ClInclude Include="src\resources\binary\image\uid\resources.binary.image.uid_.h" />
     <ClInclude Include="src\resources\binary\resources.binary.h" />
+    <ClInclude Include="src\resources\gimap_downloader.h" />
     <ClInclude Include="src\resources\import\resources.import.h" />
     <ClInclude Include="src\resources\Resources.h" />
     <ClInclude Include="src\resources\resources.load.h" />
@@ -451,6 +452,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='RelNoOpz|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\resources\binary\resources.binary.cpp" />
+    <ClCompile Include="src\resources\gimap_downloader.cpp" />
     <ClCompile Include="src\resources\import\resources.import.cpp" />
     <ClCompile Include="src\resources\KeypointsCache.cpp" />
     <ClInclude Include="src\resources\KeypointsCache.h" />

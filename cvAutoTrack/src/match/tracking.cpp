@@ -157,26 +157,35 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
 	cv::Mat img_object = _miniMapMat;
 	cv::Point some_map_center_pos = pos;
-	auto someMap_roi = TianLi::Utils::get_some_map_rect(img_scene, some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
-	cv::Mat someMap = img_scene(someMap_roi).clone();
-	if (someMap.empty())
+	auto keypoint_roi = TianLi::Utils::get_rect_by_center_r(some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
+
+	cv::Mat someMap = cv::Mat();
+#ifdef _CVAT_DEBUG
+	// 考虑到界外特征点的存在，目前采取的方式是，对于界外特征点，使用空图像填充确保可作图
+	cv::Rect2i someMap_roi = keypoint_roi & cv::Rect(0, 0, img_scene.cols, img_scene.rows);
+	if (someMap_roi.width == 0 || someMap_roi.height == 0)
 	{
-		calc_continuity_is_faile = true;
-		return {};
+		someMap = cv::Mat::zeros(cv::Size(real_some_map_size_r * 2, real_some_map_size_r * 2), img_scene.type());
 	}
+	else {
+		someMap = img_scene(someMap_roi).clone();
+	}
+#endif
 
 	cv::Mat miniMap = img_object.clone();
+
 	m_matcher->detect_and_compute(miniMap, mini_map_kp);
 	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), _miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
 
-	m_lsh_index->query_and_gather(someMap_roi, map_kp.keypoints, map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
+	m_lsh_index->query_and_gather(keypoint_roi, map_kp.keypoints, map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
+
 #ifdef _CVAT_DEBUG
 	// 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
 	cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
 		for (int i = range.start; i < range.end; i++)
 		{
-			some_map_kp.keypoints[i].pt.x -= someMap_roi.x;
-			some_map_kp.keypoints[i].pt.y -= someMap_roi.y;
+			some_map_kp.keypoints[i].pt.x -= keypoint_roi.x;
+			some_map_kp.keypoints[i].pt.y -= keypoint_roi.y;
 		}
 		});
 #endif
@@ -239,13 +248,14 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		return {};
 	}
 
+	std::vector<cv::DMatch> good_matches;
 	std::vector<cv::Point2f> good_matched_scene;
 	std::vector<cv::Point2f> good_matched_object;
 	// 匹配特征点
 	if (isContinuity)  //连续匹配下图像较小，使用互匹配提高质量
 	{
 		std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, true);
-		TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matched_scene, good_matched_object);
+		TianLi::Utils::lowe_test(keypoint_scene.keypoints, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matches);
 		//auto good_matched_count = good_matched_scene.size();
 	}
 	else {  //全图匹配较大，优先使用速度更快的lowe
@@ -254,10 +264,14 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		//cv::Mat match_results;
 		//cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
 
-		TianLi::Utils::calc_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matched_scene, good_matched_object);
+		TianLi::Utils::lowe_test(keypoint_scene.keypoints, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matches);
 
 		//auto good_matched_count = good_matched_scene.size();
 	}
+	TianLi::Utils::dmatch2cvPoints(keypoint_scene.keypoints, keypoint_object.keypoints, good_matches, good_matched_scene, good_matched_object);
+#ifdef _CVAT_DEBUG
+	TianLi::Utils::draw_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, good_matches);
+#endif
 
 	if (good_matched_scene.size() < 6)
 	{
@@ -332,7 +346,9 @@ cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matc
 	{
 		list_filter_kp.push_back(cv::Point2d(lisx[i], lisy[i]));
 	}
-	list_filter_kp = TianLi::Utils::extract_valid(list_filter_kp);
+
+	list_filter_kp = TianLi::Utils::std_mean_filter(list_filter_kp);
+	//list_filter_kp = TianLi::Utils::max_near_fliter(list_filter_kp, _miniMapDiameter * MINIMAP_BORDER_CROP_RATIO * 3 / 2);
 
 	lisx.clear();
 	lisy.clear();

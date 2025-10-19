@@ -294,6 +294,7 @@
     <ClInclude Include="src\utils\map_mapper.h">
       <Filter>src\resources</Filter>
     </ClInclude>
+    <ClInclude Include="src\resources\gimap_downloader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AutoTrack.cpp">
@@ -373,6 +374,7 @@
       <Filter>src\match</Filter>
     </ClCompile>
     <ClCompile Include="src\match\matcher_impl\SURFMatcher.cpp" />
+    <ClCompile Include="src\resources\gimap_downloader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource\cvAutoTrack.rc">

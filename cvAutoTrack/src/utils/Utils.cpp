@@ -5,104 +5,16 @@
 
 namespace TianLi::Utils
 {
-	cv::Rect2i get_some_map_rect(const cv::Mat& map, cv::Point& pos, int size_r)
+	cv::Rect2i get_rect_by_center_r(cv::Point& pos, int size_r)
 	{
-		cv::Rect rect(pos.x - size_r, pos.y - size_r, size_r + size_r, size_r + size_r);
-		return rect & cv::Rect2i{ 0,0,map.cols,map.rows };
+		return cv::Rect2i(pos.x - size_r, pos.y - size_r, size_r + size_r, size_r + size_r);
 	}
 	double dis(cv::Point2d p)
 	{
 		return sqrt(p.x * p.x + p.y * p.y);
 	}
 
-	std::vector<double> extract_valid(std::vector<double> list)
-	{
-		std::vector<double> valid_list;
-
-		if (list.size() <= 3)
-		{
-			return list;
-		}
-
-		double mean = std::accumulate(list.begin(), list.end(), 0.0) / list.size();
-
-		double accum = 0.0;
-		std::for_each(list.begin(), list.end(), [&](const double d)
-			{ accum += (d - mean) * (d - mean); });
-
-		double stdev = sqrt(accum / (list.size() - 1));
-
-		std::ranges::copy_if(list, std::back_inserter(valid_list), [&](const double d)
-			{ return abs(d - mean) < 0.382 * stdev; });
-		return valid_list;
-	}
-
-	double stdev(std::vector<double> list)
-	{
-		double mean = std::accumulate(list.begin(), list.end(), 0.0) / list.size();
-
-		double accum = 0.0;
-		std::for_each(list.begin(), list.end(), [&](const double d)
-			{ accum += (d - mean) * (d - mean); });
-
-		return sqrt(accum / (list.size() - 1));
-	}
-	cv::Mat crop_border(const cv::Mat& mat, double border)
-	{
-		int crop_size = static_cast<int>((mat.rows + mat.cols) * 0.5 * border);
-		return mat(cv::Rect(crop_size, crop_size, mat.cols - crop_size * 2, mat.rows - crop_size * 2));
-	}
-	double stdev(std::vector<cv::Point2d> list)
-	{
-		std::vector<double> x_list(list.size());
-		std::vector<double> y_list(list.size());
-		for (int i = 0; i < list.size(); i++)
-		{
-			x_list[i] = list[i].x;
-			y_list[i] = list[i].y;
-		}
-		return (stdev(x_list) + stdev(y_list)) / 2;
-	}
-	double stdev_abs(std::vector<double> list)
-	{
-		double mean = std::accumulate(list.begin(), list.end(), 0.0) / list.size();
-
-		double accum = 0.0;
-		std::for_each(list.begin(), list.end(), [&](const double d)
-			{ accum += (abs(d - mean)) * (abs(d - mean)); });
-
-		return accum / (list.size() - 1);
-	}
-
-	IMatcher::KeyMatPoint remove_minimap_fake_keypoint(const cv::Size2i& input_img_size, float diameter, const IMatcher::KeyMatPoint& keypoints)
-	{
-		IMatcher::KeyMatPoint result;
-		result.descriptors = cv::Mat(0, keypoints.descriptors.cols, keypoints.descriptors.type());
-		size_t keypoint_size = keypoints.keypoints.size();
-		if (keypoint_size == 0)
-		{
-			return result;
-		}
-		float radius = diameter / 2.0f;
-		float radius_sq = radius * radius;
-		cv::Point2f center(input_img_size.width / 2.0f, input_img_size.height / 2.0f);
-
-		for (size_t i = 0; i < keypoint_size; ++i)
-		{
-			cv::Point2f pt = keypoints.keypoints[i].pt;
-			float dx = pt.x - center.x;
-			float dy = pt.y - center.y;
-			float dist_sq = dx * dx + dy * dy;
-			if (dist_sq <= radius_sq)
-			{
-				result.keypoints.push_back(keypoints.keypoints[i]);
-				result.descriptors.push_back(keypoints.descriptors.row(static_cast<int>(i)));
-			}
-		}
-		return result;
-	}
-
-	std::vector<cv::Point2d> extract_valid(std::vector<cv::Point2d> list)
+	std::vector<cv::Point2d> std_mean_filter(std::vector<cv::Point2d> list)
 	{
 		std::vector<cv::Point2d> valid_list;
 
@@ -163,6 +75,72 @@ namespace TianLi::Utils
 		}
 		return valid_list;
 	}
+
+	std::vector<cv::Point2d> max_near_fliter(std::vector<cv::Point2d> list,double max_dist)
+	{
+		//遍历每一个点，找到在附近的邻居点
+		//建议只在输入小于100时使用
+		int max_near_index = 0;
+		int max_near_count = 0;
+		int near_count = 0;
+		std::vector<cv::Point2d> nears;
+		for (int i = 0; i < list.size(); i++)
+		{
+			near_count = 0;
+			std::vector<cv::Point2d> cur_nears;
+			for (int j = 0; j < list.size(); j++)
+			{
+				double dist = sqrt((list[i].x - list[j].x) * (list[i].x - list[j].x) + (list[i].y - list[j].y) * (list[i].y - list[j].y));
+				if (dist < max_dist)
+				{
+					cur_nears.emplace_back(list[j]);
+					near_count++;
+				}
+			}
+			if (near_count > max_near_count)
+			{
+				max_near_index = i;
+				max_near_count = near_count;
+				nears = std::move(cur_nears);
+			}
+		}
+		return nears;
+	}
+
+	cv::Mat crop_border(const cv::Mat& mat, double border)
+	{
+		int crop_size = static_cast<int>((mat.rows + mat.cols) * 0.5 * border);
+		return mat(cv::Rect(crop_size, crop_size, mat.cols - crop_size * 2, mat.rows - crop_size * 2));
+	}
+
+	IMatcher::KeyMatPoint remove_minimap_fake_keypoint(const cv::Size2i& input_img_size, float diameter, const IMatcher::KeyMatPoint& keypoints)
+	{
+		IMatcher::KeyMatPoint result;
+		result.descriptors = cv::Mat(0, keypoints.descriptors.cols, keypoints.descriptors.type());
+		size_t keypoint_size = keypoints.keypoints.size();
+		if (keypoint_size == 0)
+		{
+			return result;
+		}
+		float radius = diameter / 2.0f;
+		float radius_sq = radius * radius;
+		cv::Point2f center(input_img_size.width / 2.0f, input_img_size.height / 2.0f);
+
+		for (size_t i = 0; i < keypoint_size; ++i)
+		{
+			cv::Point2f pt = keypoints.keypoints[i].pt;
+			float dx = pt.x - center.x;
+			float dy = pt.y - center.y;
+			float dist_sq = dx * dx + dy * dy;
+			if (dist_sq <= radius_sq)
+			{
+				result.keypoints.push_back(keypoints.keypoints[i]);
+				result.descriptors.push_back(keypoints.descriptors.row(static_cast<int>(i)));
+			}
+		}
+		return result;
+	}
+
 
 	bool SPC(std::vector<double> lisx, std::vector<double> lisy, cv::Point2d& out)
 	{
@@ -325,28 +303,27 @@ namespace TianLi::Utils
 		drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	}
 
-	void calc_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::Point2f>& scene_goodmatch, std::vector<cv::Point2f>& object_goodmatch)
+	void lowe_test(std::vector<cv::KeyPoint> keypoint_scene, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::DMatch>& out_good_matches)
 	{
-#ifdef _CVAT_DEBUG
-		std::vector<cv::DMatch> good_matches;
-#endif
 		for (auto& m : KNN_m)
 		{
 			if (m.size() == 2 && m[0].distance < ratio_thresh * m[1].distance)
 			{
-				scene_goodmatch.emplace_back(keypoint_scene[m[0].trainIdx].pt);
-				object_goodmatch.emplace_back(keypoint_object[m[0].queryIdx].pt);
-#ifdef _CVAT_DEBUG
-				good_matches.emplace_back(m[0]);
-#endif
+				out_good_matches.emplace_back(m[0]);
 			}
 		}
-#ifdef _CVAT_DEBUG
-		draw_good_matches(img_scene, keypoint_scene, img_object, keypoint_object, good_matches);
-#else
-		UNREFERENCED_PARAMETER(img_scene);
-		UNREFERENCED_PARAMETER(img_object);
-#endif
+	}
+
+	void dmatch2cvPoints(const std::vector < cv::KeyPoint>& keypoints_scene, const std::vector < cv::KeyPoint>& keypoints_object, const std::vector<cv::DMatch>& good_matches, std::vector<cv::Point2f>& scene_points, std::vector<cv::Point2f>& object_points)
+	{
+		scene_points.reserve(good_matches.size());
+		object_points.reserve(good_matches.size());
+		for (size_t i = 0; i < good_matches.size(); i++)
+		{
+			//-- Get the keypoints from the good matches
+			scene_points.push_back(keypoints_scene[good_matches[i].trainIdx].pt);
+			object_points.push_back(keypoints_object[good_matches[i].queryIdx].pt);
+		}
 	}
 
 	// 注册表读取
