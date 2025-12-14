@@ -301,9 +301,10 @@ namespace TianLi::Genshin {
 						genshin_icon_sight.rect_Icon_sight.y + genshin_icon_sight.rect_Icon_sight.height / 2 - genshin_screen.config.icon_size / 2,
 						genshin_screen.config.icon_size, genshin_screen.config.icon_size };
 					}
-					//cv::Mat debug_icon_sight_found = genshin_screen.imgs.icon_sight_maybe(genshin_icon_sight.rect_Icon_sight);
-					//cv::imshow("debug_icon_sight_found", debug_icon_sight_found);
-					//cv::waitKey(1);
+					genshin_icon_sight.rect_Icon_sight &= cv::Rect{ 0,0,genshin_screen.imgs.icon_sight_maybe.cols, genshin_screen.imgs.icon_sight_maybe.rows };
+#ifdef _CVAT_DEBUG
+					cv::Mat debug_icon_sight_found = genshin_screen.imgs.icon_sight_maybe(genshin_icon_sight.rect_Icon_sight);
+#endif
 				}
 
 				if (!genshin_icon_sight.is_visial)
@@ -333,15 +334,18 @@ namespace TianLi::Genshin {
 					minimap_rect_maybe.height = static_cast<int>(out_genshin_minimap.config.minimap_size.height);
 				}
 
-				if (minimap_rect_maybe.x < 0 || minimap_rect_maybe.y < 0)
+				if(minimap_rect_maybe.x < 0 || minimap_rect_maybe.y < 0 ||
+					minimap_rect_maybe.x + minimap_rect_maybe.width > genshin_screen.img_screen.cols ||
+					minimap_rect_maybe.y + minimap_rect_maybe.height >  genshin_screen.img_screen.rows)
 				{
 					return false;
 				}
+
 				minimap_rect = minimap_rect_maybe;
 			}
 			// center point
 			auto minimap_center = cv::Point(minimap_rect.x + (minimap_rect.width) / 2, minimap_rect.y + (minimap_rect.height) / 2);
-			out_genshin_minimap.img_minimap = genshin_screen.img_screen(minimap_rect);
+			out_genshin_minimap.img_minimap = genshin_screen.img_screen(minimap_rect).clone();
 			out_genshin_minimap.minimap_diameter = std::min(out_genshin_minimap.img_minimap.rows, out_genshin_minimap.img_minimap.cols) * 0.95;
 			paddingminimap(out_genshin_minimap.img_minimap, out_genshin_minimap.img_minimap_padding, static_cast<int>(out_genshin_minimap.img_minimap.rows * 0.05), 32);
 
