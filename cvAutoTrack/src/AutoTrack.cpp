@@ -885,7 +885,7 @@ bool AutoTrack::getGengshinImpactScreen()
 
 bool AutoTrack::getMiniMapRefMat()
 {
-	genshin_minimap.img_minimap = genshin_screen.img_screen(genshin_minimap.rect_minimap);
+	genshin_minimap.img_minimap = genshin_screen.img_screen(genshin_minimap.rect_minimap).clone();
 
 	if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics ||
 		genshin_handle.config.is_force_used_no_alpha)
