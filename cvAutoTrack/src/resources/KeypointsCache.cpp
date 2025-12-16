@@ -284,7 +284,7 @@ std::vector<int> KeypointGridLSH::query(const cv::Rect2i& bbox) const
 	if (kp_pos.empty() && kp_indices.empty()) return result;
 	int gw = dims.width, gh = dims.height;
 	if (gw == 0 || gh == 0) return result;
-	cv::Rect2i clip = bbox & bounds;
+	cv::Rect2i clip = bbox;
 
 	if (clip.width <= 0 || clip.height <= 0) return result;
 	int x0 = std::clamp((clip.x - bounds.x) / cell.width, 0, gw - 1);
