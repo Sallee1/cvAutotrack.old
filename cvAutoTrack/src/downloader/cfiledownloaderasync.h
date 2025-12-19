@@ -105,7 +105,7 @@ namespace tianli {
 
     private:
         struct DownloadTask {
-            size_t id;
+            size_t id{};
             std::string filePath;
             std::string url;
             std::string md5;
@@ -129,14 +129,6 @@ namespace tianli {
                 }
 
                 m_active_tasks++;
-
-                FileDownloader downloader(task->filePath, task->url, task->md5);
-                task->success = downloader.download();
-                if (!task->success) {
-                    task->errorCode = downloader.getLastErrorCode();
-                    task->errorMsg = downloader.getLastErrorMsg();
-                }
-                task->completed = true;
 
                 try {
                     FileDownloader downloader(task->filePath, task->url, task->md5);

@@ -69,7 +69,7 @@ private:
 
 	cv::Point2d match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile);
 
-	cv::Point2d cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile);
+	cv::Point2d cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene,bool& calc_is_faile);
 
 	//全图匹配
 	//cv::Point2d match_all_map(bool& calc_is_faile,double& stdev, double minimap_scale_param = 1.0);

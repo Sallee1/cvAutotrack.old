@@ -57,7 +57,7 @@ struct KeypointGridLSH {
 	 * @param bounds_ 表示区域边界的矩形。
 	 * @param cell_ 单元格的尺寸。
 	 */
-	void build(const std::vector<cv::KeyPoint>& kps, const cv::Mat& desc, const cv::Rect2i& bounds_, const cv::Size2i& cell_);
+	void build(const std::vector<cv::KeyPoint>& kps, const cv::Rect2i& bounds_, const cv::Size2i& cell_);
 
 	/**
 	 * @brief 从缓存对象中加载关键点数据。

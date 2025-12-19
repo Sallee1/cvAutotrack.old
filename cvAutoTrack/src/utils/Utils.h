@@ -56,7 +56,7 @@ namespace TianLi::Utils
 
 	void draw_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<cv::DMatch>& good_matches);
 
-	void lowe_test(std::vector<cv::KeyPoint> keypoint_scene, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::DMatch>& out_good_matches);
+	void lowe_test(std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::DMatch>& out_good_matches);
 
 	/**
 	 * @brief 将dmatch转换为对应的点坐标

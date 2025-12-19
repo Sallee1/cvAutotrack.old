@@ -36,7 +36,7 @@ struct GenshinHandle
 	HWND handle;
 	RECT rect;
 	RECT rect_client;
-	double scale;
+	float scale;
 	bool is_exist_title_bar = true;
 	cv::Size size_frame;
 	GenshinHandleConfig config;
@@ -46,7 +46,7 @@ struct GenshinScreenConfig
 	bool is_used_alpha = true;
 	bool is_controller_mode = false;
 	bool is_search_mode = true;
-	double controller_ui_scale = 0.83333;
+	float controller_ui_scale = 0.83333f;
 	int icon_size = 54;    //键鼠模式下图标尺寸
 	int icon_size_ctrl = 45;    //手柄模式下图标尺寸
 };
@@ -84,11 +84,11 @@ struct GenshinScreen
 struct GenshinIconSightConfig
 {
 	bool is_need_find = true;
-	double icon_sight_threshold_low = 0.90;   //低亮度下的匹配阈值
-	double icon_sight_threshold_high = 0.95;    //高亮度下的匹配阈值
-	double ratio = 1.05;            //容许的模板图像尺寸比
-	double min_distance = 0.005;    //形状的最大差异
-	double tplmatch_max_diff = 0.05;   //模板匹配允许的最大差异
+	float icon_sight_threshold_low = 0.90f;   //低亮度下的匹配阈值
+	float icon_sight_threshold_high = 0.95f;    //高亮度下的匹配阈值
+	float ratio = 1.05f;            //容许的模板图像尺寸比
+	float min_distance = 0.005f;    //形状的最大差异
+	float tplmatch_max_diff = 0.05f;   //模板匹配允许的最大差异
 	int min_size = 35;  //容许模板图像的最小尺寸
 	int max_size = 51;  //容许模板图像的最大尺寸
 	int ctrl_size = 44; //区分控制器的尺寸
@@ -133,7 +133,7 @@ struct GenshinAvatarDirectionConfig
 };
 struct GenshinAvatarDirection
 {
-	double angle = 0;
+	float angle = 0;
 	GenshinAvatarDirectionConfig config;
 };
 
@@ -141,7 +141,7 @@ struct GenshinAvatarPositionConfig
 {
 	bool is_init_finish = false;
 	bool is_lock_minimap_rotation = true;
-	double minimap_rotation = 0;
+	float minimap_rotation = 0;
 	bool is_continuity = false;
 	bool is_exist_last_match_minimap = false;
 	cv::Mat img_last_match_minimap;
@@ -151,7 +151,7 @@ struct GenshinAvatarPositionConfig
 struct GenshinAvatarPosition
 {
 	cv::Point2d target_map_world_center;
-	double target_map_world_scale = 1.0;
+	float target_map_world_scale = 1.0f;
 	cv::Point2d position;
 	GenshinAvatarPositionConfig config;
 };
@@ -159,12 +159,12 @@ struct GenshinAvatarPosition
 struct GenshinViewerDirectionConfig
 {
 	bool is_lock_minimap_rotation = true;
-	double minimap_rotation = 0;
+	float minimap_rotation = 0;
 };
 
 struct GenshinViewerDirection
 {
-	double angle = 0;
+	float angle = 0;
 	GenshinViewerDirectionConfig config;
 };
 
@@ -176,12 +176,12 @@ struct GenshinMinimapDirectionConfig
 
 struct GenshinMinimapDirection
 {
-	double angle = 0;
+	float angle = 0;
 	GenshinMinimapDirectionConfig config;
 };
 struct GenshinStarsConfig
 {
-	double check_match_star_params = 0.85;
+	float check_match_star_params = 0.85f;
 };
 struct GenshinStars
 {
@@ -192,7 +192,7 @@ struct GenshinStars
 
 struct GenshinTagflagsConfig
 {
-	double check_match_star_params = 0.85;
+	float check_match_star_params = 0.85f;
 };
 struct GenshinTagflags
 {
@@ -203,7 +203,7 @@ struct GenshinTagflags
 
 struct GenshinUIDConfig
 {
-	double check_match_uid_params = 0.85;
+	float check_match_uid_params = 0.85f;
 };
 struct GenshinUID
 {

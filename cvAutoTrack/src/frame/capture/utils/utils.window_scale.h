@@ -4,6 +4,8 @@ namespace tianli::frame::capture::utils::window_scale
 {
     namespace window_last_version
     {
+        //TODO: 后续评估是否需要计算屏幕缩放比例功能
+        [[maybe_unused]]
         static double get_screen_scale(HWND current_handle = nullptr)
         {
             auto handle = current_handle;

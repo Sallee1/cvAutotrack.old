@@ -141,7 +141,9 @@ bool __stdcall DebugCapturePath(const char* path_buff, int buff_size)
 
 bool __stdcall LoadDependModuleFromPath(const char* path)
 {
+    //TODO: 待实现修改外部依赖模块加载路径功能
     //INSTALL_DUMP(AutoTrack::LoadDependModuleFromPath(path));
+    (void)path;
     return true;
 }
 

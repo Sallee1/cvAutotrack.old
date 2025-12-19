@@ -19,7 +19,7 @@ void Tracking::setMiniMap(cv::Mat miniMapMat, float diameter)
 	}
 	else
 	{
-		_miniMapDiameter = std::min(miniMapMat.cols, miniMapMat.rows);
+		_miniMapDiameter = static_cast<float>(std::min(miniMapMat.cols, miniMapMat.rows));
 	}
 }
 
@@ -49,7 +49,7 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::Ke
 
 	auto cell_size = Resources::getInstance().lsh_cell_size;
 	m_lsh_index = std::make_unique<KeypointGridLSH>();
-	m_lsh_index->build(map_kp.keypoints, map_kp.descriptors, cv::Rect2i(0, 0, _mapMat.cols, _mapMat.rows), cv::Size2i(cell_size, cell_size));
+	m_lsh_index->build(map_kp.keypoints, cv::Rect2i(0, 0, _mapMat.cols, _mapMat.rows), cv::Size2i(cell_size, cell_size));
 
 	isInit = true;
 	return true;
@@ -255,7 +255,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 	if (isContinuity)  //连续匹配下图像较小，使用互匹配提高质量
 	{
 		std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, true);
-		TianLi::Utils::lowe_test(keypoint_scene.keypoints, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matches);
+		TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matches);
 		//auto good_matched_count = good_matched_scene.size();
 	}
 	else {  //全图匹配较大，优先使用速度更快的lowe
@@ -264,7 +264,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		//cv::Mat match_results;
 		//cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
 
-		TianLi::Utils::lowe_test(keypoint_scene.keypoints, keypoint_object.keypoints, KNN_m, LOWE_RATIO_THRESH, good_matches);
+		TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH, good_matches);
 
 		//auto good_matched_count = good_matched_scene.size();
 	}
@@ -275,7 +275,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 
 	if (good_matched_scene.size() < 6)
 	{
-		return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+		return cleanAndComputePos_Old(good_matched_scene,calc_is_faile);
 	}
 
 	cv::Mat H, mask;
@@ -286,7 +286,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 	if (accept_count < 4 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
 	{
 		//矩阵的置信度不高，使用旧版的筛选算法
-		return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+		return cleanAndComputePos_Old(good_matched_scene,calc_is_faile);
 	}
 	// 新增几何约束检查
 	if (!H.empty() && H.type() == CV_64F) {
@@ -314,16 +314,16 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 
 		if (angle_deg <= MAX_ANGLE && scale >= MIN_SCALE && scale <= MAX_SCALE)
 		{
-			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0, img_object.rows / 2.0) };
+			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0f, img_object.rows / 2.0f) };
 			cv::transform(out_pt, out_pt, H);
 			return out_pt[0];
 		}
 	}
 	//不满足约束
-	return cleanAndComputePos_Old(good_matched_scene, good_matched_object, calc_is_faile);
+	return cleanAndComputePos_Old(good_matched_scene,calc_is_faile);
 }
 
-cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, std::vector<cv::Point2f>& good_matched_object, bool& calc_is_faile)
+cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, bool& calc_is_faile)
 {
 	if (isContinuity)
 	{

@@ -8,12 +8,12 @@ namespace tianli::frame::capture
     public:
         capture_source(){ this->mode = source_mode::handle; }
         ~capture_source() override = default;
-        bool set_source_frame_callback(std::function<cv::Mat()> callback) override { return false; }
+        bool set_source_frame_callback(std::function<cv::Mat()> callback) override { (void)callback; return false; }
 
-        bool set_local_frame(cv::Mat frame) override { return false; }
-        bool set_local_file(std::string file) override { return false; }
+        bool set_local_frame(cv::Mat frame) override { (void)frame; return false; }
+        bool set_local_file(std::string file) override { (void)file; return false; }
         // TODO: frame_source::set_source_frame_callback
-        bool set_frame_rect_callback(std::function<cv::Rect(cv::Rect)> callback) override { return false; }
+        bool set_frame_rect_callback(std::function<cv::Rect(cv::Rect)> callback) override { (void)callback; return false; }
 
     protected:
         std::function<HWND()> source_handle_callback;

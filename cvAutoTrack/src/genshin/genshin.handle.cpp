@@ -174,7 +174,7 @@ namespace TianLi::Genshin
         HMONITOR hMonitor = MonitorFromWindow(genshin_handle.handle, MONITOR_DEFAULTTONEAREST);
         UINT dpiX, dpiY;
         GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
-        genshin_handle.scale = dpiX / 96.0;
+        genshin_handle.scale = dpiX / 96.0f;
 
         {
             int x = genshin_handle.rect_client.right - genshin_handle.rect_client.left;

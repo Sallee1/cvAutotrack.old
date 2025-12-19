@@ -216,7 +216,7 @@ namespace {
 }
 
 // Build a simple grid based LSH on keypoints
-void KeypointGridLSH::build(const std::vector<cv::KeyPoint>& kps, const cv::Mat& desc, const cv::Rect2i& bounds_, const cv::Size2i& cell_)
+void KeypointGridLSH::build(const std::vector<cv::KeyPoint>& kps, const cv::Rect2i& bounds_, const cv::Size2i& cell_)
 {
 	bounds = bounds_;
 	cell = cell_;
@@ -365,7 +365,7 @@ bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, MapKeypointC
 
 	// Build grid on remapped keypoints
 	KeypointGridLSH grid;
-	grid.build(cache.keypoints, cache.descriptors, { 0,0, cache.map_size.width, cache.map_size.height }, cache.lsh_cell);
+	grid.build(cache.keypoints, { 0,0, cache.map_size.width, cache.map_size.height }, cache.lsh_cell);
 	cache.lsh_cell_offsets = grid.cell_offsets;
 	cache.lsh_kp_indices = grid.kp_indices;
 

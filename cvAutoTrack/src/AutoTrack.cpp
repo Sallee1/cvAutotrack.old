@@ -174,7 +174,7 @@ bool AutoTrack::SetWorldCenter(double x, double y)
 
 bool AutoTrack::SetWorldScale(double scale)
 {
-	genshin_avatar_position.target_map_world_scale = scale;
+	genshin_avatar_position.target_map_world_scale = static_cast<float>(scale);
 	return true;
 }
 

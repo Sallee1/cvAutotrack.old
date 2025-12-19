@@ -303,7 +303,7 @@ namespace TianLi::Utils
 		drawMatches(img_object, keypoint_object, img_scene, keypoint_scene, good_matches, img_matches, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	}
 
-	void lowe_test(std::vector<cv::KeyPoint> keypoint_scene, std::vector<cv::KeyPoint> keypoint_object, std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::DMatch>& out_good_matches)
+	void lowe_test(std::vector<std::vector<cv::DMatch>>& KNN_m, double ratio_thresh, std::vector<cv::DMatch>& out_good_matches)
 	{
 		for (auto& m : KNN_m)
 		{
