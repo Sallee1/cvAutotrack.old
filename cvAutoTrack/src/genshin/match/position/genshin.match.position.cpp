@@ -143,7 +143,7 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 		surf_match.Init(genshin_minimap.matcher,
 			std::move(map_keypoints_cache));
 #ifdef _CVAT_DEBUG
-		//surf_match.setMap(Resources::getInstance().MapTemplate);
+		surf_match.setMap(Resources::getInstance().MapTemplate);
 #else
 		//正式发布版本，释放图像，因为目前已经可以实现无图匹配
 		Resources::getInstance().release();
