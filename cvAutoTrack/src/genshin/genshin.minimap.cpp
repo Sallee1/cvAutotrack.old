@@ -54,7 +54,7 @@ namespace TianLi::Genshin {
 		 * @param out_distance
 		 * @return 是否查找成功
 		 */
-		bool shape_match(cv::Mat shape_src, cv::Mat icon_sight_maybe, double threshold, GenshinIconSight& genshin_icon_sight)
+		bool shape_match(cv::Mat shape_src, cv::Mat icon_sight_maybe, double threshold, std::vector<GenshinIconSight>& genshin_icon_sights)
 		{
 			cv::cvtColor(icon_sight_maybe, icon_sight_maybe, cv::COLOR_BGR2GRAY);
 			double min_val, max_val;
@@ -73,14 +73,14 @@ namespace TianLi::Genshin {
 				contours_icon_sight_maybe_inv.end());
 
 			//粗形状匹配
-			double min_distance = 1.0;
-			int max_index = -1;
-			bool is_ctrl_mode = false;
+			double min_distance = 0.005;
 			for (int i = 0; i < contours_icon_sight_maybe.size(); i++)
 			{
+				GenshinIconSight genshin_icon_sight;
+#ifdef _CVAT_DEBUG
 				cv::Mat debug_draw_contour_icon_sight_maybe = cv::Mat::zeros(icon_sight_maybe.size(), CV_8UC1);
 				cv::drawContours(debug_draw_contour_icon_sight_maybe, contours_icon_sight_maybe, i, cv::Scalar(255), 1);
-
+#endif
 				double distance = cv::matchShapes(shape_src, contours_icon_sight_maybe[i], cv::CONTOURS_MATCH_I1, 0);
 				if (distance < min_distance)
 				{
@@ -90,23 +90,21 @@ namespace TianLi::Genshin {
 					{
 						continue;
 					}
-					is_ctrl_mode = is_ctrl_mode_maybe;
-					min_distance = distance;
-					max_index = i;
+					genshin_icon_sight.is_visial = true;
+					genshin_icon_sight.is_ctrl_mode = is_ctrl_mode_maybe;
+					genshin_icon_sight.rect_Icon_sight = cv::boundingRect(contours_icon_sight_maybe[i]);
+					genshin_icon_sights.push_back(genshin_icon_sight);
 				}
 			}
-			if (max_index == -1)
+
+			if (genshin_icon_sights.empty())
 			{
 				return false;
 			}
-
-			genshin_icon_sight.is_visial = true;
-			genshin_icon_sight.is_ctrl_mode = is_ctrl_mode;
-			genshin_icon_sight.rect_Icon_sight = cv::boundingRect(contours_icon_sight_maybe[max_index]);
 			return true;
 		}
 
-		bool match_icon_sight(const GenshinScreen& genshin_screen, GenshinIconSight& out_genshin_icon_sight)
+		bool match_icon_sight(const GenshinScreen& genshin_screen, cv::Size2i minimap_size, float tpl_threshold, GenshinIconSight& out_genshin_icon_sight)
 		{
 			static cv::Mat icon_sight_tpl;
 			static std::vector<cv::Mat> contours_icon_sight_tpl;
@@ -123,23 +121,43 @@ namespace TianLi::Genshin {
 				//查找轮廓
 				cv::findContours(icon_sight_tpl, contours_icon_sight_tpl,
 					cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+#ifdef _CVAT_DEBUG
 				cv::Mat debug_draw_contour_icon_sight = cv::Mat::zeros(icon_sight_tpl.size(), CV_8UC1);
 				cv::drawContours(debug_draw_contour_icon_sight, contours_icon_sight_tpl, 0, cv::Scalar(255), 1);
+#endif
 				is_first = false;
 			}
 
 			cv::Mat icon_sight_maybe = genshin_screen.imgs.icon_sight_maybe.clone();
+			
+			std::vector<GenshinIconSight> matched_icon_sights;
 			//暗形状匹配（大部分情况）
 			if (shape_match(contours_icon_sight_tpl[0], icon_sight_maybe,
 				out_genshin_icon_sight.config.icon_sight_threshold_low,
-				out_genshin_icon_sight))
+				matched_icon_sights))
 			{
-				return true;
+				//2025-12-28 追加模板匹配，筛选更符合的结果
+				for(auto& icon_sight:matched_icon_sights)
+				{
+					if (match_quest(genshin_screen, icon_sight, minimap_size,tpl_threshold))
+					{
+						out_genshin_icon_sight = icon_sight;
+						return true;
+					}
+				}
 			}
 			//亮形状匹配
-			if (shape_match(contours_icon_sight_tpl[0], icon_sight_maybe, out_genshin_icon_sight.config.icon_sight_threshold_high, out_genshin_icon_sight))
+			if (shape_match(contours_icon_sight_tpl[0], icon_sight_maybe, out_genshin_icon_sight.config.icon_sight_threshold_high, matched_icon_sights))
 			{
-				return true;
+				//2025-12-28 追加模板匹配，筛选更符合的结果
+				for (auto& icon_sight : matched_icon_sights)
+				{
+					if (match_quest(genshin_screen, icon_sight, minimap_size, tpl_threshold))
+					{
+						out_genshin_icon_sight = icon_sight;
+						return true;
+					}
+				}
 			}
 			return false;
 		}
@@ -285,7 +303,7 @@ namespace TianLi::Genshin {
 			if (genshin_screen.config.is_search_mode)
 			{
 				static GenshinIconSight genshin_icon_sight;
-				if (match_icon_sight(genshin_screen, genshin_icon_sight))
+				if (match_icon_sight(genshin_screen, out_genshin_minimap.config.minimap_size, genshin_icon_sight.config.tplmatch_max_diff,genshin_icon_sight))
 				{
 					if (genshin_icon_sight.is_ctrl_mode)
 					{
@@ -311,11 +329,7 @@ namespace TianLi::Genshin {
 				{
 					return false;
 				}
-				//检查旗子
-				if (!match_quest(genshin_screen, genshin_icon_sight, out_genshin_minimap.config.minimap_size, genshin_icon_sight.config.tplmatch_max_diff))
-				{
-					return false;
-				}
+				//2025-12-28: 旗子检查移动到了匹配图标步骤上，以排除假阳性结果
 				//旗子检查通过，有小地图，则给小地图相关参数赋值
 				cv::Rect rect_Icon_sight_screen = genshin_icon_sight.rect_Icon_sight + genshin_screen.rects.icon_sight_maybe.tl();
 				cv::Rect minimap_rect_maybe;

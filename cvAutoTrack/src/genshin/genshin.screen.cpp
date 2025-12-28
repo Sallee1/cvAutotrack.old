@@ -51,29 +51,29 @@ namespace TianLi::Genshin {
         // 宽高比小于16:9时，宽度不变填充高度
         // 为了正确获取左上角的小地图的可能性区域
         // 需要左上角对齐裁剪填充的部分
-        int x_screen = giFrame.cols;
-        int y_screen = giFrame.rows;
+        int x_size = giFrame.cols;
+        int y_size = giFrame.rows;
 
-        float screen_ratio = static_cast<float>(x_screen) / static_cast<float>(y_screen);
+        float screen_ratio = static_cast<float>(x_size) / static_cast<float>(y_size);
         if(screen_ratio > (16.0f / 9.0f))
         {
             // 宽屏，裁剪左右
-            x_screen = static_cast<int>(y_screen * (16.0f / 9.0f));
-            y_screen = y_screen;
+            x_size = static_cast<int>(y_size * (16.0f / 9.0f));
+            y_size = y_size;
         }
         else if(screen_ratio < (16.0f / 9.0f))
         {
             // 高屏，裁剪上下
-            x_screen = x_screen;
-            y_screen = static_cast<int>(x_screen * (9.0f / 16.0f));
+            x_size = x_size;
+            y_size = static_cast<int>(x_size * (9.0f / 16.0f));
         }
 
 
         // 小地图标定可能性区域计算参数
-        int icon_sight_mayArea_left = static_cast<int>(x_screen * 0.08);
+        int icon_sight_mayArea_left = static_cast<int>(x_size * 0.10);
         int icon_sight_mayArea_top = 0;
-        int icon_sight_mayArea_width = static_cast<int>(x_screen * 0.10);
-        int icon_sight_mayArea_height = static_cast<int>(y_screen * 0.10);
+        int icon_sight_mayArea_width = static_cast<int>(x_size * 0.12);
+        int icon_sight_mayArea_height = static_cast<int>(y_size * 0.10);
         // 小地图标定可能性区域
         cv::Rect Area_icon_sight_mayArea(
             icon_sight_mayArea_left,
@@ -85,8 +85,8 @@ namespace TianLi::Genshin {
         // 小地图可能性区域计算参数
         int miniMap_mayArea_left = 0;
         int miniMap_mayArea_top = 0;
-        int miniMap_mayArea_width = static_cast<int>(x_screen * 0.18);
-        int miniMap_mayArea_height = static_cast<int>(y_screen * 0.22);
+        int miniMap_mayArea_width = static_cast<int>(x_size * 0.18);
+        int miniMap_mayArea_height = static_cast<int>(y_size * 0.22);
         // 小地图可能性区域
         cv::Rect Area_MiniMap_mayArea(
             miniMap_mayArea_left,
@@ -97,10 +97,10 @@ namespace TianLi::Genshin {
 
         // UID可能性区域计算参数
         // UID在右下角，所以需要包括填充区域的偏移
-        int UID_mayArea_left = static_cast<int>(x_screen * 0.88) + (x_screen - x_screen);
-        int UID_mayArea_top = static_cast<int>(y_screen * 0.97) + (y_screen - y_screen);
-        int UID_mayArea_width = x_screen - UID_mayArea_left + (x_screen - x_screen);
-        int UID_mayArea_height = y_screen - UID_mayArea_top + (y_screen - y_screen);
+        int UID_mayArea_left = static_cast<int>(x_size * 0.88) + (x_size - x_size);
+        int UID_mayArea_top = static_cast<int>(y_size * 0.97) + (y_size - y_size);
+        int UID_mayArea_width = x_size - UID_mayArea_left + (x_size - x_size);
+        int UID_mayArea_height = y_size - UID_mayArea_top + (y_size - y_size);
         // UID可能性区域
         cv::Rect Area_UID_mayArea(
             UID_mayArea_left,
@@ -108,14 +108,14 @@ namespace TianLi::Genshin {
             UID_mayArea_width,
             UID_mayArea_height);
         out_genshin_screen.rects.uid_maybe = Area_UID_mayArea;
-        out_genshin_screen.rects.uid_maybe += cv::Size2i{ (giFrame.cols - x_screen),(giFrame.rows - y_screen) };
+        out_genshin_screen.rects.uid_maybe += cv::Size2i{ (giFrame.cols - x_size),(giFrame.rows - y_size) };
 
-        int UID_Rect_x = cvCeil(x_screen - x_screen * (1.0 - 0.865));
-        int UID_Rect_y = cvCeil(y_screen - 1080.0 * (1.0 - 0.9755));
+        int UID_Rect_x = cvCeil(x_size - x_size * (1.0 - 0.865));
+        int UID_Rect_y = cvCeil(y_size - 1080.0 * (1.0 - 0.9755));
         int UID_Rect_w = cvCeil(1920 * 0.11);
         int UID_Rect_h = cvCeil(1920 * 0.0938 * 0.11);
         out_genshin_screen.rects.uid = cv::Rect(UID_Rect_x, UID_Rect_y, UID_Rect_w, UID_Rect_h);
-        out_genshin_screen.rects.uid += cv::Size2i{ (giFrame.cols - x_screen),(giFrame.rows - y_screen) };
+        out_genshin_screen.rects.uid += cv::Size2i{ (giFrame.cols - x_size),(giFrame.rows - y_size) };
 
         // 获取maybe区域
         out_genshin_screen.imgs.icon_sight_maybe = giFrame(out_genshin_screen.rects.icon_sight_maybe);

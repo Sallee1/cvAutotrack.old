@@ -138,13 +138,16 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 
 		std::vector<cv::KeyPoint> gi_map_keypoints;
 		cv::Mat gi_map_descriptors;
-
-		surf_match.setMap(Resources::getInstance().MapTemplate);
 		//读取关键点缓存
 		MapKeypointCache map_keypoints_cache = get_map_keypoint(genshin_minimap);
 		surf_match.Init(genshin_minimap.matcher,
 			std::move(map_keypoints_cache));
-
+#ifdef _CVAT_DEBUG
+		//surf_match.setMap(Resources::getInstance().MapTemplate);
+#else
+		//正式发布版本，释放图像，因为目前已经可以实现无图匹配
+		Resources::getInstance().release();
+#endif
 		is_init = true;
 		return;
 	}
