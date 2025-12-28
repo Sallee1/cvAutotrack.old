@@ -53,7 +53,7 @@ public:
 	void setMiniMap(cv::Mat miniMapMat, float diameter = 0);
 
 	bool Init(const std::shared_ptr<IMatcher>& matcher);
-	bool Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors);
+	bool Init(const std::shared_ptr<IMatcher>& matcher, int cols, int rows, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors);
 	bool Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&& map_keypoints_cache);
 	void UnInit();
 	void match();

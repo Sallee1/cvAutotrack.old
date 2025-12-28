@@ -26,7 +26,10 @@ void Tracking::setMiniMap(cv::Mat miniMapMat, float diameter)
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 {
 	if (isInit)return true;
-	m_matcher->detect_and_compute(_mapMat, map_kp.keypoints, map_kp.descriptors);
+	if(!_mapMat.empty())
+	{
+		m_matcher->detect_and_compute(_mapMat, map_kp.keypoints, map_kp.descriptors);
+	}
 	if (matcher == nullptr)
 	{
 		return false;
@@ -36,7 +39,7 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 	return true;
 }
 
-bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors)
+bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher,int cols,int rows, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors)
 {
 	if (isInit)return true;
 	map_kp.keypoints = std::move(gi_map_keypoints);
@@ -49,7 +52,7 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::Ke
 
 	auto cell_size = Resources::getInstance().lsh_cell_size;
 	m_lsh_index = std::make_unique<KeypointGridLSH>();
-	m_lsh_index->build(map_kp.keypoints, cv::Rect2i(0, 0, _mapMat.cols, _mapMat.rows), cv::Size2i(cell_size, cell_size));
+	m_lsh_index->build(map_kp.keypoints, cv::Rect2i(0, 0, cols, rows), cv::Size2i(cell_size, cell_size));
 
 	isInit = true;
 	return true;
@@ -75,7 +78,6 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&&
 void Tracking::UnInit()
 {
 	if (!isInit)return;
-	_mapMat.release();
 	_mapMat = cv::Mat();
 	map_kp.keypoints.clear();
 	map_kp.descriptors.release();
@@ -161,14 +163,17 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 
 	cv::Mat someMap = cv::Mat();
 #ifdef _CVAT_DEBUG
-	// 考虑到界外特征点的存在，目前采取的方式是，对于界外特征点，使用空图像填充确保可作图
-	cv::Rect2i someMap_roi = keypoint_roi & cv::Rect(0, 0, img_scene.cols, img_scene.rows);
-	if (someMap_roi.width == 0 || someMap_roi.height == 0)
+	if(!img_scene.empty())
 	{
-		someMap = cv::Mat::zeros(cv::Size(real_some_map_size_r * 2, real_some_map_size_r * 2), img_scene.type());
-	}
-	else {
-		someMap = img_scene(someMap_roi).clone();
+		// 考虑到界外特征点的存在，目前采取的方式是，对于界外特征点，使用空图像填充确保可作图
+		cv::Rect2i someMap_roi = keypoint_roi & cv::Rect(0, 0, img_scene.cols, img_scene.rows);
+		if (someMap_roi.width == 0 || someMap_roi.height == 0)
+		{
+			someMap = cv::Mat::zeros(cv::Size(real_some_map_size_r * 2, real_some_map_size_r * 2), img_scene.type());
+		}
+		else {
+			someMap = img_scene(someMap_roi).clone();
+		}
 	}
 #endif
 
@@ -270,7 +275,10 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 	}
 	TianLi::Utils::dmatch2cvPoints(keypoint_scene.keypoints, keypoint_object.keypoints, good_matches, good_matched_scene, good_matched_object);
 #ifdef _CVAT_DEBUG
-	TianLi::Utils::draw_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, good_matches);
+	if(!img_scene.empty())
+	{
+		TianLi::Utils::draw_good_matches(img_scene, keypoint_scene.keypoints, img_object, keypoint_object.keypoints, good_matches);
+	}
 #endif
 
 	if (good_matched_scene.size() < 6)
