@@ -302,7 +302,7 @@ namespace TianLi::Genshin {
 			cv::Rect minimap_rect = genshin_screen.rects.minimap;
 			if (genshin_screen.config.is_search_mode)
 			{
-				static GenshinIconSight genshin_icon_sight;
+				GenshinIconSight genshin_icon_sight;
 				if (match_icon_sight(genshin_screen, out_genshin_minimap.config.minimap_size, genshin_icon_sight.config.tplmatch_max_diff,genshin_icon_sight))
 				{
 					if (genshin_icon_sight.is_ctrl_mode)
