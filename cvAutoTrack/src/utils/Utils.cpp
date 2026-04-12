@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include "resources/map_mapper.h"
 #include <resources/Resources.h>
+#include <resources/KeypointsCache.h>
 
 namespace TianLi::Utils
 {
@@ -139,6 +140,53 @@ namespace TianLi::Utils
 			}
 		}
 		return result;
+	}
+
+	std::vector<cv::Rect2i> getRectsByPoints(const std::vector<cv::Point2f>& pts, const cv::Size2i& size) {
+		//使用网格划分特征点
+		using GridIndex = std::pair<int, int>;
+		std::map<GridIndex, cv::Rect2i> grid_rect;
+		std::map<GridIndex, int> grid_pt_count;
+		for (auto& pt : pts)
+		{
+			GridIndex pt_index{ static_cast<int>(pt.x) / size.width,static_cast<int>(pt.y) / size.height };
+			if (!grid_rect.contains(pt_index))
+			{
+				grid_rect[pt_index] = cv::Rect2i{ pt,cv::Size2i{1,1} };
+				grid_pt_count[pt_index] = 1;
+			}
+			else {
+				grid_rect[pt_index] |= cv::Rect2i{ pt,cv::Size2i{1,1} };
+				grid_pt_count[pt_index] ++;
+			}
+		}
+		//然后提取每一个单元格的矩形
+		std::vector<std::pair<int, cv::Rect2i>> out_rects_with_count;
+		out_rects_with_count.reserve(grid_rect.size());
+		for (auto& [rect_key, rect] : grid_rect)
+		{
+			//规格化尺寸
+			cv::Rect2i norm_rect{
+				rect.width / 2 + rect.x - size.width / 2,
+				rect.height / 2 + rect.y - size.height / 2,
+				size.width,
+				size.height
+			};
+			out_rects_with_count.emplace_back(std::make_pair(grid_pt_count[rect_key],norm_rect));
+		}
+		std::sort(out_rects_with_count.begin(), out_rects_with_count.end(),
+			[&](const std::pair<int, cv::Rect2i>& l, std::pair<int, cv::Rect2i>& r) {
+				return l.first >= r.first;
+			});
+
+		//整理为顶点数从大到小的列表
+		std::vector<cv::Rect2i> out_rects;
+		out_rects.reserve(out_rects_with_count.size());
+		for (auto& [rect_key, rect] : out_rects_with_count)
+		{
+			out_rects.emplace_back(rect);
+		}
+		return out_rects;
 	}
 
 

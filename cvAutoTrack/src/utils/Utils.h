@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <match/IMatcher.h>
 
 namespace TianLi::Utils
@@ -16,6 +17,14 @@ namespace TianLi::Utils
 	 * @return 图像的roi
 	 */
 	cv::Rect2i get_rect_by_center_r(cv::Point& pos, int size_r);
+	
+	/**
+	 * @brief 根据顶点获取包含所有顶点的固定大小矩形集，默认从少到多排列，用于局部匹配探索
+	 * @param pts 点集
+	 * @param size 输出矩形的大小
+	 * @return 矩形集合
+	 */
+	std::vector<cv::Rect2i> getRectsByPoints(const std::vector<cv::Point2f>& pts, const cv::Size2i& size);
 
 	double dis(cv::Point2d p);
 	bool SPC(std::vector<double> lisx, std::vector<double> lisy, cv::Point2d& out);

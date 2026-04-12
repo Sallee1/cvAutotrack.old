@@ -170,7 +170,7 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 	surf_match.match();
 
 	out_genshin_position.position = surf_match.getLocalPos();
-	out_genshin_position.config.is_continuity = surf_match.isContinuity;
+	out_genshin_position.config.is_continuity = surf_match.m_isContinuity;
 
 	if (out_genshin_position.config.is_use_filter)
 	{
@@ -187,7 +187,7 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 		out_genshin_position.position = filt_pos;
 	}
 
-	if (surf_match.is_success_match)
+	if (surf_match.m_is_success_match)
 	{
 		out_genshin_position.config.img_last_match_minimap = genshin_minimap.img_minimap.clone();
 		out_genshin_position.config.is_exist_last_match_minimap = true;

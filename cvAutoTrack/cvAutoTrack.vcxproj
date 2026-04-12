@@ -293,6 +293,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\match\match.star.h" />
     <ClInclude Include="src\match\match.uid.h" />
     <ClInclude Include="src\match\matcher_impl\AkazeMatcher.h" />
+    <ClInclude Include="src\match\matcher_impl\FAST_SURFMatcher.h" />
     <ClInclude Include="src\match\matcher_impl\SURFMatcher.h" />
     <ClInclude Include="src\match\tracking.h" />
     <ClInclude Include="src\match\type\MatchType.h" />
@@ -343,6 +344,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClCompile Include="src\match\diff\DiffMatch.cpp" />
     <ClCompile Include="src\match\IMatcher.cpp" />
     <ClCompile Include="src\match\matcher_impl\AkazeMatcher.cpp" />
+    <ClCompile Include="src\match\matcher_impl\FAST_SURFMatcher.cpp" />
     <ClCompile Include="src\match\matcher_impl\SURFMatcher.cpp" />
     <ClCompile Include="src\match\tracking.cpp" />
     <ClCompile Include="src\pch.cpp">

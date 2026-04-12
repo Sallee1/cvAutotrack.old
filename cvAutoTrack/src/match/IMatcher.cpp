@@ -70,13 +70,13 @@ cv::Ptr<cv::DescriptorMatcher> IMatcher::getMatcher(bool bfmatch, bool cross_che
 		if (getIsBinaryDescriptor())
 		{
 			cv::Ptr<cv::flann::LshIndexParams> index_params{ cv::makePtr<cv::flann::LshIndexParams>(20, 32, 2) };
-			cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(32, 0.1, true) };
+			cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0.1, true) };
 			matcher = cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
 		}
 		else
 		{
-			cv::Ptr<cv::flann::KDTreeIndexParams> index_params{ cv::makePtr<cv::flann::KDTreeIndexParams>(6) };
-			cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(32,0, true) };
+			cv::Ptr<cv::flann::KDTreeIndexParams> index_params{ cv::makePtr<cv::flann::KDTreeIndexParams>(8) };
+			cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256,0, true) };
 			matcher = cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
 		}
 	}

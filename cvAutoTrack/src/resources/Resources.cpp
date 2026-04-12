@@ -37,7 +37,7 @@ namespace TianLi::Resource::Utils
 		return true;
 	}
 
-	void LoadImg_ID2Mat(int IDB, cv::Mat& mat, const wchar_t* format = L"PNG")
+	void LoadImg_ID2Mat(int IDB, cv::Mat& mat, const wchar_t* format = L"PNG",bool grayscale = false)
 	{
 		HMODULE hModu = GetModuleHandleW(L"CVAUTOTRACK.dll");
 
@@ -57,7 +57,7 @@ namespace TianLi::Resource::Utils
 
 		// 直接使用OpenCV的imdecode函数从二进制数据加载图像
 		std::vector<uint8_t> buf = { (uint8_t*)pImageFile, (uint8_t*)pImageFile + imageFileSize };
-		mat = cv::imdecode(buf, cv::IMREAD_COLOR);
+		mat = cv::imdecode(buf, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 
 		UnlockResource(pImageFile);
 		FreeResource(imageResDataHandle);
@@ -155,7 +155,7 @@ void Resources::install()
 		//auto& gimap_downloader = GIMapDownloader::getInstance();
 		//gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
 
-		LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF");
+		LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF",true);
 		is_installed = true;
 	}
 }

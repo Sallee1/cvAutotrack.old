@@ -12,20 +12,21 @@ constexpr double MAP_BOTH_SCALE_RATE = 1.0;
 constexpr int DEFAULT_SOME_MAP_SIZE_R = 200;
 // 小地图边缘过滤比例
 constexpr float MINIMAP_BORDER_CROP_RATIO = 0.95f;
+// 小地图标准尺寸
+constexpr double MINIMAP_DIAMETER = 200;
 
 struct MapKeypointCache;
 struct KeypointGridLSH;
 
 class Tracking
 {
-	cv::Mat _mapMat;
-	cv::Mat _miniMapMat;
-	cv::Mat _miniMapLastMat;
-	float _miniMapDiameter = 0;
+	cv::Mat m_mapMat;
+	cv::Mat m_miniMapMat;
+	cv::Mat m_miniMapLastMat;
+	float m_miniMapDiameter = 0;
 
-	cv::Point2d pos;
-	cv::Point2d last_pos;		// 上一次匹配的地点，匹配失败，返回上一次的结果
-	cv::Rect rect_continuity_map;
+	cv::Point2d m_pos;
+	cv::Point2d m_last_pos;		// 上一次匹配的地点，匹配失败，返回上一次的结果
 public:
 	Tracking() = default;
 	~Tracking() = default;
@@ -33,16 +34,16 @@ public:
 public:
 	std::shared_ptr<IMatcher> m_matcher = nullptr;
 
-	IMatcher::KeyMatPoint map_kp, some_map_kp, mini_map_kp;
+	IMatcher::KeyMatPoint m_map_kp;
 	std::unique_ptr<KeypointGridLSH> m_lsh_index;
 
-	bool isInit = false;
-	bool isContinuity = false;
+	bool m_isInit = false;
+	bool m_isContinuity = false;
 
-	int continuity_retry = 0;		//局部匹配重试次数
-	const int max_continuity_retry = 3;		//最大重试次数
+	int m_continuity_retry = 0;		//局部匹配重试次数
+	const int m_max_continuity_retry = 3;		//最大重试次数
 
-	bool is_success_match = false;
+	bool m_is_success_match = false;
 
 	void setMap(cv::Mat gi_map);
 	/**
@@ -73,5 +74,5 @@ private:
 
 	//全图匹配
 	//cv::Point2d match_all_map(bool& calc_is_faile,double& stdev, double minimap_scale_param = 1.0);
-	bool isMatchAllMap = true;
+	bool m_isMatchAllMap = true;
 };

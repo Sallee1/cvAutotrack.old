@@ -7,43 +7,56 @@
 
 void Tracking::setMap(cv::Mat gi_map)
 {
-	_mapMat = gi_map;
+	m_mapMat = gi_map;
 }
 
 void Tracking::setMiniMap(cv::Mat miniMapMat, float diameter)
 {
-	_miniMapMat = miniMapMat;
+	m_miniMapMat = miniMapMat;
+	//灰度化处理，避免一些算法bug，如FAST
+	if(miniMapMat.channels() == 4)
+	{
+		cv::cvtColor(m_miniMapMat, m_miniMapMat, cv::COLOR_BGRA2GRAY);
+	}
+	else if (miniMapMat.channels() == 3)
+	{
+		cv::cvtColor(m_miniMapMat, m_miniMapMat, cv::COLOR_BGR2GRAY);
+	}
 	if (diameter > 0)
 	{
-		_miniMapDiameter = diameter;
+		m_miniMapDiameter = diameter;
 	}
 	else
 	{
-		_miniMapDiameter = static_cast<float>(std::min(miniMapMat.cols, miniMapMat.rows));
+		m_miniMapDiameter = static_cast<float>(std::min(miniMapMat.cols, miniMapMat.rows));
 	}
+
+	//缩放处理，目前发现反而会破坏特征
+	//double scale_ratio = MINIMAP_DIAMETER / m_miniMapDiameter;
+	//cv::resize(m_miniMapMat, m_miniMapMat, {}, scale_ratio, scale_ratio, scale_ratio < 0 ? cv::INTER_AREA : cv::INTER_LINEAR);
 }
 
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 {
-	if (isInit)return true;
-	if(!_mapMat.empty())
+	if (m_isInit)return true;
+	if(!m_mapMat.empty())
 	{
-		m_matcher->detect_and_compute(_mapMat, map_kp.keypoints, map_kp.descriptors);
+		m_matcher->detect_and_compute(m_mapMat, m_map_kp.keypoints, m_map_kp.descriptors);
 	}
 	if (matcher == nullptr)
 	{
 		return false;
 	}
 	m_matcher = matcher;
-	isInit = true;
+	m_isInit = true;
 	return true;
 }
 
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher,int cols,int rows, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors)
 {
-	if (isInit)return true;
-	map_kp.keypoints = std::move(gi_map_keypoints);
-	map_kp.descriptors = std::move(gi_map_descriptors);
+	if (m_isInit)return true;
+	m_map_kp.keypoints = std::move(gi_map_keypoints);
+	m_map_kp.descriptors = std::move(gi_map_descriptors);
 	if (matcher == nullptr)
 	{
 		return false;
@@ -52,48 +65,48 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher,int cols,int rows, 
 
 	auto cell_size = Resources::getInstance().lsh_cell_size;
 	m_lsh_index = std::make_unique<KeypointGridLSH>();
-	m_lsh_index->build(map_kp.keypoints, cv::Rect2i(0, 0, cols, rows), cv::Size2i(cell_size, cell_size));
+	m_lsh_index->build(m_map_kp.keypoints, cv::Rect2i(0, 0, cols, rows), cv::Size2i(cell_size, cell_size));
 
-	isInit = true;
+	m_isInit = true;
 	return true;
 }
 
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&& map_keypoints_cache)
 {
-	if (isInit) return false;
+	if (m_isInit) return false;
 	m_lsh_index = std::make_unique<KeypointGridLSH>();
 	m_lsh_index->fromCache(map_keypoints_cache);
-	map_kp.keypoints = std::move(map_keypoints_cache.keypoints);
-	map_kp.descriptors = std::move(map_keypoints_cache.descriptors);
+	m_map_kp.keypoints = std::move(map_keypoints_cache.keypoints);
+	m_map_kp.descriptors = std::move(map_keypoints_cache.descriptors);
 
 	if (matcher == nullptr)
 	{
 		return false;
 	}
 	m_matcher = matcher;
-	isInit = true;
+	m_isInit = true;
 	return true;
 }
 
 void Tracking::UnInit()
 {
-	if (!isInit)return;
-	_mapMat = cv::Mat();
-	map_kp.keypoints.clear();
-	map_kp.descriptors.release();
-	isInit = false;
+	if (!m_isInit)return;
+	m_mapMat = cv::Mat();
+	m_map_kp.keypoints.clear();
+	m_map_kp.descriptors.release();
+	m_isInit = false;
 }
 
 void Tracking::match()
 {
 	bool calc_is_faile = false;
-	is_success_match = false;
+	m_is_success_match = false;
 
 	// 非连续匹配，匹配整个大地图
-	if (isMatchAllMap)
+	if (m_isMatchAllMap)
 	{
-		pos = match_no_continuity(calc_is_faile);
-		if (std::isnan(pos.x) || std::isnan(pos.y))
+		m_pos = match_no_continuity(calc_is_faile);
+		if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
 		{
 			calc_is_faile = true;
 		}
@@ -101,64 +114,64 @@ void Tracking::match()
 		// 没有有效结果，结束
 		if (calc_is_faile)
 		{
-			pos = last_pos;
-			is_success_match = false;
+			m_pos = m_last_pos;
+			m_is_success_match = false;
 			return;
 		}
-		continuity_retry = max_continuity_retry - 1;		//全局检测后只局部检测一次
+		m_continuity_retry = m_max_continuity_retry - 1;		//全局检测后只局部检测一次
 	}
 
 	// 尝试连续匹配，匹配角色附近小范围区域
 	bool calc_continuity_is_faile = false;
 	//pos = match_no_continuity(calc_continuity_is_faile);
-	pos = match_continuity(calc_continuity_is_faile);
-	if (std::isnan(pos.x) || std::isnan(pos.y))
+	m_pos = match_continuity(calc_continuity_is_faile);
+	if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
 	{
 		calc_continuity_is_faile = true;
 	}
 
 	if (!calc_continuity_is_faile)
 	{
-		last_pos = pos;
-		continuity_retry = 0;
+		m_last_pos = m_pos;
+		m_continuity_retry = 0;
 
-		if (isMatchAllMap)
+		if (m_isMatchAllMap)
 		{
-			isContinuity = false;
-			isMatchAllMap = false;
+			m_isContinuity = false;
+			m_isMatchAllMap = false;
 		}
 		else
 		{
-			isContinuity = true;
+			m_isContinuity = true;
 		}
 
-		is_success_match = true;
+		m_is_success_match = true;
 	}
 	else
 	{
-		pos = last_pos;
-		is_success_match = false;
-		continuity_retry++;
+		m_pos = m_last_pos;
+		m_is_success_match = false;
+		m_continuity_retry++;
 
-		if (continuity_retry >= max_continuity_retry)
+		if (m_continuity_retry >= m_max_continuity_retry)
 		{
-			isMatchAllMap = true;
-			isContinuity = false;
-			continuity_retry = 0;
+			m_isMatchAllMap = true;
+			m_isContinuity = false;
+			m_continuity_retry = 0;
 		}
 	}
 }
 
 cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 {
-	static cv::Mat img_scene(_mapMat);
+	static cv::Mat img_scene(m_mapMat);
 	int real_some_map_size_r = DEFAULT_SOME_MAP_SIZE_R;
 
 	cv::Point2d pos_object;
 
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
-	cv::Mat img_object = _miniMapMat;
-	cv::Point some_map_center_pos = pos;
+	cv::Mat img_object = m_miniMapMat;
+	cv::Point some_map_center_pos = m_pos;
 	auto keypoint_roi = TianLi::Utils::get_rect_by_center_r(some_map_center_pos, DEFAULT_SOME_MAP_SIZE_R);
 
 	cv::Mat someMap = cv::Mat();
@@ -178,11 +191,13 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 #endif
 
 	cv::Mat miniMap = img_object.clone();
-
+	IMatcher::KeyMatPoint some_map_kp;
+	IMatcher::KeyMatPoint mini_map_kp;
+	
 	m_matcher->detect_and_compute(miniMap, mini_map_kp);
-	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), _miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
+	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), m_miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
 
-	m_lsh_index->query_and_gather(keypoint_roi, map_kp.keypoints, map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
+	m_lsh_index->query_and_gather(keypoint_roi, m_map_kp.keypoints, m_map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
 
 #ifdef _CVAT_DEBUG
 	// 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
@@ -214,9 +229,9 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 	pos_object = p;
 #endif
 
-	double last_distance = std::sqrt(std::pow(static_cast<double>(pos_object.x) - last_pos.x, 2) +
-		std::pow(static_cast<double>(pos_object.y) - last_pos.y, 2));
-	if (!isMatchAllMap && last_pos.x != 0 && last_pos.y != 0 && last_distance > 200)
+	double last_distance = std::sqrt(std::pow(static_cast<double>(pos_object.x) - m_last_pos.x, 2) +
+		std::pow(static_cast<double>(pos_object.y) - m_last_pos.y, 2));
+	if (!m_isMatchAllMap && m_last_pos.x != 0 && m_last_pos.y != 0 && last_distance > DEFAULT_SOME_MAP_SIZE_R)
 	{
 		calc_continuity_is_faile = true;
 		return {};
@@ -233,15 +248,62 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 {
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
-	cv::Mat img_object = _miniMapMat;
+	cv::Mat img_object = m_miniMapMat;
+	IMatcher::KeyMatPoint mini_map_kp;
 	m_matcher->detect_and_compute(img_object, mini_map_kp);
-	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), _miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
-	if (mini_map_kp.size() <= 2)
+	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), m_miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
+	//Lowe测试
+	std::vector<cv::DMatch> good_matches;
+	std::vector<cv::Point2f> good_matched_scene;
+	std::vector<cv::Point2f> good_matched_object;
+	std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(mini_map_kp, m_map_kp, 2, false);
+	TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH, good_matches);
+	TianLi::Utils::dmatch2cvPoints(m_map_kp.keypoints, mini_map_kp.keypoints, good_matches, good_matched_scene, good_matched_object);
+
+#ifdef _CVAT_DEBUG
+	if (!m_mapMat.empty())
 	{
-		calc_is_faile = true;
-		return {};
+		TianLi::Utils::draw_good_matches(m_mapMat, m_map_kp.keypoints, img_object, mini_map_kp.keypoints, good_matches);
 	}
-	return match_impl(_mapMat, map_kp, img_object, mini_map_kp, calc_is_faile);
+#endif
+
+
+	//尝试探索局部点
+	const cv::Size2i rect_size = cv::Size2i{ DEFAULT_SOME_MAP_SIZE_R*2,DEFAULT_SOME_MAP_SIZE_R * 2 };
+	std::vector<cv::Rect2i> rects_maybe = TianLi::Utils::getRectsByPoints(good_matched_scene, rect_size);
+	for (auto& rect : rects_maybe)
+	{
+		IMatcher::KeyMatPoint some_map_kp;
+		m_lsh_index->query_and_gather(rect, m_map_kp.keypoints, m_map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
+		
+		cv::Mat some_map;
+#ifdef _CVAT_DEBUG
+		some_map = m_mapMat(rect);
+		// 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
+		cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
+			for (int i = range.start; i < range.end; i++)
+			{
+				some_map_kp.keypoints[i].pt.x -= rect.x;
+				some_map_kp.keypoints[i].pt.y -= rect.y;
+			}
+			});
+#endif
+
+		cv::Point2d out_pt = match_impl(some_map, some_map_kp, img_object, mini_map_kp, calc_is_faile);
+
+
+#ifdef _CVAT_DEBUG
+		out_pt = cv::Point2d(out_pt.x + rect.x, out_pt.y + rect.y);
+#endif
+
+		if(!calc_is_faile)
+		{
+			return out_pt;
+		}
+		calc_is_faile = false;
+	}
+	calc_is_faile = true;
+	return {};
 }
 
 cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile)
@@ -256,23 +318,9 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 	std::vector<cv::DMatch> good_matches;
 	std::vector<cv::Point2f> good_matched_scene;
 	std::vector<cv::Point2f> good_matched_object;
-	// 匹配特征点
-	if (isContinuity)  //连续匹配下图像较小，使用互匹配提高质量
-	{
-		std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, true);
-		TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matches);
-		//auto good_matched_count = good_matched_scene.size();
-	}
-	else {  //全图匹配较大，优先使用速度更快的lowe
-		std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, false);
-		// 绘制关键点
-		//cv::Mat match_results;
-		//cv::drawMatches(img_object, keypoint_object.keypoints, img_scene, keypoint_scene.keypoints, KNN_m, match_results, cv::Scalar::all(-1), cv::Scalar::all(-1), std::vector<std::vector<char>>());
+	std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->knnmatch(keypoint_object, keypoint_scene, 2, true);
+	TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH_CONTINUITY, good_matches);
 
-		TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH, good_matches);
-
-		//auto good_matched_count = good_matched_scene.size();
-	}
 	TianLi::Utils::dmatch2cvPoints(keypoint_scene.keypoints, keypoint_object.keypoints, good_matches, good_matched_scene, good_matched_object);
 #ifdef _CVAT_DEBUG
 	if(!img_scene.empty())
@@ -283,7 +331,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 
 	if (good_matched_scene.size() < 6)
 	{
-		return cleanAndComputePos_Old(good_matched_scene,calc_is_faile);
+		calc_is_faile = true; return {};
 	}
 
 	cv::Mat H, mask;
@@ -294,7 +342,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 	if (accept_count < 4 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
 	{
 		//矩阵的置信度不高，使用旧版的筛选算法
-		return cleanAndComputePos_Old(good_matched_scene,calc_is_faile);
+		calc_is_faile = true; return {};
 	}
 	// 新增几何约束检查
 	if (!H.empty() && H.type() == CV_64F) {
@@ -328,12 +376,12 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		}
 	}
 	//不满足约束
-	return cleanAndComputePos_Old(good_matched_scene,calc_is_faile);
+	calc_is_faile = true; return {};
 }
 
-cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, bool& calc_is_faile)
+[[deprecated]] cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, bool& calc_is_faile)
 {
-	if (isContinuity)
+	if (m_isContinuity)
 	{
 		// 连续匹配情况下，不使用旧版稀疏算法，以防止陷入局部最优
 		calc_is_faile = true;
@@ -383,10 +431,10 @@ cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matc
 
 cv::Point2d Tracking::getLocalPos()
 {
-	return pos;
+	return m_pos;
 }
 
 bool Tracking::getIsContinuity()
 {
-	return isContinuity;
+	return m_isContinuity;
 }
