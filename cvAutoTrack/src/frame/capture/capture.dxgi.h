@@ -304,7 +304,7 @@ namespace tianli::frame::capture
             desc.Height = m_destSize.height;
             desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             desc.ArraySize = 1;
-            // Staging texture is CPU-readback only, so no bind/shared flags are required.
+            // Staging texture is CPU read-back only, so no bind/shared flags are required.
             desc.BindFlags = 0;
             desc.MiscFlags = 0;
             desc.SampleDesc.Count = 1;
