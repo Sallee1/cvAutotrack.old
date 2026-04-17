@@ -124,6 +124,11 @@ namespace {
 		block_offsets.push_back(0);
 		TianLi::Utils::Win32ProgressWindow progress_window;
 		progress_window.create(L"cvAutoTrack", static_cast<int>(rects.size()), L"正在生成特征点缓存...");
+		const auto update_progress = [&](size_t index)
+		{
+			progress_window.set_status(L"正在生成特征点缓存: " + std::to_wstring(index + 1) + L"/" + std::to_wstring(rects.size()));
+			progress_window.set_value(static_cast<int>(index + 1));
+		};
 
 		for (size_t i = 0; i < rects.size(); ++i)
 		{
@@ -150,8 +155,7 @@ namespace {
 			{
 				block_rects.push_back(inner_rect);
 				block_offsets.push_back(block_offsets.back());
-				progress_window.set_status(L"正在生成特征点缓存: " + std::to_wstring(i + 1) + L"/" + std::to_wstring(rects.size()));
-				progress_window.set_value(static_cast<int>(i + 1));
+				update_progress(i);
 				continue;
 			}
 
@@ -178,8 +182,7 @@ namespace {
 
 			block_rects.push_back(inner_rect);
 			block_offsets.push_back(block_offsets.back() + static_cast<int>(kps.size()));
-			progress_window.set_status(L"正在生成特征点缓存: " + std::to_wstring(i + 1) + L"/" + std::to_wstring(rects.size()));
-			progress_window.set_value(static_cast<int>(i + 1));
+			update_progress(i);
 		}
 		progress_window.close();
 		return true;

@@ -142,10 +142,11 @@ namespace tianli::frame::capture
 
         if (client_box_available)
         {
-            if (static_cast<int32_t>(client_box.right - client_box.left) > frame_size.Width ||
-                static_cast<int32_t>(client_box.bottom - client_box.top) > frame_size.Height)
+            auto client_width = static_cast<int32_t>(client_box.right - client_box.left);
+            auto client_height = static_cast<int32_t>(client_box.bottom - client_box.top);
+            if (client_width > frame_size.Width || client_height > frame_size.Height)
                 return false;
-            this->source_frame = copied_frame(cv::Rect(0, 0, client_box.right - client_box.left, client_box.bottom - client_box.top)).clone();
+            this->source_frame = copied_frame(cv::Rect(0, 0, client_width, client_height)).clone();
         }
         else
         {
