@@ -14,6 +14,9 @@ namespace tianli::frame::capture
         winrt::Windows::Graphics::Capture::GraphicsCaptureSession m_session{ nullptr };
         winrt::Windows::Graphics::SizeInt32 m_lastSize;
         winrt::com_ptr<IDXGISwapChain1> m_swapChain{ nullptr };
+        winrt::Windows::Graphics::DirectX::DirectXPixelFormat m_pixelFormat = winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+        DXGI_FORMAT m_dxgiFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+        bool m_is_hdr_capture = false;
 
     public:
         capture_window_graphics()
@@ -35,6 +38,10 @@ namespace tianli::frame::capture
                 return false;
 
             m_device = utils::window_graphics::CreateDirect3DDevice(utils::window_graphics::graphics_global::get_instance().dxgi_device.get());
+            auto capture_format = utils::window_graphics::resolve_capture_color_format(this->source_handle, utils::window_graphics::graphics_global::get_instance().dxgi_device.get());
+            m_pixelFormat = capture_format.pixel_format;
+            m_dxgiFormat = capture_format.dxgi_format;
+            m_is_hdr_capture = capture_format.is_hdr;
             m_item = utils::window_graphics::CreateCaptureItemForWindow(this->source_handle);
 
             if (m_item == nullptr)
@@ -48,12 +55,12 @@ namespace tianli::frame::capture
 
             m_lastSize = m_item.Size();
             m_swapChain = utils::window_graphics::CreateDXGISwapChain(utils::window_graphics::graphics_global::get_instance().d3d_device, static_cast<uint32_t>(m_lastSize.Width),
-                static_cast<uint32_t>(m_lastSize.Height), DXGI_FORMAT_B8G8R8A8_UNORM, 2);
+                static_cast<uint32_t>(m_lastSize.Height), m_dxgiFormat, 2);
 
             utils::window_graphics::graphics_global::get_instance().d3d_device->GetImmediateContext(m_d3dContext.put());
 
             m_framePool = winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool::Create(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(),
-                static_cast<winrt::Windows::Graphics::DirectX::DirectXPixelFormat>(87), 2, m_lastSize);
+                m_pixelFormat, 2, m_lastSize);
             m_session = m_framePool.CreateCaptureSession(m_item);
 
             if (m_session == nullptr)

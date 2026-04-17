@@ -55,7 +55,23 @@ struct GenshinScreen
 {
 	cv::Rect rect_client;
 	std::chrono::system_clock::time_point last_time = std::chrono::system_clock::now();
+	cv::Mat img_screen_raw;
 	cv::Mat img_screen;
+	double screen_scale_x = 1.0;
+	double screen_scale_y = 1.0;
+
+	cv::Rect to_raw_rect(const cv::Rect& rect) const
+	{
+		if (img_screen_raw.empty() || img_screen.empty())
+			return rect;
+		int x = cvRound(rect.x * screen_scale_x);
+		int y = cvRound(rect.y * screen_scale_y);
+		int w = std::max(1, cvRound(rect.width * screen_scale_x));
+		int h = std::max(1, cvRound(rect.height * screen_scale_y));
+		cv::Rect mapped{ x, y, w, h };
+		mapped &= cv::Rect(0, 0, img_screen_raw.cols, img_screen_raw.rows);
+		return mapped;
+	}
 
 	struct Imgs {
 		cv::Mat icon_sight_maybe;

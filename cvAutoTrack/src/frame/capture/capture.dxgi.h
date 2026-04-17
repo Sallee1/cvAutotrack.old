@@ -59,6 +59,8 @@ namespace tianli::frame::capture
             m_outputDuplication.Reset();
             m_acquiredSurface.Reset();
             m_destTexture.Reset();
+            m_outputRect = { 0,0,0,0 };
+            m_currentMonitor = nullptr;
 
             is_initialized = false;
             return true;
@@ -98,6 +100,21 @@ namespace tianli::frame::capture
 
         bool get_frame(cv::Mat& frame) override
         {
+            HWND hwnd = source_handle;
+            if (is_callback)
+                hwnd = source_handle_callback();
+            if (!hwnd || !IsWindow(hwnd))
+                return false;
+
+            HMONITOR current_monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (current_monitor != m_currentMonitor)
+            {
+                uninitialized();
+                source_handle = hwnd;
+                if (!initialization())
+                    return false;
+            }
+
             if (!is_initialized && !initialization())
                 return false;
 
@@ -137,9 +154,14 @@ namespace tianli::frame::capture
             m_acquiredSurface.Attach(pTexture);
 
             // 如果需要，调整目标纹理大小
-            if (!m_destTexture || m_frameInfo.TotalMetadataBufferSize > m_metadataBufferSize)
+            D3D11_TEXTURE2D_DESC acquired_desc{};
+            m_acquiredSurface->GetDesc(&acquired_desc);
+            if (!m_destTexture ||
+                acquired_desc.Width != static_cast<UINT>(m_destSize.width) ||
+                acquired_desc.Height != static_cast<UINT>(m_destSize.height) ||
+                acquired_desc.Format != DXGI_FORMAT_B8G8R8A8_UNORM)
             {
-                m_metadataBufferSize = m_frameInfo.TotalMetadataBufferSize;
+                m_destSize = cv::Size(static_cast<int>(acquired_desc.Width), static_cast<int>(acquired_desc.Height));
                 if (!resize_destination_texture())
                 {
                     m_outputDuplication->ReleaseFrame();
@@ -175,6 +197,27 @@ namespace tianli::frame::capture
 
             if (source_frame.empty())
                 return false;
+
+            RECT client_screen_rect{};
+            if (!get_client_rect_on_screen(hwnd, client_screen_rect))
+                return false;
+
+            RECT clipped_rect{};
+            if (!IntersectRect(&clipped_rect, &client_screen_rect, &m_outputRect))
+                return false;
+
+            int crop_x = clipped_rect.left - m_outputRect.left;
+            int crop_y = clipped_rect.top - m_outputRect.top;
+            int crop_w = clipped_rect.right - clipped_rect.left;
+            int crop_h = clipped_rect.bottom - clipped_rect.top;
+            if (crop_w <= 0 || crop_h <= 0)
+                return false;
+
+            cv::Rect roi(crop_x, crop_y, crop_w, crop_h);
+            roi &= cv::Rect(0, 0, source_frame.cols, source_frame.rows);
+            if (roi.width <= 0 || roi.height <= 0)
+                return false;
+            source_frame = source_frame(roi).clone();
 
             frame = source_frame;
             return true;
@@ -236,6 +279,8 @@ namespace tianli::frame::capture
                             output->GetDesc(&outputDesc);
                             m_destSize.width = outputDesc.DesktopCoordinates.right - outputDesc.DesktopCoordinates.left;
                             m_destSize.height = outputDesc.DesktopCoordinates.bottom - outputDesc.DesktopCoordinates.top;
+                            m_outputRect = outputDesc.DesktopCoordinates;
+                            m_currentMonitor = desc.Monitor;
 
                             // 创建目标纹理
                             if (!create_destination_texture())
@@ -259,8 +304,8 @@ namespace tianli::frame::capture
             desc.Height = m_destSize.height;
             desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             desc.ArraySize = 1;
-            desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-            desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+            desc.BindFlags = 0;
+            desc.MiscFlags = 0;
             desc.SampleDesc.Count = 1;
             desc.Usage = D3D11_USAGE_STAGING;
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
@@ -275,6 +320,21 @@ namespace tianli::frame::capture
             return create_destination_texture();
         }
 
+        bool get_client_rect_on_screen(HWND hwnd, RECT& out_rect) const
+        {
+            RECT client_rect{};
+            if (!GetClientRect(hwnd, &client_rect))
+                return false;
+            POINT pt{ 0, 0 };
+            if (!ClientToScreen(hwnd, &pt))
+                return false;
+            out_rect.left = pt.x;
+            out_rect.top = pt.y;
+            out_rect.right = pt.x + client_rect.right;
+            out_rect.bottom = pt.y + client_rect.bottom;
+            return out_rect.right > out_rect.left && out_rect.bottom > out_rect.top;
+        }
+
     private:
         Microsoft::WRL::ComPtr<ID3D11Device> m_d3dDevice;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_d3dContext;
@@ -283,7 +343,8 @@ namespace tianli::frame::capture
         Microsoft::WRL::ComPtr<ID3D11Texture2D> m_acquiredSurface;
 
         DXGI_OUTDUPL_FRAME_INFO m_frameInfo = {};
-        UINT m_metadataBufferSize = 0;
         cv::Size m_destSize;
+        RECT m_outputRect{ 0, 0, 0, 0 };
+        HMONITOR m_currentMonitor = nullptr;
     };
 } // namespace tianli::frame::capture

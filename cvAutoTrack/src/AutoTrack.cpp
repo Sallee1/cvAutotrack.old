@@ -885,7 +885,12 @@ bool AutoTrack::getGengshinImpactScreen()
 
 bool AutoTrack::getMiniMapRefMat()
 {
-	genshin_minimap.img_minimap = genshin_screen.img_screen(genshin_minimap.rect_minimap).clone();
+	if (!genshin_screen.img_screen_raw.empty())
+	{
+		auto rect_raw = genshin_screen.to_raw_rect(genshin_minimap.rect_minimap);
+		if (rect_raw.width > 0 && rect_raw.height > 0)
+			genshin_minimap.img_minimap = genshin_screen.img_screen_raw(rect_raw).clone();
+	}
 
 	if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics ||
 		genshin_handle.config.is_force_used_no_alpha)

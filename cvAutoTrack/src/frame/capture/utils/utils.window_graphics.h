@@ -13,6 +13,34 @@
 
 namespace tianli::frame::capture::utils::window_graphics
 {
+    struct capture_color_format
+    {
+        winrt::Windows::Graphics::DirectX::DirectXPixelFormat pixel_format = winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+        DXGI_FORMAT dxgi_format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        bool is_hdr = false;
+    };
+
+    inline winrt::Windows::Graphics::DirectX::DirectXPixelFormat to_directx_pixel_format(DXGI_FORMAT format)
+    {
+        if (format == DXGI_FORMAT_R16G16B16A16_FLOAT)
+            return winrt::Windows::Graphics::DirectX::DirectXPixelFormat::R16G16B16A16Float;
+        return winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized;
+    }
+
+    inline DXGI_FORMAT to_dxgi_format(winrt::Windows::Graphics::DirectX::DirectXPixelFormat format)
+    {
+        if (format == winrt::Windows::Graphics::DirectX::DirectXPixelFormat::R16G16B16A16Float)
+            return DXGI_FORMAT_R16G16B16A16_FLOAT;
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+    }
+
+    inline bool is_hdr_colorspace(DXGI_COLOR_SPACE_TYPE color_space)
+    {
+        return color_space == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 ||
+            color_space == DXGI_COLOR_SPACE_RGB_STUDIO_G2084_NONE_P2020 ||
+            color_space == DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+    }
+
     struct __declspec(uuid("A9B3D012-3DF2-4EE3-B8D1-8695F457D3C1")) IDirect3DDxgiInterfaceAccess : ::IUnknown
     {
         virtual HRESULT __stdcall GetInterface(GUID const& id, void** object) = 0;
@@ -78,6 +106,46 @@ namespace tianli::frame::capture::utils::window_graphics
         winrt::Windows::Graphics::Capture::GraphicsCaptureItem item = { nullptr };
         winrt::check_hresult(interop_factory->CreateForMonitor(hmon, winrt::guid_of<ABI::Windows::Graphics::Capture::IGraphicsCaptureItem>(), winrt::put_abi(item)));
         return item;
+    }
+
+    inline capture_color_format resolve_capture_color_format(HWND hwnd, IDXGIDevice* dxgi_device)
+    {
+        capture_color_format format{};
+        if (!hwnd || !dxgi_device)
+            return format;
+
+        HMONITOR hmonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (!hmonitor)
+            return format;
+
+        winrt::com_ptr<IDXGIAdapter> adapter;
+        if (FAILED(dxgi_device->GetAdapter(adapter.put())))
+            return format;
+
+        winrt::com_ptr<IDXGIOutput> output;
+        UINT output_index = 0;
+        while (adapter->EnumOutputs(output_index, output.put()) != DXGI_ERROR_NOT_FOUND)
+        {
+            DXGI_OUTPUT_DESC desc{};
+            if (SUCCEEDED(output->GetDesc(&desc)) && desc.Monitor == hmonitor)
+            {
+                winrt::com_ptr<IDXGIOutput6> output6 = output.try_as<IDXGIOutput6>();
+                if (output6)
+                {
+                    DXGI_OUTPUT_DESC1 desc1{};
+                    if (SUCCEEDED(output6->GetDesc1(&desc1)) && is_hdr_colorspace(desc1.ColorSpace))
+                    {
+                        format.is_hdr = true;
+                        format.dxgi_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+                        format.pixel_format = winrt::Windows::Graphics::DirectX::DirectXPixelFormat::R16G16B16A16Float;
+                    }
+                }
+                break;
+            }
+            output = nullptr;
+            ++output_index;
+        }
+        return format;
     }
 
     template <typename T> inline auto GetDXGIInterfaceFromObject(winrt::Windows::Foundation::IInspectable const& object)

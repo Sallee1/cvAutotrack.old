@@ -8,6 +8,7 @@
 #include "serialize.h"
 #include "resources/Resources.h"
 #include "resources/map_mapper.h"
+#include "utils/utils.progress.h"
 
 void MapKeypointCache::serialize(std::string outFileName)
 {
@@ -121,9 +122,12 @@ namespace {
 		block_rects.clear();
 		block_offsets.clear();
 		block_offsets.push_back(0);
+		TianLi::Utils::Win32ProgressWindow progress_window;
+		progress_window.create(L"cvAutoTrack", static_cast<int>(rects.size()), L"正在生成特征点缓存...");
 
-		for (auto& rect : rects)
+		for (size_t i = 0; i < rects.size(); ++i)
 		{
+			auto& rect = rects[i];
 			cv::Rect2i padded_rect = rect.first;
 			cv::Rect2i inner_rect = rect.second;
 
@@ -146,6 +150,8 @@ namespace {
 			{
 				block_rects.push_back(inner_rect);
 				block_offsets.push_back(block_offsets.back());
+				progress_window.set_status(L"正在生成特征点缓存: " + std::to_wstring(i + 1) + L"/" + std::to_wstring(rects.size()));
+				progress_window.set_value(static_cast<int>(i + 1));
 				continue;
 			}
 
@@ -172,7 +178,10 @@ namespace {
 
 			block_rects.push_back(inner_rect);
 			block_offsets.push_back(block_offsets.back() + static_cast<int>(kps.size()));
+			progress_window.set_status(L"正在生成特征点缓存: " + std::to_wstring(i + 1) + L"/" + std::to_wstring(rects.size()));
+			progress_window.set_value(static_cast<int>(i + 1));
 		}
+		progress_window.close();
 		return true;
 	}
 
