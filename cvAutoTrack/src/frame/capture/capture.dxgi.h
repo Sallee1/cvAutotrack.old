@@ -59,7 +59,7 @@ namespace tianli::frame::capture
             m_outputDuplication.Reset();
             m_acquiredSurface.Reset();
             m_destTexture.Reset();
-            m_outputRect = { 0,0,0,0 };
+            m_outputRect = { 0, 0, 0, 0 };
             m_currentMonitor = nullptr;
 
             is_initialized = false;
