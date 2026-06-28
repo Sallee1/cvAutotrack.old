@@ -161,12 +161,12 @@ cv::Ptr<cv::DescriptorMatcher> IMatcher::create_flann_matcher()
 	if (getIsBinaryDescriptor())
 	{
 		cv::Ptr<cv::flann::LshIndexParams> index_params{ cv::makePtr<cv::flann::LshIndexParams>(20, 32, 2) };
-		cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0.1, true) };
+		cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0.1f, true) };
 		return cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
 	}
 
 	cv::Ptr<cv::flann::KDTreeIndexParams> index_params{ cv::makePtr<cv::flann::KDTreeIndexParams>(8) };
-	cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0, true) };
+	cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0.0f, true) };
 	return cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
 }
 

@@ -35,6 +35,6 @@ private:
 
 inline bool clear_error_logs()
 {
-	ErrorCode::getInstance() = { 0,"调用成功" };
+	ErrorCode::getInstance() = { 0,"璋冪敤鎴愬姛" };
 	return true;
 }
