@@ -3,10 +3,33 @@
 
 namespace tianli::frame::capture
 {
+    namespace
+    {
+        cv::Mat tone_map_hdr_to_sdr_bgra(const cv::Mat& hdr_rgba)
+        {
+            cv::Mat hdr_float;
+            hdr_rgba.convertTo(hdr_float, CV_32FC4);
+            std::vector<cv::Mat> channels;
+            cv::split(hdr_float, channels);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                cv::max(channels[i], 0.0f, channels[i]);
+                channels[i] = channels[i] / (1.0f + channels[i]); // Reinhard tone mapping
+                cv::pow(channels[i], 1.0 / 2.2, channels[i]);     // gamma to SDR
+            }
+            channels[3] = cv::Mat::ones(channels[3].size(), channels[3].type());
+
+            cv::Mat merged;
+            cv::merge(channels, merged);
+            cv::Mat sdr_bgra;
+            merged.convertTo(sdr_bgra, CV_8UC4, 255.0);
+            return sdr_bgra;
+        }
+    }
+
     bool capture_window_graphics::get_frame(cv::Mat& frame)
     {
-        static ID3D11Texture2D* bufferTexture;
-
         if (this->is_callback)
             set_capture_handle(this->source_handle_callback());
 
@@ -15,6 +38,16 @@ namespace tianli::frame::capture
             uninitialized();
             if (initialization() == false)
                 return false;
+        }
+
+        auto resolved_format = utils::window_graphics::resolve_capture_color_format(this->source_handle, utils::window_graphics::graphics_global::get_instance().dxgi_device.get());
+        if (resolved_format.dxgi_format != m_dxgiFormat)
+        {
+            m_pixelFormat = resolved_format.pixel_format;
+            m_dxgiFormat = resolved_format.dxgi_format;
+            m_is_hdr_capture = resolved_format.is_hdr;
+            m_framePool.Recreate(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(), m_pixelFormat, 2, m_lastSize);
+            m_swapChain->ResizeBuffers(2, static_cast<uint32_t>(m_lastSize.Width), static_cast<uint32_t>(m_lastSize.Height), m_dxgiFormat, 0);
         }
 
         winrt::Windows::Graphics::Capture::Direct3D11CaptureFrame new_frame{ nullptr };
@@ -34,72 +67,91 @@ namespace tianli::frame::capture
         }
 
         auto& desc = utils::window_graphics::graphics_global::get_instance().desc_type;
-        if (desc.Width != static_cast<UINT>(m_lastSize.Width) || desc.Height != static_cast<UINT>(m_lastSize.Height))
-        {
-            desc.Width = m_lastSize.Width;
-            desc.Height = m_lastSize.Height;
-        }
+        auto frame_surface = utils::window_graphics::GetDXGIInterfaceFromObject<ID3D11Texture2D>(new_frame.Surface());
+        D3D11_TEXTURE2D_DESC frame_surface_desc{};
+        frame_surface->GetDesc(&frame_surface_desc);
 
         if (frame_size.Width != m_lastSize.Width || frame_size.Height != m_lastSize.Height)
         {
-            m_framePool.Recreate(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(), winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized, 2,
+            m_framePool.Recreate(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(), m_pixelFormat, 2,
                 frame_size);
             m_lastSize = frame_size;
 
             m_swapChain->ResizeBuffers(2, static_cast<uint32_t>(m_lastSize.Width), static_cast<uint32_t>(m_lastSize.Height),
-                static_cast<DXGI_FORMAT>(winrt::Windows::Graphics::DirectX::DirectXPixelFormat::B8G8R8A8UIntNormalized), 0);
+                m_dxgiFormat, 0);
         }
-        auto frameSurface = utils::window_graphics::GetDXGIInterfaceFromObject<ID3D11Texture2D>(new_frame.Surface());
 
-        // auto d3dDevice = GetDXGIInterfaceFromObject<ID3D11Device>(m_device);
-        utils::window_graphics::graphics_global::get_instance().d3d_device->CreateTexture2D(&desc, nullptr, &bufferTexture);
+        if (frame_surface_desc.Format != m_dxgiFormat)
+        {
+            m_dxgiFormat = frame_surface_desc.Format;
+            m_pixelFormat = utils::window_graphics::to_directx_pixel_format(m_dxgiFormat);
+            m_framePool.Recreate(m_device.as<winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice>(), m_pixelFormat, 2, frame_size);
+            m_swapChain->ResizeBuffers(2, static_cast<uint32_t>(frame_size.Width), static_cast<uint32_t>(frame_size.Height), m_dxgiFormat, 0);
+            return false;
+        }
+
+        desc.Width = static_cast<UINT>(frame_size.Width);
+        desc.Height = static_cast<UINT>(frame_size.Height);
+        desc.Format = frame_surface_desc.Format;
+
+        winrt::com_ptr<ID3D11Texture2D> buffer_texture;
+        if (FAILED(utils::window_graphics::graphics_global::get_instance().d3d_device->CreateTexture2D(&desc, nullptr, buffer_texture.put())))
+            return false;
+
         D3D11_BOX client_box;
         bool client_box_available = utils::window_graphics::get_client_box(this->source_handle, desc.Width, desc.Height, &client_box);
 
         if (client_box_available)
         {
-            m_d3dContext->CopySubresourceRegion(bufferTexture, 0, 0, 0, 0, frameSurface.get(), 0, &client_box);
+            m_d3dContext->CopySubresourceRegion(buffer_texture.get(), 0, 0, 0, 0, frame_surface.get(), 0, &client_box);
         }
         else
         {
-            m_d3dContext->CopyResource(bufferTexture, frameSurface.get());
+            m_d3dContext->CopyResource(buffer_texture.get(), frame_surface.get());
         }
 
-        if (bufferTexture == nullptr)
+        if (!buffer_texture)
         {
             return false;
         }
 
-        D3D11_MAPPED_SUBRESOURCE mappedTex;
-        m_d3dContext->Map(bufferTexture, 0, D3D11_MAP_READ, 0, &mappedTex);
+        D3D11_MAPPED_SUBRESOURCE mapped_tex{};
+        if (FAILED(m_d3dContext->Map(buffer_texture.get(), 0, D3D11_MAP_READ, 0, &mapped_tex)))
+            return false;
 
-        auto data = mappedTex.pData;
-        auto pitch = mappedTex.RowPitch;
+        auto data = mapped_tex.pData;
+        auto pitch = mapped_tex.RowPitch;
         if (data == nullptr)
-            return false;
-
-        //不知道什么原理，有时候frame_size和desc大小不一样，就会炸
-        if (frame_size.Width != static_cast<int32_t>(desc.Width) || frame_size.Height != static_cast<int32_t>(desc.Height))
         {
+            m_d3dContext->Unmap(buffer_texture.get(), 0);
             return false;
         }
 
-        try {
-            frame = cv::Mat(frame_size.Height, frame_size.Width, CV_8UC4, data, pitch);
+        cv::Mat copied_frame;
+        if (desc.Format == DXGI_FORMAT_R16G16B16A16_FLOAT)
+        {
+            cv::Mat hdr_mat(frame_size.Height, frame_size.Width, CV_16FC4, data, pitch);
+            copied_frame = tone_map_hdr_to_sdr_bgra(hdr_mat);
         }
-        catch (cv::Exception e) {
-            return false;
+        else
+        {
+            cv::Mat bgra_mat(frame_size.Height, frame_size.Width, CV_8UC4, data, pitch);
+            copied_frame = bgra_mat.clone();
         }
+        m_d3dContext->Unmap(buffer_texture.get(), 0);
 
         if (client_box_available)
         {
-            if (static_cast<int32_t>(client_box.right - client_box.left) > frame_size.Width ||
-                static_cast<int32_t>(client_box.bottom - client_box.top) > frame_size.Height)
+            auto client_width = static_cast<int32_t>(client_box.right - client_box.left);
+            auto client_height = static_cast<int32_t>(client_box.bottom - client_box.top);
+            if (client_width > frame_size.Width || client_height > frame_size.Height)
                 return false;
-            this->source_frame = frame(cv::Rect(0, 0, client_box.right - client_box.left, client_box.bottom - client_box.top));
+            this->source_frame = copied_frame(cv::Rect(0, 0, client_width, client_height)).clone();
         }
-        // 释放资源
-        bufferTexture->Release();
+        else
+        {
+            this->source_frame = copied_frame;
+        }
 
         if (this->source_frame.empty())
             return false;

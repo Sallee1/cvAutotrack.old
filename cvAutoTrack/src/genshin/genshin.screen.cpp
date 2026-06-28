@@ -19,24 +19,28 @@ namespace TianLi::Genshin {
         auto& giRect = genshin_handle.rect;
         auto& giRectClient = genshin_handle.rect_client;
         //auto& giScale = genshin_handle.scale;
+        auto& giFrameRaw = out_genshin_screen.img_screen_raw;
         auto& giFrame = out_genshin_screen.img_screen;
 
         auto now_time = std::chrono::system_clock::now();
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - out_genshin_screen.last_time).count() > 20 || giFrame.empty())
         {
             out_genshin_screen.last_time = now_time;
-            if (!genshin_handle.config.frame_source->get_frame(giFrame))
+            if (!genshin_handle.config.frame_source->get_frame(giFrameRaw))
             {
                 return false;
             }
         }
 
         {
-            if (giFrame.empty())return false;
-            cv::resize(giFrame, giFrame, genshin_handle.size_frame);
+            if (giFrameRaw.empty())return false;
+            cv::resize(giFrameRaw, giFrame, genshin_handle.size_frame);
+            out_genshin_screen.screen_scale_x = static_cast<double>(giFrameRaw.cols) / std::max(1, giFrame.cols);
+            out_genshin_screen.screen_scale_y = static_cast<double>(giFrameRaw.rows) / std::max(1, giFrame.rows);
 
             out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
             preprocess_raw_frame(giFrame);
+            preprocess_raw_frame(giFrameRaw);
             init_screen_frames(out_genshin_screen);
         }
         return true;

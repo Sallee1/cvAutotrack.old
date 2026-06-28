@@ -294,6 +294,9 @@
     <ClInclude Include="src\utils\map_mapper.h">
       <Filter>src\resources</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\utils.progress.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
     <ClInclude Include="src\resources\gimap_downloader.h" />
     <ClInclude Include="src\match\matcher_impl\FAST_SURFMatcher.h" />
   </ItemGroup>
@@ -376,6 +379,9 @@
     </ClCompile>
     <ClCompile Include="src\match\matcher_impl\SURFMatcher.cpp" />
     <ClCompile Include="src\resources\gimap_downloader.cpp" />
+    <ClCompile Include="src\utils\utils.progress.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
     <ClCompile Include="src\match\matcher_impl\FAST_SURFMatcher.cpp" />
   </ItemGroup>
   <ItemGroup>

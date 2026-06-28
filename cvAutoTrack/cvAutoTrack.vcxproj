@@ -322,6 +322,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClInclude Include="src\resources\serialize.h" />
     <ClInclude Include="src\utils\log\utils.log.h" />
     <ClInclude Include="src\utils\map_mapper.h" />
+    <ClInclude Include="src\utils\utils.progress.h" />
     <ClInclude Include="src\utils\Utils.h" />
     <ClInclude Include="src\Ver.h" />
   </ItemGroup>
@@ -359,6 +360,7 @@ xcopy /Y $(targetDir)$(targetName).pdb C:\Users\Sallee\AppData\LocalLow\空荧�
     <ClCompile Include="src\resources\Resources.cpp" />
     <ClCompile Include="src\resources\resources.load.cpp" />
     <ClCompile Include="src\utils\log\utils.log.cpp" />
+    <ClCompile Include="src\utils\utils.progress.cpp" />
     <ClCompile Include="src\utils\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>

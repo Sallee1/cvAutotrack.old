@@ -359,7 +359,12 @@ namespace TianLi::Genshin {
 			}
 			// center point
 			auto minimap_center = cv::Point(minimap_rect.x + (minimap_rect.width) / 2, minimap_rect.y + (minimap_rect.height) / 2);
-			out_genshin_minimap.img_minimap = genshin_screen.img_screen(minimap_rect).clone();
+			cv::Rect minimap_rect_raw = genshin_screen.to_raw_rect(minimap_rect);
+			if (minimap_rect_raw.width <= 0 || minimap_rect_raw.height <= 0)
+			{
+				return false;
+			}
+			out_genshin_minimap.img_minimap = genshin_screen.img_screen_raw(minimap_rect_raw).clone();
 			out_genshin_minimap.minimap_diameter = std::min(out_genshin_minimap.img_minimap.rows, out_genshin_minimap.img_minimap.cols) * 0.95f;
 			paddingminimap(out_genshin_minimap.img_minimap, out_genshin_minimap.img_minimap_padding, static_cast<int>(out_genshin_minimap.img_minimap.rows * 0.05f), 32);
 
