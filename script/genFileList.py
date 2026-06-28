@@ -43,8 +43,8 @@ def main():
                 continue
 
             filepath = os.path.join(root, file)
-            filepath = filepath.replace('\\', '/')
             relative_path = os.path.relpath(filepath, directory)
+            relative_path = relative_path.replace('\\', '/')
             current_files.add(relative_path)
 
             file_md5 = calculate_md5(filepath)
