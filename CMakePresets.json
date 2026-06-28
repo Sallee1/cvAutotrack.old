@@ -1,0 +1,48 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "x64-Release",
+            "description": "Release x64 构建（对应原 vcxproj Release|x64）",
+            "generator": "Visual Studio 18 2026",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build/x64-Release",
+            "cacheVariables": {
+                "CMAKE_CONFIGURATION_TYPES": "Release;RelWithDebInfo",
+                "CVAT_COPY_TO_GAMEDIR":true
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "x64-Debug",
+            "description": "Debug x64 构建（不优化，带调试信息）",
+            "generator": "Visual Studio 18 2026",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build/x64-Debug",
+            "cacheVariables": {
+                "CMAKE_CONFIGURATION_TYPES": "Debug"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "release",
+            "displayName": "构建 Release",
+            "configurePreset": "default",
+            "configuration": "Release"
+        },
+        {
+            "name": "relwithdebinfo",
+            "displayName": "构建 RelNoOpz",
+            "configurePreset": "default",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "debug",
+            "displayName": "构建 Debug",
+            "configurePreset": "debug",
+            "configuration": "Debug"
+        }
+    ]
+}
