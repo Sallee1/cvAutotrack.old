@@ -1,141 +1,119 @@
 #include "pch.h"
 #include "utils.progress.h"
-#include <CommCtrl.h>
+#include <ShlObj.h>   // CLSID_ProgressDialog, IID_IProgressDialog
+#include <ShlGuid.h>  // CLSID_ProgressDialog (部分 SDK)
+#include <comdef.h>
+#include <thread>
 
-#pragma comment(lib, "Comctl32.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "shell32.lib")
 
 namespace TianLi::Utils
 {
-	namespace
+	//-------------------------------------------------------------------------
+	// create —— 启动 UI 线程创建原生现代进度对话框
+	//-------------------------------------------------------------------------
+	bool Win32ProgressWindow::create(const std::wstring& title, int max_value, const std::wstring& status)
 	{
-		constexpr wchar_t kProgressWindowClass[] = L"cvAutoTrackProgressWindow";
+		max_value_ = static_cast<DWORD>(std::max(1, max_value));
+
+		// 用事件同步：等待 UI 线程初始化完再返回
+		HANDLE h_ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+		if (!h_ready)
+			return false;
+
+		// 启动 UI 线程
+		ui_thread_ = std::thread([this, title, status, h_ready]() {
+			ui_thread_id_ = GetCurrentThreadId();
+
+			// 初始化 COM（UI 线程需 STA）
+			HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+			if (FAILED(hr)) {
+				dialog_ = nullptr;
+				SetEvent(h_ready);
+				return;
+			}
+
+			// 创建进度对话框
+			IProgressDialog* pDlg = nullptr;
+			hr = CoCreateInstance(CLSID_ProgressDialog, nullptr,
+				CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDlg));
+			if (FAILED(hr) || !pDlg) {
+				CoUninitialize();
+				dialog_ = nullptr;
+				SetEvent(h_ready);
+				return;
+			}
+			dialog_ = pDlg;
+
+			// 开始对话框
+			pDlg->SetTitle(title.c_str());
+			pDlg->SetLine(1, status.c_str(), false, nullptr);
+			pDlg->StartProgressDialog(
+				nullptr, nullptr, PROGDLG_NORMAL | PROGDLG_AUTOTIME, nullptr);
+			pDlg->SetProgress(0, max_value_);
+
+			// 通知主线程创建完毕
+			SetEvent(h_ready);
+
+			// 消息循环（GetMessage 阻塞，不占用 CPU）
+			MSG msg{};
+			while (GetMessageW(&msg, nullptr, 0, 0) > 0)
+			{
+				TranslateMessage(&msg);
+				DispatchMessageW(&msg);
+			}
+
+			// 释放对话框
+			pDlg->StopProgressDialog();
+			pDlg->Release();
+			dialog_ = nullptr;
+			CoUninitialize();
+			});
+
+		// 等待窗口创建完毕
+		WaitForSingleObject(h_ready, INFINITE);
+		CloseHandle(h_ready);
+
+		return dialog_ != nullptr;
+	}
+
+	void Win32ProgressWindow::set_range(int /*max_value*/)
+	{
+		// IProgressDialog 不直接支持动态 range，忽略
+	}
+
+	void Win32ProgressWindow::set_value(int value)
+	{
+		if (!dialog_)
+			return;
+		dialog_->SetProgress(static_cast<DWORD>(std::max(0, value)), max_value_);
+	}
+
+	void Win32ProgressWindow::set_status(const std::wstring& status)
+	{
+		if (!dialog_)
+			return;
+		dialog_->SetLine(1, status.c_str(), false, nullptr);
+	}
+
+	void Win32ProgressWindow::close()
+	{
+		if (dialog_) {
+			dialog_->StopProgressDialog();
+			dialog_->Release();
+			dialog_ = nullptr;
+		}
+		// StopProgressDialog 在调用线程上处理窗口消息，PostQuitMessage 发到的是
+		// 调用线程（主线程）。显式向 UI 线程发 WM_QUIT 确保消息循环退出。
+		if (ui_thread_id_ != 0)
+			PostThreadMessageW(ui_thread_id_, WM_QUIT, 0, 0);
+		if (ui_thread_.joinable())
+			ui_thread_.join();
 	}
 
 	Win32ProgressWindow::~Win32ProgressWindow()
 	{
 		close();
-	}
-
-	bool Win32ProgressWindow::register_class()
-	{
-		static bool is_registered = false;
-		if (is_registered)
-			return true;
-
-		WNDCLASSEXW wc{};
-		wc.cbSize = sizeof(wc);
-		wc.lpfnWndProc = WndProc;
-		wc.hInstance = GetModuleHandleW(nullptr);
-		wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-		wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-		wc.lpszClassName = kProgressWindowClass;
-		if (RegisterClassExW(&wc) == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
-			return false;
-
-		is_registered = true;
-		return true;
-	}
-
-	bool Win32ProgressWindow::create(const std::wstring& title, int max_value, const std::wstring& status)
-	{
-		if (!register_class())
-			return false;
-
-		INITCOMMONCONTROLSEX icex{};
-		icex.dwSize = sizeof(icex);
-		icex.dwICC = ICC_PROGRESS_CLASS;
-		InitCommonControlsEx(&icex);
-
-		hwnd_ = CreateWindowExW(
-			WS_EX_APPWINDOW | WS_EX_TOPMOST,
-			kProgressWindowClass,
-			title.c_str(),
-			WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-			CW_USEDEFAULT, CW_USEDEFAULT, 480, 130,
-			nullptr,
-			nullptr,
-			GetModuleHandleW(nullptr),
-			nullptr);
-		if (!hwnd_)
-			return false;
-
-		status_hwnd_ = CreateWindowExW(
-			0, L"STATIC", status.c_str(),
-			WS_VISIBLE | WS_CHILD | SS_LEFT,
-			16, 14, 440, 20,
-			hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
-
-		progress_hwnd_ = CreateWindowExW(
-			0, PROGRESS_CLASSW, nullptr,
-			WS_VISIBLE | WS_CHILD | PBS_SMOOTH,
-			16, 44, 440, 26,
-			hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
-
-		set_range(max_value);
-		set_value(0);
-		ShowWindow(hwnd_, SW_SHOW);
-		UpdateWindow(hwnd_);
-		process_messages();
-		return progress_hwnd_ != nullptr;
-	}
-
-	void Win32ProgressWindow::set_range(int max_value)
-	{
-		if (!progress_hwnd_)
-			return;
-		max_value_ = std::max(1, max_value);
-		SendMessageW(progress_hwnd_, PBM_SETRANGE32, 0, static_cast<LPARAM>(max_value_));
-	}
-
-	void Win32ProgressWindow::set_value(int value)
-	{
-		if (!progress_hwnd_)
-			return;
-		int clamped_value = (std::max)(0, (std::min)(value, max_value_));
-		SendMessageW(progress_hwnd_, PBM_SETPOS, static_cast<WPARAM>(clamped_value), 0);
-		process_messages();
-	}
-
-	void Win32ProgressWindow::set_status(const std::wstring& status)
-	{
-		if (!status_hwnd_)
-			return;
-		SetWindowTextW(status_hwnd_, status.c_str());
-		process_messages();
-	}
-
-	void Win32ProgressWindow::close()
-	{
-		if (hwnd_)
-		{
-			DestroyWindow(hwnd_);
-			hwnd_ = nullptr;
-		}
-		progress_hwnd_ = nullptr;
-		status_hwnd_ = nullptr;
-		process_messages();
-	}
-
-	void Win32ProgressWindow::process_messages()
-	{
-		MSG msg{};
-		while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
-	}
-
-	LRESULT CALLBACK Win32ProgressWindow::WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-	{
-		switch (msg)
-		{
-		case WM_CLOSE:
-			DestroyWindow(hwnd);
-			return 0;
-		default:
-			break;
-		}
-		return DefWindowProcW(hwnd, msg, wparam, lparam);
 	}
 }
