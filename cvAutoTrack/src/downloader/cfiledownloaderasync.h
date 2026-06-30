@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <memory>
+#include <filesystem>
 
 namespace tianli {
     class FileDownloaderAsync {
@@ -54,6 +55,20 @@ namespace tianli {
             m_wait_cond.wait(lock, [this]() {
                 return m_task_queue.empty() && m_active_tasks == 0;
             });
+        }
+
+        size_t getTaskCount() const {
+            std::lock_guard<std::mutex> lock(m_tasks_mutex);
+            return m_tasks.size();
+        }
+
+        size_t getCompletedCount() const {
+            std::lock_guard<std::mutex> lock(m_tasks_mutex);
+            size_t count = 0;
+            for (const auto& [id, task] : m_tasks) {
+                if (task->completed) count++;
+            }
+            return count;
         }
 
         std::unordered_map<size_t, std::pair<int, std::string>> getFailed() const {
@@ -131,11 +146,28 @@ namespace tianli {
                 m_active_tasks++;
 
                 try {
-                    FileDownloader downloader(task->filePath, task->url, task->md5);
+                    // 下载到临时文件，完成后原子重命名，避免写坏目标文件
+                    std::string tmp_path = task->filePath + ".tmp";
+
+                    FileDownloader downloader(tmp_path, task->url, task->md5);
                     task->success = downloader.download();
-                    if (!task->success) {
+
+                    if (task->success) {
+                        // 下载成功：.tmp → 目标文件（原子 rename 覆盖）
+                        std::error_code ec;
+                        std::filesystem::rename(tmp_path, task->filePath, ec);
+                        if (ec) {
+                            task->success = false;
+                            task->errorCode = -3;
+                            task->errorMsg = "重命名临时文件失败: " + ec.message();
+                            std::filesystem::remove(tmp_path, ec);
+                        }
+                    } else {
                         task->errorCode = downloader.getLastErrorCode();
                         task->errorMsg = downloader.getLastErrorMsg();
+                        // 下载失败：清理 .tmp
+                        std::error_code ec;
+                        std::filesystem::remove(tmp_path, ec);
                     }
                 } catch (...) {
                     task->success = false;

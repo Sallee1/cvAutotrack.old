@@ -64,14 +64,12 @@ namespace TianLi::Resource::Utils
 	}
 }
 using namespace TianLi::Resource::Utils;
-#ifdef USED_BINARY_IMAGE
+
 #include "resources.load.h"
-#endif //
 #include <match/type/MatchType.h>
 
 Resources::Resources()
 {
-#ifdef USED_BINARY_IMAGE
 	PaimonTemplate = TianLi::Resources::Load::load_image("paimon");
 	StarTemplate = TianLi::Resources::Load::load_image("star");
 	IconSightTemplate = TianLi::Resources::Load::load_image("icon_sight");
@@ -87,31 +85,6 @@ Resources::Resources()
 	UIDnumber[7] = TianLi::Resources::Load::load_image("uid7");
 	UIDnumber[8] = TianLi::Resources::Load::load_image("uid8");
 	UIDnumber[9] = TianLi::Resources::Load::load_image("uid9");
-
-	cv::cvtColor(StarTemplate, StarTemplate, cv::COLOR_RGB2GRAY);
-	cv::cvtColor(UID, UID, cv::COLOR_RGB2GRAY);
-	for (int i = 0; i < 10; i++)
-	{
-		cv::cvtColor(UIDnumber[i], UIDnumber[i], cv::COLOR_RGB2GRAY);
-	}
-#endif //
-	LoadBitmap_ID2Mat(IDB_BITMAP_PAIMON, PaimonTemplate);
-	LoadBitmap_ID2Mat(IDB_BITMAP_STAR, StarTemplate);
-
-	LoadImg_ID2Mat(IDB_PNG_ICON_SIGHT, IconSightTemplate);
-	LoadImg_ID2Mat(IDB_PNG_ICON_QUEST, IconQuestTemplate);
-
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID_, UID);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID0, UIDnumber[0]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID1, UIDnumber[1]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID2, UIDnumber[2]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID3, UIDnumber[3]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID4, UIDnumber[4]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID5, UIDnumber[5]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID6, UIDnumber[6]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID7, UIDnumber[7]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID8, UIDnumber[8]);
-	LoadBitmap_ID2Mat(IDB_BITMAP_UID9, UIDnumber[9]);
 
 	cv::cvtColor(StarTemplate, StarTemplate, cv::COLOR_RGBA2GRAY);
 	cv::cvtColor(UID, UID, cv::COLOR_RGBA2GRAY);
@@ -152,10 +125,24 @@ void Resources::install()
 {
 	if (is_installed == false)
 	{
-		//auto& gimap_downloader = GIMapDownloader::getInstance();
-		//gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
+		auto& gimap_downloader = GIMapDownloader::getInstance();
+        try
+        {
+            fs::path download_target = fs::u8path(getDllPath() + "/../CVAT_Resources").lexically_normal();
+		    gimap_downloader.setDependentsJsonPath(download_target);
+		    gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
+            gimap_downloader.setLocalPath(download_target);
+            gimap_downloader.download();
+        }
+        catch(const std::exception& e)
+        {
+            fs::path ex_what = fs::u8path(e.what());
+            std::wstring lex_what = ex_what.wstring();
+            std::wstring warn_info = std::wstring(L"") + L"\"位置追踪\"资源下载失败！原因:\n" + lex_what;
+            MessageBox(NULL, warn_info.c_str(), L"警告", MB_OK | MB_ICONWARNING);
+        }
 
-		LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF",true);
+		//LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF",true);
 		is_installed = true;
 	}
 }
@@ -173,4 +160,22 @@ void Resources::release()
 bool Resources::map_is_embedded()
 {
 	return true;
+}
+
+std::string Resources::getDllPath()
+{
+    HMODULE hModule = NULL;
+    // 获取当前DLL自身的句柄
+    GetModuleHandleEx(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCWSTR)&Resources::getDllPath, // 传入当前函数地址
+        &hModule
+    );
+
+    wchar_t path[1024];
+    if (hModule != NULL && GetModuleFileName(hModule, path, MAX_PATH) > 0) {
+        return fs::path(path).parent_path().u8string();
+    }
+    return "";
 }

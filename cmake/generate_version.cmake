@@ -92,7 +92,7 @@ namespace TianLi::Version
 ")
 
 file(WRITE "${VERSION_H_PATH}" "${VERSION_H_CONTENT}")
-message(STATUS "生成版本信息: ${BUILD_VERSION}")
+message(STATUS "Version: ${BUILD_VERSION}")
 
 # ---- 更新 version_tag.tag（revision 自增后写回） ----
 if(VPREFIX STREQUAL "")

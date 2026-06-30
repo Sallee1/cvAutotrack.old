@@ -16,3 +16,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(cvAutoTrack)
+add_subdirectory(impl/Cpp/TEST_cvAutoTrack_Cpp)

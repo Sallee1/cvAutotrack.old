@@ -9,7 +9,8 @@
             "architecture": "x64",
             "binaryDir": "${sourceDir}/build/x64-Release",
             "cacheVariables": {
-                "CMAKE_CONFIGURATION_TYPES": "Release;RelWithDebInfo",
+                "CMAKE_CONFIGURATION_TYPES": "RelWithDebInfo;RelNoOpz",
+                "CMAKE_INSTALL_PREFIX":"${sourceDir}/out/install",
                 "CVAT_COPY_TO_GAMEDIR":true
             }
         },
@@ -27,16 +28,16 @@
     ],
     "buildPresets": [
         {
-            "name": "release",
-            "displayName": "构建 Release",
-            "configurePreset": "default",
-            "configuration": "Release"
-        },
-        {
             "name": "relwithdebinfo",
-            "displayName": "构建 RelNoOpz",
+            "displayName": "构建 RelWithDebInfo",
             "configurePreset": "default",
             "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "relnoopz",
+            "displayName": "构建 RelNoOpz",
+            "configurePreset": "default",
+            "configuration": "RelNoOpz"
         },
         {
             "name": "debug",

@@ -39,6 +39,8 @@ public:
 	void release();
 public:
 	bool map_is_embedded();
+
+    static std::string getDllPath();
 private:
 	bool is_installed = false;
 };

@@ -44,6 +44,42 @@ namespace tianli {
 		int getLastErrorCode() const { return last_error_code; }
 		std::string getLastErrorMsg() const { return m_last_error_msg; }
 
+		/**
+		 * @brief 测试服务器连通性（HEAD 请求）
+		 * @param url 测试地址
+		 * @param timeout_sec 超时秒数（默认 10）
+		 * @return 服务器正常返回 true
+		 * @throw std::runtime_error 连接失败或 HTTP 错误时抛出
+		 */
+		static bool testConnection(const std::string& url, long timeout_sec = 10) {
+			CURL* curl = curl_easy_init();
+			if (!curl)
+				throw std::runtime_error("testConnection: 初始化 CURL 失败");
+
+			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+			curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+			CURLcode res = curl_easy_perform(curl);
+			if (res != CURLE_OK) {
+				std::string err = curl_easy_strerror(res);
+				curl_easy_cleanup(curl);
+				throw std::runtime_error("服务器连接失败: " + err);
+			}
+
+			long http_code = 0;
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+			curl_easy_cleanup(curl);
+
+			if (http_code >= 400)
+				throw std::runtime_error("服务器返回错误: HTTP " + std::to_string(http_code));
+
+			return true;
+		}
+
 	private:
 		int last_error_code{ 0 };
 		std::string m_last_error_msg;
@@ -119,12 +155,13 @@ namespace tianli {
 #endif
 		}
 
-		// 校验MD5
+		// 校验MD5（忽略大小写，兼容服务器大写格式）
 		bool checkMD5() const {
 			if (m_md5.empty()) return true; // 未提供MD5时不校验
 			std::string file_md5 = calculateMD5();
 			if (file_md5.empty()) return false;
-			return file_md5 == m_md5;
+			if (file_md5.size() != m_md5.size()) return false;
+			return _stricmp(file_md5.c_str(), m_md5.c_str()) == 0;
 		}
 
 		// CURL回调函数

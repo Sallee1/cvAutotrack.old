@@ -1,5 +1,4 @@
 #pragma once
-#ifdef USED_BINARY_IMAGE
 #include "paimon/resources.binary.image.paimon.h"
 #include "icon/resources.binary.image.icon_sight.h"
 #include "icon/resources.binary.image.icon_quest.h"
@@ -15,60 +14,44 @@
 #include "uid/resources.binary.image.uid7.h"
 #include "uid/resources.binary.image.uid8.h"
 #include "uid/resources.binary.image.uid9.h"
-#endif
-
 namespace TianLi::Resources::Binary::Image
 {
     const unsigned char* image_list[] =
     {
-#ifdef USED_BINARY_IMAGE
         Png::icon_sight,
         Png::icon_quest,
-        Bmp::paimon,
-        Bmp::star,
-        Bmp::uid_,
-        Bmp::uid0,
-        Bmp::uid1,
-        Bmp::uid2,
-        Bmp::uid3,
-        Bmp::uid4,
-        Bmp::uid5,
-        Bmp::uid6,
-        Bmp::uid7,
-        Bmp::uid8,
-        Bmp::uid9
-#else
-        nullptr
-#endif
+        Png::uid_,
+        Png::uid0,
+        Png::uid1,
+        Png::uid2,
+        Png::uid3,
+        Png::uid4,
+        Png::uid5,
+        Png::uid6,
+        Png::uid7,
+        Png::uid8,
+        Png::uid9
     };
     const size_t image_size[] =
     {
-#ifdef USED_BINARY_IMAGE
-        sizeof(Png::cailb),
-        sizeof(Bmp::paimon),
-        sizeof(Bmp::star),
-        sizeof(Bmp::uid_),
-        sizeof(Bmp::uid0),
-        sizeof(Bmp::uid1),
-        sizeof(Bmp::uid2),
-        sizeof(Bmp::uid3),
-        sizeof(Bmp::uid4),
-        sizeof(Bmp::uid5),
-        sizeof(Bmp::uid6),
-        sizeof(Bmp::uid7),
-        sizeof(Bmp::uid8),
-        sizeof(Bmp::uid9)
-#else
-        0
-#endif
+        sizeof(Png::icon_sight),
+        sizeof(Png::icon_quest),
+        sizeof(Png::uid_),
+        sizeof(Png::uid0),
+        sizeof(Png::uid1),
+        sizeof(Png::uid2),
+        sizeof(Png::uid3),
+        sizeof(Png::uid4),
+        sizeof(Png::uid5),
+        sizeof(Png::uid6),
+        sizeof(Png::uid7),
+        sizeof(Png::uid8),
+        sizeof(Png::uid9)
     };
     const char* image_name[] =
     {
-#ifdef USED_BINARY_IMAGE
         "icon_sight",
         "icon_quest",
-        "paimon",
-        "star",
         "uid_",
         "uid0",
         "uid1",
@@ -80,8 +63,5 @@ namespace TianLi::Resources::Binary::Image
         "uid7",
         "uid8",
         "uid9"
-#else
-        nullptr
-#endif
     };
 }

@@ -21,6 +21,15 @@ add_definitions(-DUNICODE -D_UNICODE)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # ============================================================================
+# RelNoOpz 自定义配置：关闭所有优化，但使用 Release 运行时库（/MT 而非 /MTd）
+# 这样可以在 Debug 时无需切换 Debug 库（Windows 的 debug/release 库不通用）
+# ============================================================================
+set(CMAKE_CXX_FLAGS_RELNOOPZ "/Od /D NDEBUG /Zi /Ob0")
+set(CMAKE_C_FLAGS_RELNOOPZ   "/Od /D NDEBUG /Zi /Ob0")
+set(CMAKE_EXE_LINKER_FLAGS_RELNOOPZ    "/DEBUG")
+set(CMAKE_SHARED_LINKER_FLAGS_RELNOOPZ "/DEBUG")
+
+# ============================================================================
 # 头文件目录
 # ============================================================================
 set(CVAT_INCLUDE_DIRS
@@ -81,8 +90,6 @@ set(CVAT_SOURCES
     src/utils/utils.progress.cpp
     src/utils/Utils.cpp
 
-    # Win32 资源
-    resource/cvAutoTrack.rc
 )
 
 # ============================================================================
@@ -95,10 +102,9 @@ target_include_directories(cvAutoTrack PRIVATE ${CVAT_INCLUDE_DIRS})
 # 导出宏
 target_compile_definitions(cvAutoTrack PRIVATE CVAUTOTRACK_EXPORTS)
 
-# RelWithDebInfo 模式下注入 _DEBUG / _CVAT_DEBUG（对应原 RelNoOpz）
+# RelNoOpz 模式下注入 _CVAT_DEBUG（关闭优化，但使用 Release 运行时库）
 target_compile_definitions(cvAutoTrack PRIVATE
-    $<$<CONFIG:RelWithDebInfo>:_DEBUG>
-    $<$<CONFIG:RelWithDebInfo>:_CVAT_DEBUG>
+    $<$<CONFIG:RelNoOpz>:_CVAT_DEBUG>
 )
 
 # ============================================================================
@@ -107,12 +113,7 @@ target_compile_definitions(cvAutoTrack PRIVATE
 target_precompile_headers(cvAutoTrack PRIVATE src/pch.h)
 
 # ============================================================================
-# 模块定义文件 (.def)
-# ============================================================================
-target_link_options(cvAutoTrack PRIVATE
-    "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/resource/Source.def"
-)
-
+# 链接库（静态链接）
 # ============================================================================
 # 链接库（静态链接）
 # ============================================================================
@@ -176,6 +177,18 @@ add_custom_command(TARGET cvAutoTrack PRE_BUILD
 )
 
 # ============================================================================
+# 图片二进制嵌入头文件生成（PRE_BUILD）
+# 调用封装好的批处理，从 resource/ 中的图片源文件自动生成头文件
+# ============================================================================
+set(IMG2BIN_BAT "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/binary/image_to_binary.bat")
+
+add_custom_command(TARGET cvAutoTrack PRE_BUILD
+    COMMAND "${IMG2BIN_BAT}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/binary"
+    COMMENT "生成图片二进制嵌入头文件 ……"
+)
+
+# ============================================================================
 # 安装/部署（POST_BUILD，可选）
 # ============================================================================
 option(CVAT_COPY_TO_GAMEDIR "编译后自动复制 DLL 到游戏目录" OFF)
@@ -194,3 +207,8 @@ if(CVAT_COPY_TO_GAMEDIR)
         COMMENT "复制 DLL/PDB 到游戏目录 ……"
     )
 endif()
+
+
+install(TARGETS cvAutoTrack 
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)

@@ -12,8 +12,8 @@ param(
     [string]$Config
 )
 
-$dllDst = Join-Path $GameDir "DLL" $Config
-$pdbDst = Join-Path $GameDir "PDB" $Config
+$dllDst = Join-Path (Join-Path $GameDir "DLL") $Config
+$pdbDst = Join-Path (Join-Path $GameDir "PDB") $Config
 
 mkdir $dllDst -Force -ErrorAction SilentlyContinue | Out-Null
 mkdir $pdbDst -Force -ErrorAction SilentlyContinue | Out-Null
