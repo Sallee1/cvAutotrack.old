@@ -6,21 +6,36 @@ namespace TianLi::Genshin {
     void init_screen_frames(GenshinScreen& out_genshin_screen);
 
 
-    inline cv::Mat tone_map_hdr_to_sdr_bgra(const cv::Mat& hdr_rgba)
+    inline cv::Mat tone_map_hdr_to_sdr(const cv::Mat& hdr_rgba)
     {
         cv::Mat hdr_float;
-        hdr_rgba.convertTo(hdr_float, CV_32FC4);
+
+        if (hdr_rgba.depth() == CV_16F)
+        {
+            hdr_rgba.convertTo(hdr_float, CV_32F);
+        }
+        else
+        {
+            hdr_float = hdr_rgba.clone();
+        }
+
+        //交换RGB->BGR
         cv::cvtColor(hdr_float, hdr_float, cv::COLOR_RGBA2BGRA);
         std::vector<cv::Mat> channels;
         cv::split(hdr_float, channels);
 
         //采集白点值，先尝试线性压缩
         //原神是假HDR，UI的最亮点可以作为白点参考
+        double min, max;
+        cv::minMaxLoc(channels[0], &min, &max);
+        (void)min;
+        //使用当前的SDR白点亮度压缩
+        max = std::max(max, 6.0);
+
         for (int i = 0; i < 3; ++i)
         {
-            cv::max(channels[i], 0.0f, channels[i]);
-            channels[i] = channels[i] / (1.0f + channels[i]); // Reinhard tone mapping
-            cv::pow(channels[i], 1.0 / 2.2, channels[i]);     // gamma to SDR
+            channels[i] = channels[i] / max;    //亮度压缩
+            cv::pow(channels[i], 1.0 / 2.2, channels[i]);
         }
         channels[3] = cv::Mat::ones(channels[3].size(), channels[3].type());
 
@@ -55,6 +70,11 @@ namespace TianLi::Genshin {
             if (!genshin_handle.config.frame_source->get_frame(raw_frame))
             {
                 return false;
+            }
+
+            if (raw_frame.depth() == CV_16F)
+            {
+                raw_frame.convertTo(raw_frame, CV_32F);
             }
             cv::resize(raw_frame, giFrame, genshin_handle.size_frame);
         }
@@ -153,6 +173,12 @@ namespace TianLi::Genshin {
 
     void preprocess_raw_frame(cv::Mat& mat)
     {
+        //处理hdr截图输入
+        if (mat.depth() == CV_32F || mat.depth() == CV_16F)
+        {
+            mat = tone_map_hdr_to_sdr(mat);
+        }
+
         //提取alpha通道
         bool is_grayscale = (mat.channels() == 1);
         bool has_alpha = (mat.channels() == 4);
