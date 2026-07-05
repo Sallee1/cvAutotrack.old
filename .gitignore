@@ -281,3 +281,5 @@ cvat_rc*
 /rclone.conf
 *.zip
 /api
+
+[Oo]ut

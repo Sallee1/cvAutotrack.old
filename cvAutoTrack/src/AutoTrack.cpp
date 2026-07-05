@@ -15,7 +15,6 @@
 #include "algorithms/algorithms.direction.h"
 #include "algorithms/algorithms.rotation.h"
 
-#include "match/match.star.h"
 #include "match/match.uid.h"
 
 #include "genshin/genshin.h"
@@ -35,41 +34,27 @@ AutoTrack::AutoTrack()
 	genshin_handle.config.frame_source = std::make_shared<tianli::frame::capture::capture_window_graphics>();
 	genshin_handle.config.frame_source->initialization();
 	genshin_avatar_position.config.pos_filter = std::make_shared<Kalman>();
+
+	// 构造时创建 matcher 并初始化
+	genshin_minimap.matcher = std::shared_ptr<IMatcher>(new FAST_SURFMatcher(0.01, 1, 1, false, true));
+	init_matcher();
+}
+
+void AutoTrack::init_matcher()
+{
+	TianLi::Genshin::Match::init_matcher(genshin_minimap.matcher);
 }
 
 bool AutoTrack::init()
 {
-	//if (!third_is_load)
-	//{
-	//    ErrorCode::getInstance() = { 10000,"调用init之前必须使用SetThirdPartyDllPath加载动态库" };
-	//    return false;
-	//}
-
-	if (!genshin_minimap.is_init_finish)
-	{
-		//genshin_minimap.matcher = std::shared_ptr<IMatcher>(new AKAZEMatcher(cv::AKAZE::DESCRIPTOR_KAZE_UPRIGHT, 0, 3, 0.0001f, 1, 1, cv::KAZE::DIFF_PM_G2, -1));
-		//genshin_minimap.matcher = std::shared_ptr<IMatcher>(new SURFMatcher(0.01, 1, 1, false, true));
-		genshin_minimap.matcher = std::shared_ptr<IMatcher>(new FAST_SURFMatcher(0.01, 1, 1, false, true));
-		genshin_minimap.is_run_init_start = true;
-		TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
-		genshin_minimap.is_run_init_start = false;
-
-		genshin_minimap.is_init_finish = true;
-	}
-	return genshin_minimap.is_init_finish;
+	init_matcher();
+    return true;
 }
 
 bool AutoTrack::uninit()
 {
-	if (genshin_minimap.is_init_finish)
-	{
-		genshin_minimap.is_run_uninit_start = true;
-		TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
-		genshin_minimap.is_run_uninit_start = false;
-
-		genshin_minimap.is_init_finish = false;
-	}
-	return !genshin_minimap.is_init_finish;
+	TianLi::Genshin::Match::uninit_matcher();
+    return true;
 }
 
 bool AutoTrack::SetUseBitbltCaptureMode()
@@ -362,10 +347,6 @@ bool AutoTrack::GetTransformOfMap(double& x, double& y, double& a, int& mapId)
 {
 	double x2 = 0, y2 = 0, a2 = 0;
 	int mapId2 = 0;
-	if (!genshin_minimap.is_init_finish)
-	{
-		init();//初始化
-	}
 
 	if (!GetPositionOfMap(x2, y2, mapId2))
 	{
@@ -385,10 +366,6 @@ bool AutoTrack::GetPosition(double& x, double& y)
 	if (try_get_genshin_windows() == false)
 	{
 		return false;
-	}
-	if (!genshin_minimap.is_init_finish)
-	{
-		init();
 	}
 	if (getMiniMapRefMat() == false)
 	{
@@ -503,167 +480,15 @@ bool AutoTrack::GetRotation(double& a)
 
 bool AutoTrack::GetStar(double& x, double& y, bool& isEnd)
 {
-	static bool isNotSee = false;
-	static vector<cv::Point2d> pos;
-	static int seeId = 0;
-	static bool isStarVisible = false;
-
-	int MAXLOOP = 0;
-	bool isLoopMatch = false;
-	cv::Mat tmp;
-	double minVal, maxVal;
-	cv::Point minLoc, maxLoc;
-	double scale = 1.3;
-	bool isOnCity = false;
-
-	if (isNotSee)
-	{
-		if (isOnCity)
-		{
-			scale = 0.8667;
-		}
-		x = pos[seeId].x * scale;
-		y = pos[seeId].y * scale;
-		seeId++;
-		if (seeId == pos.size())
-		{
-			isEnd = true;
-			isNotSee = false;
-		}
-		else
-		{
-			isEnd = false;
-			isNotSee = true;
-		}
-		return clear_error_logs();
-	}
-	else
-	{
-		pos.clear();
-		seeId = 0;
-
-		if (try_get_genshin_windows() == false)
-		{
-			return false;
-		}
-
-		if (getMiniMapRefMat() == false)
-		{
-			//ErrorCode::getInstance() = { 4001, "获取神瞳时，没有识别到paimon" };
-			return false;
-		}
-
-		if (genshin_minimap.img_minimap.empty())
-		{
-			ErrorCode::getInstance() = { 5, "原神小地图区域为空" };
-			return false;
-		}
-		cv::Mat giStarRef;
-
-		cv::cvtColor(genshin_minimap.img_minimap(cv::Rect(36, 36, genshin_minimap.img_minimap.cols - 72, genshin_minimap.img_minimap.rows - 72)),
-			giStarRef, cv::COLOR_RGBA2GRAY);
-
-		matchTemplate(Resources::getInstance().StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
-		minMaxLoc(tmp, &minVal, &maxVal, &minLoc, &maxLoc);
-#ifdef _DEBUG
-		//cout << "Match Star MinVal & MaxVal : " << minVal << " , " << maxVal << endl;
-#endif
-		if (maxVal < 0.66)
-		{
-			isStarVisible = false;
-		}
-		else
-		{
-			isLoopMatch = true;
-			isStarVisible = true;
-			pos.emplace_back(cv::Point2d(maxLoc) -
-				cv::Point2d(giStarRef.cols / 2, giStarRef.rows / 2) +
-				cv::Point2d(Resources::getInstance().StarTemplate.cols / 2, Resources::getInstance().StarTemplate.rows / 2));
-		}
-
-		while (isLoopMatch)
-		{
-			giStarRef(cv::Rect(maxLoc.x, maxLoc.y, Resources::getInstance().StarTemplate.cols, Resources::getInstance().StarTemplate.rows)) = cv::Scalar(0, 0, 0);
-			matchTemplate(Resources::getInstance().StarTemplate, giStarRef, tmp, cv::TM_CCOEFF_NORMED);
-			minMaxLoc(tmp, &minVal, &maxVal, &minLoc, &maxLoc);
-#ifdef _DEBUG
-			//cout << "Match Star MinVal & MaxVal : " << minVal << " , " << maxVal << endl;
-#endif
-
-			if (maxVal < 0.66)
-			{
-				isLoopMatch = false;
-			}
-			else
-			{
-				pos.emplace_back(cv::Point2d(maxLoc) -
-					cv::Point2d(giStarRef.cols / 2, giStarRef.rows / 2) +
-					cv::Point2d(Resources::getInstance().StarTemplate.cols / 2, Resources::getInstance().StarTemplate.rows / 2));
-			}
-
-			MAXLOOP > 10 ? isLoopMatch = false : MAXLOOP++;
-		}
-
-		if (isStarVisible == true)
-		{
-			if (isOnCity)
-			{
-				scale = 0.8667;
-			}
-			x = pos[seeId].x * scale;
-			y = pos[seeId].y * scale;
-			seeId++;
-			if (seeId == pos.size())
-			{
-				isEnd = true;
-				isNotSee = false;
-			}
-			else
-			{
-				isEnd = false;
-				isNotSee = true;
-			}
-			return clear_error_logs();
-		}
-		ErrorCode::getInstance() = { 601,"获取神瞳失败，未确定原因" };
-		return false;
-	}
+    ErrorCode::getInstance() = { 4100, "神瞳获取功能已废弃，请不要使用GetStar接口" };
+    //删除查找神瞳接口，目前始终返回false
+    return false;
 }
 
 bool AutoTrack::GetStarJson(char* jsonBuff)
 {
-	if (try_get_genshin_windows() == false)
-	{
-		return false;
-	}
-
-	if (getMiniMapRefMat() == false)
-	{
-		//ErrorCode::getInstance() = { 4001, "获取神瞳时，没有识别到paimon" };
-		return false;
-	}
-
-	if (genshin_minimap.img_minimap.empty())
-	{
-		ErrorCode::getInstance() = { 5, "原神小地图区域为空" };
-		return false;
-	}
-	cv::Mat giStarRef;
-
-	//一个bug 未开游戏而先开应用，开游戏时触发
-	cv::cvtColor(genshin_minimap.img_minimap(cv::Rect(36, 36, genshin_minimap.img_minimap.cols - 72, genshin_minimap.img_minimap.rows - 72)),
-		giStarRef, cv::COLOR_RGBA2GRAY);
-
-	star_calculation_config config;
-
-	star_calculation(giStarRef, jsonBuff, config);
-	if (config.error)
-	{
-		ErrorCode::getInstance() = config.err;
-		return false;
-	}
-
-	return clear_error_logs();
+    ErrorCode::getInstance() = { 4100, "神瞳获取功能已废弃，请不要使用GetStarJson接口" };
+    return false;
 }
 
 bool AutoTrack::GetUID(int& uid)
@@ -704,10 +529,6 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
 	if (try_get_genshin_windows() == false)
 	{
 		return false;
-	}
-	if (!genshin_minimap.is_init_finish)
-	{
-		init();
 	}
 	if (getMiniMapRefMat() == false)
 	{
@@ -887,12 +708,7 @@ bool AutoTrack::getGengshinImpactScreen()
 
 bool AutoTrack::getMiniMapRefMat()
 {
-	if (!genshin_screen.img_screen_raw.empty())
-	{
-		auto rect_raw = genshin_screen.to_raw_rect(genshin_minimap.rect_minimap);
-		if (rect_raw.width > 0 && rect_raw.height > 0)
-			genshin_minimap.img_minimap = genshin_screen.img_screen_raw(rect_raw).clone();
-	}
+	genshin_minimap.img_minimap = genshin_screen.img_screen(genshin_minimap.rect_minimap).clone();
 
 	if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics ||
 		genshin_handle.config.is_force_used_no_alpha)

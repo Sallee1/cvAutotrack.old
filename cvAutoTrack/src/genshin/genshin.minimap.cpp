@@ -106,7 +106,7 @@ namespace TianLi::Genshin {
 
 		bool match_icon_sight(const GenshinScreen& genshin_screen, cv::Size2i minimap_size, float tpl_threshold, GenshinIconSight& out_genshin_icon_sight)
 		{
-			static cv::Mat icon_sight_tpl;
+			static cv::Mat& icon_sight_tpl = Resources::getInstance().IconSightTemplate;
 			static std::vector<cv::Mat> contours_icon_sight_tpl;
 			static bool is_first = true;
 
@@ -114,8 +114,6 @@ namespace TianLi::Genshin {
 			if (is_first)
 			{
 				// 缩放键鼠和手柄模式的模板
-				cv::Mat icon_sight = Resources::getInstance().IconSightTemplate;
-				cv::cvtColor(icon_sight, icon_sight_tpl, cv::COLOR_BGR2GRAY);
 				icon_sight_tpl = icon_sight_tpl > static_cast<int>(0.8 * 255.0);
 
 				//查找轮廓
@@ -177,8 +175,6 @@ namespace TianLi::Genshin {
 				cv::Mat& raw_icon_quest_tpl = Resources::getInstance().IconQuestTemplate;
 				cv::resize(raw_icon_quest_tpl, img_icon_quest_tpl, { genshin_screen.config.icon_size,genshin_screen.config.icon_size }, 0.0, 0.0, cv::INTER_AREA);
 				cv::resize(raw_icon_quest_tpl, img_icon_quest_tpl_ctrl, { genshin_screen.config.icon_size_ctrl,genshin_screen.config.icon_size_ctrl }, 0.0, 0.0, cv::INTER_AREA);
-				cv::cvtColor(img_icon_quest_tpl, img_icon_quest_tpl, cv::COLOR_RGB2GRAY);
-				cv::cvtColor(img_icon_quest_tpl_ctrl, img_icon_quest_tpl_ctrl, cv::COLOR_RGB2GRAY);
 				mask_icon_quest_tpl = img_icon_quest_tpl > 250;
 				mask_icon_quest_tpl_ctrl = img_icon_quest_tpl_ctrl > 250;
 				img_icon_quest_tpl.convertTo(f_img_icon_quest_tpl, CV_32FC1, (1.0 / 255.0));
@@ -359,12 +355,7 @@ namespace TianLi::Genshin {
 			}
 			// center point
 			auto minimap_center = cv::Point(minimap_rect.x + (minimap_rect.width) / 2, minimap_rect.y + (minimap_rect.height) / 2);
-			cv::Rect minimap_rect_raw = genshin_screen.to_raw_rect(minimap_rect);
-			if (minimap_rect_raw.width <= 0 || minimap_rect_raw.height <= 0)
-			{
-				return false;
-			}
-			out_genshin_minimap.img_minimap = genshin_screen.img_screen_raw(minimap_rect_raw).clone();
+			out_genshin_minimap.img_minimap = genshin_screen.img_screen(minimap_rect).clone();
 			out_genshin_minimap.minimap_diameter = std::min(out_genshin_minimap.img_minimap.rows, out_genshin_minimap.img_minimap.cols) * 0.95f;
 			paddingminimap(out_genshin_minimap.img_minimap, out_genshin_minimap.img_minimap_padding, static_cast<int>(out_genshin_minimap.img_minimap.rows * 0.05f), 32);
 

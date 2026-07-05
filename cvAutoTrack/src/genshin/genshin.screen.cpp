@@ -5,6 +5,32 @@
 namespace TianLi::Genshin {
     void init_screen_frames(GenshinScreen& out_genshin_screen);
 
+
+    inline cv::Mat tone_map_hdr_to_sdr_bgra(const cv::Mat& hdr_rgba)
+    {
+        cv::Mat hdr_float;
+        hdr_rgba.convertTo(hdr_float, CV_32FC4);
+        cv::cvtColor(hdr_float, hdr_float, cv::COLOR_RGBA2BGRA);
+        std::vector<cv::Mat> channels;
+        cv::split(hdr_float, channels);
+
+        //采集白点值，先尝试线性压缩
+        //原神是假HDR，UI的最亮点可以作为白点参考
+        for (int i = 0; i < 3; ++i)
+        {
+            cv::max(channels[i], 0.0f, channels[i]);
+            channels[i] = channels[i] / (1.0f + channels[i]); // Reinhard tone mapping
+            cv::pow(channels[i], 1.0 / 2.2, channels[i]);     // gamma to SDR
+        }
+        channels[3] = cv::Mat::ones(channels[3].size(), channels[3].type());
+
+        cv::Mat merged;
+        cv::merge(channels, merged);
+        cv::Mat sdr_bgra;
+        merged.convertTo(sdr_bgra, CV_8UC4, 255.0);
+        return sdr_bgra;
+    }
+
     /**
      * @brief 预处理原始帧
      * @param mat 待处理的帧
@@ -19,28 +45,25 @@ namespace TianLi::Genshin {
         auto& giRect = genshin_handle.rect;
         auto& giRectClient = genshin_handle.rect_client;
         //auto& giScale = genshin_handle.scale;
-        auto& giFrameRaw = out_genshin_screen.img_screen_raw;
         auto& giFrame = out_genshin_screen.img_screen;
 
         auto now_time = std::chrono::system_clock::now();
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now_time - out_genshin_screen.last_time).count() > 20 || giFrame.empty())
         {
             out_genshin_screen.last_time = now_time;
-            if (!genshin_handle.config.frame_source->get_frame(giFrameRaw))
+            cv::Mat raw_frame;
+            if (!genshin_handle.config.frame_source->get_frame(raw_frame))
             {
                 return false;
             }
+            cv::resize(raw_frame, giFrame, genshin_handle.size_frame);
         }
 
         {
-            if (giFrameRaw.empty())return false;
-            cv::resize(giFrameRaw, giFrame, genshin_handle.size_frame);
-            out_genshin_screen.screen_scale_x = static_cast<double>(giFrameRaw.cols) / std::max(1, giFrame.cols);
-            out_genshin_screen.screen_scale_y = static_cast<double>(giFrameRaw.rows) / std::max(1, giFrame.rows);
+            if (giFrame.empty())return false;
 
             out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
             preprocess_raw_frame(giFrame);
-            preprocess_raw_frame(giFrameRaw);
             init_screen_frames(out_genshin_screen);
         }
         return true;

@@ -11,9 +11,13 @@ public:
         return instance;
     }
 
-#pragma region 外部接口
+    /** 手动初始化/重新初始化（幂等，可多次调用） */
     bool init();
+
+    /** 释放匹配器资源 */
     bool uninit();
+
+#pragma region 外部接口
 
     bool SetUseBitbltCaptureMode();
     bool SetUseDx11CaptureMode();
@@ -69,6 +73,7 @@ private:
     GenshinAvatarPosition genshin_avatar_position;
 
 private:
+    void init_matcher();
     bool third_is_load = false;
     bool try_get_genshin_windows();
     bool getGengshinImpactWnd();

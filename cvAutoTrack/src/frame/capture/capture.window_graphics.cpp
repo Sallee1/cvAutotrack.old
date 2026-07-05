@@ -3,30 +3,6 @@
 
 namespace tianli::frame::capture
 {
-    namespace
-    {
-        cv::Mat tone_map_hdr_to_sdr_bgra(const cv::Mat& hdr_rgba)
-        {
-            cv::Mat hdr_float;
-            hdr_rgba.convertTo(hdr_float, CV_32FC4);
-            std::vector<cv::Mat> channels;
-            cv::split(hdr_float, channels);
-
-            for (int i = 0; i < 3; ++i)
-            {
-                cv::max(channels[i], 0.0f, channels[i]);
-                channels[i] = channels[i] / (1.0f + channels[i]); // Reinhard tone mapping
-                cv::pow(channels[i], 1.0 / 2.2, channels[i]);     // gamma to SDR
-            }
-            channels[3] = cv::Mat::ones(channels[3].size(), channels[3].type());
-
-            cv::Mat merged;
-            cv::merge(channels, merged);
-            cv::Mat sdr_bgra;
-            merged.convertTo(sdr_bgra, CV_8UC4, 255.0);
-            return sdr_bgra;
-        }
-    }
 
     bool capture_window_graphics::get_frame(cv::Mat& frame)
     {
@@ -131,7 +107,7 @@ namespace tianli::frame::capture
         if (desc.Format == DXGI_FORMAT_R16G16B16A16_FLOAT)
         {
             cv::Mat hdr_mat(frame_size.Height, frame_size.Width, CV_16FC4, data, pitch);
-            copied_frame = tone_map_hdr_to_sdr_bgra(hdr_mat);
+            copied_frame = hdr_mat.clone();
         }
         else
         {

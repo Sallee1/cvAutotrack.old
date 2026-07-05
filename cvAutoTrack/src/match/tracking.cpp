@@ -203,14 +203,17 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 	m_lsh_index->query_and_gather(keypoint_roi, m_map_kp.keypoints, m_map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
 
 #ifdef _CVAT_DEBUG
-	// 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
-	cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
-		for (int i = range.start; i < range.end; i++)
-		{
-			some_map_kp.keypoints[i].pt.x -= keypoint_roi.x;
-			some_map_kp.keypoints[i].pt.y -= keypoint_roi.y;
-		}
-		});
+    //调试旁路代码
+    if (!img_scene.empty()) {
+        // 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
+        cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
+            for (int i = range.start; i < range.end; i++)
+            {
+                some_map_kp.keypoints[i].pt.x -= keypoint_roi.x;
+                some_map_kp.keypoints[i].pt.y -= keypoint_roi.y;
+            }
+            });
+    }
 #endif
 
 	// 如果搜索范围内可识别特征点数量少于2，则认为计算失败
@@ -227,10 +230,15 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 	}
 
 #ifdef _CVAT_DEBUG
-	pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+    if (!img_scene.empty()) {
+        pos_object = cv::Point2d(p.x + some_map_center_pos.x - real_some_map_size_r, p.y + some_map_center_pos.y - real_some_map_size_r);
+    }
+    else {
 #else
-	pos_object = p;
+    {
 #endif
+        pos_object = p;
+    }
 
 	double last_distance = std::sqrt(std::pow(static_cast<double>(pos_object.x) - m_last_pos.x, 2) +
 		std::pow(static_cast<double>(pos_object.y) - m_last_pos.y, 2));
@@ -281,22 +289,28 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 		
 		cv::Mat some_map;
 #ifdef _CVAT_DEBUG
-		some_map = m_mapMat(rect);
-		// 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
-		cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
-			for (int i = range.start; i < range.end; i++)
-			{
-				some_map_kp.keypoints[i].pt.x -= rect.x;
-				some_map_kp.keypoints[i].pt.y -= rect.y;
-			}
-			});
+        if (!m_mapMat.empty())
+        {
+            some_map = m_mapMat(rect);
+            // 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
+            cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
+                for (int i = range.start; i < range.end; i++)
+                {
+                    some_map_kp.keypoints[i].pt.x -= rect.x;
+                    some_map_kp.keypoints[i].pt.y -= rect.y;
+                }
+                });
+        }
 #endif
 
 		cv::Point2d out_pt = match_impl(some_map, some_map_kp, img_object, mini_map_kp, calc_is_faile);
 
 
 #ifdef _CVAT_DEBUG
-		out_pt = cv::Point2d(out_pt.x + rect.x, out_pt.y + rect.y);
+        if (!m_mapMat.empty())
+        {
+            out_pt = cv::Point2d(out_pt.x + rect.x, out_pt.y + rect.y);
+        }
 #endif
 
 		if(!calc_is_faile)

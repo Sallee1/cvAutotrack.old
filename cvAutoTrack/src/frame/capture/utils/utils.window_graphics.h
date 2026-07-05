@@ -11,6 +11,8 @@
 #include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/windows.foundation.metadata.h>
 
+#include <opencv2/opencv.hpp>
+
 namespace tianli::frame::capture::utils::window_graphics
 {
     struct capture_color_format
@@ -39,6 +41,31 @@ namespace tianli::frame::capture::utils::window_graphics
         return color_space == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 ||
             color_space == DXGI_COLOR_SPACE_RGB_STUDIO_G2084_NONE_P2020 ||
             color_space == DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+    }
+
+    inline cv::Mat tone_map_hdr_to_sdr_bgra(const cv::Mat& hdr_rgba)
+    {
+        cv::Mat hdr_float;
+        hdr_rgba.convertTo(hdr_float, CV_32FC4);
+        cv::cvtColor(hdr_float, hdr_float, cv::COLOR_RGBA2BGRA);
+        std::vector<cv::Mat> channels;
+        cv::split(hdr_float, channels);
+
+        //采集白点值，先尝试线性压缩
+        //原神是假HDR，UI的最亮点可以作为白点参考
+        for (int i = 0; i < 3; ++i)
+        {
+            cv::max(channels[i], 0.0f, channels[i]);
+            channels[i] = channels[i] / (1.0f + channels[i]); // Reinhard tone mapping
+            cv::pow(channels[i], 1.0 / 2.2, channels[i]);     // gamma to SDR
+        }
+        channels[3] = cv::Mat::ones(channels[3].size(), channels[3].type());
+
+        cv::Mat merged;
+        cv::merge(channels, merged);
+        cv::Mat sdr_bgra;
+        merged.convertTo(sdr_bgra, CV_8UC4, 255.0);
+        return sdr_bgra;
     }
 
     struct __declspec(uuid("A9B3D012-3DF2-4EE3-B8D1-8695F457D3C1")) IDirect3DDxgiInterfaceAccess : ::IUnknown

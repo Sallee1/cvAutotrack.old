@@ -5,6 +5,40 @@
 #include "resources/KeypointsCache.h"
 #include "Match/tracking.h"
 #include "filter/kalman/Kalman.h"
+#include "match/IMatcher.h"
+
+namespace {
+	Tracking g_surf_match;
+	bool g_is_init = false;
+}
+
+namespace TianLi::Genshin::Match
+{
+	void init_matcher(const std::shared_ptr<IMatcher>& matcher)
+	{
+		if (g_is_init) return;
+		Resources::getInstance().install();
+
+		// 读取关键点缓存
+		MapKeypointCache map_keypoints_cache = get_map_keypoint(matcher);
+		g_surf_match.Init(matcher, std::move(map_keypoints_cache));
+#ifdef _CVAT_DEBUG
+		g_surf_match.setMap(Resources::getInstance().DebugMapTemplate);
+#else
+		// 正式发布版本，释放图像，因为目前已经可以实现无图匹配
+		Resources::getInstance().release();
+#endif
+		g_is_init = true;
+	}
+
+	void uninit_matcher()
+	{
+		if (!g_is_init) return;
+		g_surf_match.UnInit();
+		Resources::getInstance().release();
+		g_is_init = false;
+	}
+}
 
 cv::Mat to_color(cv::Mat& img_object)
 {
@@ -129,34 +163,10 @@ cv::Point2d match_no_continuity_2nd(bool& calc_is_faile)
 
 void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position)
 {
-	static Tracking surf_match;
-	static bool is_init = false;
-	if (genshin_minimap.is_run_init_start == true || is_init == false)
+	if (!g_is_init)
 	{
-		if (is_init)return;
-		Resources::getInstance().install();
-
-		std::vector<cv::KeyPoint> gi_map_keypoints;
-		cv::Mat gi_map_descriptors;
-		//读取关键点缓存
-		MapKeypointCache map_keypoints_cache = get_map_keypoint(genshin_minimap);
-		surf_match.Init(genshin_minimap.matcher,
-			std::move(map_keypoints_cache));
-#ifdef _CVAT_DEBUG
-		surf_match.setMap(Resources::getInstance().MapTemplate);
-#else
-		//正式发布版本，释放图像，因为目前已经可以实现无图匹配
-		Resources::getInstance().release();
-#endif
-		is_init = true;
-		return;
-	}
-
-	if (genshin_minimap.is_run_uninit_start == true)
-	{
-		surf_match.UnInit();
-		Resources::getInstance().release();
-		is_init = false;
+		// 兼容旧式未主动 init 的情况
+		init_matcher(genshin_minimap.matcher);
 		return;
 	}
 
@@ -165,12 +175,12 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 		return;
 	}
 
-	surf_match.setMiniMap(genshin_minimap.img_minimap_padding, genshin_minimap.minimap_diameter);
+	g_surf_match.setMiniMap(genshin_minimap.img_minimap_padding, genshin_minimap.minimap_diameter);
 
-	surf_match.match();
+	g_surf_match.match();
 
-	out_genshin_position.position = surf_match.getLocalPos();
-	out_genshin_position.config.is_continuity = surf_match.m_isContinuity;
+	out_genshin_position.position = g_surf_match.getLocalPos();
+	out_genshin_position.config.is_continuity = g_surf_match.m_isContinuity;
 
 	if (out_genshin_position.config.is_use_filter)
 	{
@@ -187,7 +197,7 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 		out_genshin_position.position = filt_pos;
 	}
 
-	if (surf_match.m_is_success_match)
+	if (g_surf_match.m_is_success_match)
 	{
 		out_genshin_position.config.img_last_match_minimap = genshin_minimap.img_minimap.clone();
 		out_genshin_position.config.is_exist_last_match_minimap = true;
