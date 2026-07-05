@@ -1,65 +1,21 @@
 #include "pch.h"
 #include "DiffMatch.h"
 
-DiffMatch::DiffMatch()
+cv::Point2d DiffMatch::phaseCorrelate(const cv::Mat& ref, const cv::Mat& cur, double& response)
 {
-}
-
-DiffMatch::~DiffMatch()
-{
-}
-
-void DiffMatch::setInitMap(cv::Mat minimap_last_mat)
-{
-	_minimap_last_mat = minimap_last_mat;
-}
-
-void DiffMatch::setMiniMap(cv::Mat minimap_now_mat)
-{
-    _minimap_now_mat = minimap_now_mat;
-}
-
-void DiffMatch::match()
-{
-    if (_minimap_last_mat.empty())
+    if (ref.size() != cur.size())
     {
-        _minimap_last_mat = _minimap_now_mat;
-		return;
+        response = 0.0;
+        return cv::Point2d(NAN, NAN);
     }
-	
-	if (_minimap_last_mat.size != _minimap_now_mat.size)
-	{
-		_minimap_last_mat = _minimap_now_mat;
-		return;
-	}
-	
-	cv::Mat minimap_last_mat32;
-	cv::Mat minimap_now_mat32;
-	cv::cvtColor(_minimap_now_mat, minimap_now_mat32, cv::COLOR_RGBA2GRAY);
-	cv::cvtColor(_minimap_last_mat, minimap_last_mat32, cv::COLOR_RGBA2GRAY);
+    cv::Mat ref32, cur32;
+    ref.convertTo(ref32, CV_32FC1);
+    cur.convertTo(cur32, CV_32FC1);
 
-	minimap_now_mat32.convertTo(minimap_now_mat32, CV_32FC1);
-	minimap_last_mat32.convertTo(minimap_last_mat32, CV_32FC1);
-	
-	// 利用 phaseCorrelate 方法计算两帧之间小地图的平移
-	auto diff_pos = cv::phaseCorrelate(minimap_now_mat32, minimap_last_mat32);
-	// TODO: 数据需要-0.5，待研究 
-	diff_pos.x -= 0.5;
-	diff_pos.y -= 0.5;
-	
-	_minimap_last_mat = _minimap_now_mat;
-	
-	_diff_pos = diff_pos;
-}
+    cv::Mat window;
+    cv::createHanningWindow(window, ref32.size(), CV_32FC1);
 
-cv::Point2d DiffMatch::match(cv::Mat minimap_now_mat)
-{
-    setMiniMap(minimap_now_mat);
-    match();
-    return getDiffPos();
-}
-
-cv::Point2d DiffMatch::getDiffPos()
-{
-    return _diff_pos;
+    auto result = cv::phaseCorrelate(cur32, ref32, window, &response);
+    result -= cv::Point2d{ 0.5, 0.5 };
+    return result;
 }

@@ -10,30 +10,24 @@ void Tracking::setMap(cv::Mat gi_map)
 	m_mapMat = gi_map;
 }
 
-void Tracking::setMiniMap(cv::Mat miniMapMat, float diameter)
+void Tracking::setMiniMap(const GenshinMinimap& minimap)
 {
-	m_miniMapMat = miniMapMat;
-	//灰度化处理，避免一些算法bug，如FAST
-	if(miniMapMat.channels() == 4)
-	{
-		cv::cvtColor(m_miniMapMat, m_miniMapMat, cv::COLOR_BGRA2GRAY);
-	}
-	else if (miniMapMat.channels() == 3)
-	{
-		cv::cvtColor(m_miniMapMat, m_miniMapMat, cv::COLOR_BGR2GRAY);
-	}
-	if (diameter > 0)
-	{
-		m_miniMapDiameter = diameter;
-	}
-	else
-	{
-		m_miniMapDiameter = static_cast<float>(std::min(miniMapMat.cols, miniMapMat.rows));
-	}
+	// img_minimap_padding → 带遮罩+padding，用于特征点匹配
+	m_miniMapMat = minimap.img_minimap_padding.clone();
+	// img_minimap → 原始裁剪（无遮罩无padding），用于相位相关
+	m_miniMapCenter = minimap.img_viewer.clone();
+	m_miniMapDiameter = minimap.minimap_diameter;
 
-	//缩放处理，目前发现反而会破坏特征
-	//double scale_ratio = MINIMAP_DIAMETER / m_miniMapDiameter;
-	//cv::resize(m_miniMapMat, m_miniMapMat, {}, scale_ratio, scale_ratio, scale_ratio < 0 ? cv::INTER_AREA : cv::INTER_LINEAR);
+	//灰度化处理，避免一些算法bug，如FAST
+	auto toGray = [](cv::Mat& mat)
+	{
+		if (mat.channels() == 4)
+			cv::cvtColor(mat, mat, cv::COLOR_BGRA2GRAY);
+		else if (mat.channels() == 3)
+			cv::cvtColor(mat, mat, cv::COLOR_BGR2GRAY);
+	};
+	toGray(m_miniMapMat);
+	toGray(m_miniMapCenter);
 }
 
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
@@ -104,65 +98,182 @@ void Tracking::match()
 {
 	bool calc_is_faile = false;
 	m_is_success_match = false;
-
-	// 非连续匹配，匹配整个大地图
-	if (m_isMatchAllMap)
-	{
-		m_pos = match_no_continuity(calc_is_faile);
-		if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
-		{
-			calc_is_faile = true;
-		}
-
-		// 没有有效结果，结束
-		if (calc_is_faile)
-		{
-			m_pos = m_last_pos;
-			m_is_success_match = false;
-			return;
-		}
-		m_continuity_retry = m_max_continuity_retry - 1;		//全局检测后只局部检测一次
-	}
-
-	// 尝试连续匹配，匹配角色附近小范围区域
-	bool calc_continuity_is_faile = false;
-	//pos = match_no_continuity(calc_continuity_is_faile);
-	m_pos = match_continuity(calc_continuity_is_faile);
-	if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
-	{
-		calc_continuity_is_faile = true;
-	}
-
-	if (!calc_continuity_is_faile)
-	{
-		m_last_pos = m_pos;
-		m_continuity_retry = 0;
-
+	do {
+		// ============================================================
+		// 模式 A：全局匹配（首次启动 / 传送后重新定位）
+		// ============================================================
 		if (m_isMatchAllMap)
 		{
 			m_isContinuity = false;
+
+			m_pos = match_no_continuity(calc_is_faile);
+			if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
+				calc_is_faile = true;
+
+			if (calc_is_faile)
+			{
+				m_pos = m_last_pos;
+				m_is_success_match = false;
+				m_isMatchAllMap = true;
+				break;
+			}
+
+			m_last_pos = m_pos;
 			m_isMatchAllMap = false;
+			m_is_success_match = true;
+			m_inertial.reset();
+			break;
+		}
+
+		// ============================================================
+		// 模式 B：连续追踪（主模式 = 局部特征匹配）
+		// ============================================================
+		m_isContinuity = true;
+
+		// B1. 首选：局部特征点匹配 → 亚像素精度，极少假阳性
+		bool continuity_failed = false;
+		m_pos = match_continuity(continuity_failed);
+		if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
+			continuity_failed = true;
+
+		if (!continuity_failed)
+		{
+			m_last_pos = m_pos;
+			m_isMatchAllMap = false;
+			m_is_success_match = true;
+			m_inertial.reset();
+			break;
+		}
+
+		// B2. 特征匹配失败 → 惯性导航补位（帧间相位相关）
+		m_pos = m_last_pos;
+		m_is_success_match = false;
+
+		if (m_last_pos.x == 0 && m_last_pos.y == 0)
+			break;  // 无有效历史位置，无法惯性导航
+		if (m_miniMapCenter.empty())
+			break;
+
+		double peak = 0.0;
+		cv::Point2d diff_delta = {NAN, NAN};
+		double pixel_dist = 0.0;
+
+		if (!m_inertial.hasLastFrame()
+			|| m_inertial.last_frame.size() != m_miniMapCenter.size())
+		{
+			// 首帧或尺寸不一致 → 无法做帧间相关，跳过本帧
+			peak = 0.0;
 		}
 		else
 		{
-			m_isContinuity = true;
+			diff_delta = DiffMatch::phaseCorrelate(
+				m_inertial.last_frame, m_miniMapCenter, peak);
 		}
 
-		m_is_success_match = true;
-	}
-	else
-	{
-		m_pos = m_last_pos;
-		m_is_success_match = false;
-		m_continuity_retry++;
-
-		if (m_continuity_retry >= m_max_continuity_retry)
+		// B2a. 一票否决：峰值突降 → 场景剧变（传送） → 切全局匹配
+		if (m_inertial.needsVeto(peak))
 		{
 			m_isMatchAllMap = true;
 			m_isContinuity = false;
-			m_continuity_retry = 0;
+			m_inertial.reset();
+			break;
 		}
-	}
+
+		// B2b. 相位相关可靠 → 积分位移更新位置
+		double displacement = 0.0;  // 坐标空间位移
+		if (peak >= DiffMatch::CONFIDENCE_THRESHOLD
+			&& !std::isnan(diff_delta.x) && !std::isnan(diff_delta.y))
+		{
+			pixel_dist = std::sqrt(
+				diff_delta.x * diff_delta.x +
+				diff_delta.y * diff_delta.y);
+
+			double scale = m_tracking_scale;
+			double new_x = m_last_pos.x + diff_delta.x * scale;
+			double new_y = m_last_pos.y + diff_delta.y * scale;
+
+			double coord_dist = pixel_dist * scale;
+			if (coord_dist < DEFAULT_SOME_MAP_SIZE_R)
+			{
+				m_pos.x = new_x;
+				m_pos.y = new_y;
+				m_last_pos = m_pos;
+				m_is_success_match = true;
+				displacement = coord_dist;
+			}
+		}
+
+		m_inertial.record(peak, displacement, pixel_dist);
+
+		// 进入惯性模式首帧 → 缓存关键帧，供 B2c 大步校正使用
+		if (m_is_success_match && !m_inertial.hasKeyframe())
+		{
+			m_inertial.captureKeyframe(m_miniMapCenter, m_pos);
+		}
+
+		// B2c. 校正触发（固定间隔 / 漂移超阈值）：
+		//      1) 先尝试局部特征匹配（最精确）
+		//      2) 失败则尝试大步关键帧校正（二线回退）
+		//      3) 也失败 → 切全局匹配兜底
+		if (m_inertial.needsCorrection())
+		{
+			m_inertial.markCorrectionAttempted();
+
+			// 第一优先：局部特征匹配
+			bool retry_failed = false;
+			cv::Point2d retry_pos = match_continuity(retry_failed);
+
+			if (!retry_failed && !std::isnan(retry_pos.x))
+			{
+				// 校正成功 — 用高精度特征匹配结果替换惯性估计
+				m_pos = retry_pos;
+				m_last_pos = m_pos;
+				m_is_success_match = true;
+				m_inertial.reset();
+				break;
+			}
+
+			// 局部匹配失败 → 第二优先：大步关键帧校正
+			if (m_inertial.hasKeyframe())
+			{
+				double kf_peak = 0.0;
+				cv::Point2d kf_delta = DiffMatch::phaseCorrelate(
+					m_inertial.keyframe, m_miniMapCenter, kf_peak);
+
+				if (kf_peak >= InertialNavigator::KEYFRAME_PEAK_THRESHOLD
+					&& !std::isnan(kf_delta.x) && !std::isnan(kf_delta.y))
+				{
+					double scale = m_tracking_scale;
+					double corrected_x = m_inertial.keyframe_pos.x + kf_delta.x * scale;
+					double corrected_y = m_inertial.keyframe_pos.y + kf_delta.y * scale;
+
+					double kf_distance = std::sqrt(
+						kf_delta.x * kf_delta.x +
+						kf_delta.y * kf_delta.y) * scale;
+
+					if (kf_distance < DEFAULT_SOME_MAP_SIZE_R)
+					{
+						m_pos.x = corrected_x;
+						m_pos.y = corrected_y;
+						m_last_pos = m_pos;
+						m_is_success_match = true;
+						// 关键帧校正成功但特征仍然失败 → 继续惯性，刷新关键帧
+						m_inertial.captureKeyframe(m_miniMapCenter, m_pos);
+						break;
+					}
+				}
+			}
+
+			// 两者都失败 → 切全局匹配
+			m_isMatchAllMap = true;
+			m_isContinuity = false;
+			m_inertial.reset();
+		}
+
+	} while (false);
+
+	// 每帧更新惯性导航的上一帧，保持帧间相位相关随时可用
+	m_inertial.updateLastFrame(m_miniMapCenter);
 }
 
 cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
@@ -289,18 +400,20 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 		
 		cv::Mat some_map;
 #ifdef _CVAT_DEBUG
-        if (!m_mapMat.empty())
+        const cv::Rect2i mapMatBorder = cv::Rect(0, 0, m_mapMat.cols, m_mapMat.rows);
+        cv::Rect2i rect_clamp = rect & mapMatBorder;
+        if (!m_mapMat.empty() && rect_clamp.width > 0 && rect_clamp.height > 0)
         {
-            some_map = m_mapMat(rect);
-            // 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
-            cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
-                for (int i = range.start; i < range.end; i++)
-                {
-                    some_map_kp.keypoints[i].pt.x -= rect.x;
-                    some_map_kp.keypoints[i].pt.y -= rect.y;
-                }
-                });
+            some_map = m_mapMat(rect_clamp);
         }
+        // 作图需要_将特征点映射到局部坐标系上，实际发布版本不做映射
+        cv::parallel_for_({ 0, static_cast<int>(some_map_kp.keypoints.size()) }, [&](const cv::Range& range) {
+            for (int i = range.start; i < range.end; i++)
+            {
+                some_map_kp.keypoints[i].pt.x -= rect_clamp.x;
+                some_map_kp.keypoints[i].pt.y -= rect_clamp.y;
+            }
+        });
 #endif
 
 		cv::Point2d out_pt = match_impl(some_map, some_map_kp, img_object, mini_map_kp, calc_is_faile);
@@ -309,7 +422,7 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 #ifdef _CVAT_DEBUG
         if (!m_mapMat.empty())
         {
-            out_pt = cv::Point2d(out_pt.x + rect.x, out_pt.y + rect.y);
+            out_pt = cv::Point2d(out_pt.x + rect_clamp.x, out_pt.y + rect_clamp.y);
         }
 #endif
 
@@ -358,7 +471,6 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 
 	if (accept_count < 4 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
 	{
-		//矩阵的置信度不高，使用旧版的筛选算法
 		calc_is_faile = true; return {};
 	}
 	// 新增几何约束检查
@@ -389,6 +501,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		{
 			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0f, img_object.rows / 2.0f) };
 			cv::transform(out_pt, out_pt, H);
+            m_tracking_scale = scale;
 			return out_pt[0];
 		}
 	}
