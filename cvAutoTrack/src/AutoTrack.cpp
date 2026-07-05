@@ -403,27 +403,12 @@ bool AutoTrack::GetPositionOfMap(double& x, double& y, int& mapId)
 		return false;
 	}
 
-	if (abs(x) < 10.0 && abs(y) < 10.0)
-	{
-		//跳过无效坐标
-		return false;
-	}
-
 	auto raw_pos = TianLi::Utils::ConvertSpecialMapsPosition(x, y);
 	//auto raw_pos = std::pair<cv::Point2d, int>{ cv::Point2d{ x,y },0 };
 
 	mapId = raw_pos.second;
-	if (mapId == 0)
-	{
-		auto user_Pos = TianLi::Utils::TransferAxes(raw_pos.first, genshin_avatar_position.target_map_world_center, genshin_avatar_position.target_map_world_scale);
-		x = user_Pos.x;
-		y = user_Pos.y;
-	}
-	else
-	{
-		x = raw_pos.first.x;
-		y = raw_pos.first.y;
-	}
+    x = raw_pos.first.x;
+    y = raw_pos.first.y;
 	return clear_error_logs();
 }
 
