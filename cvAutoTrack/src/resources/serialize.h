@@ -72,6 +72,11 @@ namespace Tianli::Resources::Utils
 			*this << r.x; *this << r.y; *this << r.width; *this << r.height;
 		}
 
+		void operator <<(const cv::Point2i& p)
+		{
+			*this << p.x; *this << p.y;
+		}
+
 		void operator <<(const cv::Size2i& s)
 		{
 			*this << s.width; *this << s.height;
@@ -196,6 +201,11 @@ namespace Tianli::Resources::Utils
 		void operator >>(cv::Rect2i& r)
 		{
 			*this >> r.x; *this >> r.y; *this >> r.width; *this >> r.height;
+		}
+
+		void operator >>(cv::Point2i& p)
+		{
+			*this >> p.x; *this >> p.y;
 		}
 
 		void operator >>(cv::Size2i& s)

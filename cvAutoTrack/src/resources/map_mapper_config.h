@@ -163,6 +163,7 @@ namespace TianLi::Resources
 				{
                     mappers.at(id).removeOffset(out_pos.x, out_pos.y);
 				}
+                break;
 			}
 			return { out_pos,id };
 		}

@@ -19,6 +19,7 @@ public:
 
 	// 用于快速查找keypoints的LSH/grid元数据
 	cv::Size2i map_size{};               // 地图的总大小
+	cv::Point2i map_origin{};            // 地图左上角原点坐标（保存 bounds 偏移）
 	cv::Size2i lsh_cell{};               // lsh的分块大小
 	cv::Size2i lsh_grid_dims{};          // lsh的网格尺寸
 	std::vector<int> lsh_cell_offsets;   // 分块的前缀和 size = cells+1

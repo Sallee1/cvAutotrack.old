@@ -24,6 +24,7 @@ bool MapKeypointCache::serialize(std::string outFileName)
 
 	// LSH元数据相关信息（兼容旧版结构）
 	ss << this->map_size;
+	ss << this->map_origin;
 	ss << this->lsh_cell;
 	ss << this->lsh_grid_dims;
 	ss << this->lsh_cell_offsets;
@@ -62,6 +63,7 @@ bool MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 
 	    //读取LSH元数据相关信息（可选）
 		dss >> this->map_size;
+		dss >> this->map_origin;
 		dss >> this->lsh_cell;
 		dss >> this->lsh_grid_dims;
 		dss >> this->lsh_cell_offsets;
@@ -265,7 +267,7 @@ void KeypointGridLSH::build(const std::vector<cv::KeyPoint>& kps, const cv::Rect
 
 void KeypointGridLSH::fromCache(const MapKeypointCache& cache)
 {
-	bounds = { 0, 0, cache.map_size.width, cache.map_size.height };
+	bounds = { cache.map_origin.x, cache.map_origin.y, cache.map_size.width, cache.map_size.height };
 	cell = cache.lsh_cell;
 	dims = cache.lsh_grid_dims;
 	cell_offsets = cache.lsh_cell_offsets;
@@ -372,17 +374,19 @@ void build_lsh_grid(MapKeypointCache& cache)
         }
 	}
 
-	cache.map_size = {
-		static_cast<int>(std::ceil(totalBounds.width)),
-		static_cast<int>(std::ceil(totalBounds.height))
-	};
-
-	int gw = std::max(1, (cache.map_size.width + cache.lsh_cell.width - 1) / cache.lsh_cell.width);
-	int gh = std::max(1, (cache.map_size.height + cache.lsh_cell.height - 1) / cache.lsh_cell.height);
-	cache.lsh_grid_dims = { gw, gh };
+	// 统一用 Rect2i 作为 LSH 网格边界（和 build() 的隐式转换保持一致）
+	cv::Rect2i totalBoundsInt = totalBounds;
+	cache.map_origin = { totalBoundsInt.x, totalBoundsInt.y };
 
 	KeypointGridLSH grid;
-	grid.build(cache.keypoints, totalBounds, cache.lsh_cell);
+	grid.build(cache.keypoints, totalBoundsInt, cache.lsh_cell);
+
+	cache.lsh_grid_dims = grid.dims;
+	// map_size 存储 LSH 网格的实际覆盖范围 = 格子数 × 格子大小
+	cache.map_size = {
+		grid.dims.width * cache.lsh_cell.width,
+		grid.dims.height * cache.lsh_cell.height
+	};
 	cache.lsh_cell_offsets = grid.cell_offsets;
 	cache.lsh_kp_indices = grid.kp_indices;
 }
@@ -425,10 +429,18 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
 	}
 
     // bulid_version 包含 "#" + layer_version，反序列化后直接比较即可
-	{
+    if (cache.deSerialize("cvAutoTrack_Cache.xml", true))
+    {
 		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
 		if (cache.bulid_version != TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime())
 			return false;
+
+    }
+    else
+	{
+        std::error_code ec;
+        fs::remove("cvAutoTrack_Cache.xml", ec);
+        return false;
 	}
 
     if (!cache.deSerialize("cvAutoTrack_Cache.xml"))
@@ -439,7 +451,9 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
     }
 
 	if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
-		return false;
+    {
+        return false;
+    }
 
 	// bulid_version 已包含 DLL版本 + layer_version + update_time
 	// 反序列化后直接比较即可自动捕捉版本变更
