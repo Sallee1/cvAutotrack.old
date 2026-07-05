@@ -1,8 +1,6 @@
 #pragma once
-#include "paimon/resources.binary.image.paimon.h"
 #include "icon/resources.binary.image.icon_sight.h"
 #include "icon/resources.binary.image.icon_quest.h"
-#include "star/resources.binary.image.star.h"
 #include "uid/resources.binary.image.uid_.h"
 #include "uid/resources.binary.image.uid0.h"
 #include "uid/resources.binary.image.uid1.h"

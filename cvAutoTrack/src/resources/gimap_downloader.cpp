@@ -10,6 +10,54 @@
 #include <chrono>
 #include <cctype>
 #include <nlohmann/json.hpp>
+#include <openssl/md5.h>
+#include <openssl/evp.h>
+
+namespace fs = std::filesystem;
+using Json = nlohmann::json;
+
+//=============================================================================
+// 文件 MD5 计算（与 cfiledownloader.h 中逻辑一致）
+//=============================================================================
+static std::string calcFileMD5(const std::string& filePath)
+{
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) return "";
+
+#if OPENSSL_VERSION_MAJOR >= 3
+    EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+    if (!mdctx) return "";
+    const EVP_MD* md = EVP_md5();
+    if (!md) { EVP_MD_CTX_free(mdctx); return ""; }
+    if (EVP_DigestInit_ex(mdctx, md, nullptr) != 1) { EVP_MD_CTX_free(mdctx); return ""; }
+
+    char buffer[4096];
+    while (file.read(buffer, sizeof(buffer)) || file.gcount())
+        EVP_DigestUpdate(mdctx, buffer, file.gcount());
+
+    unsigned char digest[MD5_DIGEST_LENGTH];
+    unsigned int digest_len = 0;
+    if (EVP_DigestFinal_ex(mdctx, digest, &digest_len) != 1) { EVP_MD_CTX_free(mdctx); return ""; }
+    EVP_MD_CTX_free(mdctx);
+
+    char md5_str[33]{};
+    for (unsigned int i = 0; i < digest_len; ++i)
+        sprintf_s(&md5_str[i * 2], 3, "%02x", digest[i]);
+    return std::string(md5_str, 32);
+#else
+    MD5_CTX context;
+    MD5_Init(&context);
+    char buffer[4096];
+    while (file.read(buffer, sizeof(buffer)) || file.gcount())
+        MD5_Update(&context, buffer, file.gcount());
+    unsigned char digest[MD5_DIGEST_LENGTH];
+    MD5_Final(digest, &context);
+    char md5_str[33]{};
+    for (int i = 0; i < MD5_DIGEST_LENGTH; ++i)
+        sprintf_s(&md5_str[i * 2], 3, "%02x", digest[i]);
+    return std::string(md5_str, 32);
+#endif
+}
 
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
@@ -122,6 +170,47 @@ bool GIMapDownloader::setHost(const std::string& host)
 //-------------------------------------------------------------------------
 bool GIMapDownloader::download()
 {
+    // 0) 轻量校验：下载远程 dependents.json.md5，与本地 dependents.json 摘要比对
+    {
+        std::string local_md5;
+        fs::path local_json = pImpl->dependents_json_path / "dependents.json";
+        if (fs::exists(local_json))
+            local_md5 = calcFileMD5(local_json.string());
+
+        fs::path tmp_md5 = fs::temp_directory_path() / "gimap_remote_deps.md5";
+        try
+        {
+            tianli::FileDownloader dl(tmp_md5.string(), pImpl->host + "/dependents.json.md5");
+            if (dl.download())
+            {
+                std::ifstream ifs(tmp_md5);
+                std::string remote_md5;
+                if (ifs.is_open())
+                {
+                    ifs >> remote_md5;
+                    // 移除首尾空白
+                    remote_md5.erase(0, remote_md5.find_first_not_of(" \t\r\n"));
+                    remote_md5.erase(remote_md5.find_last_not_of(" \t\r\n") + 1);
+                }
+                ifs.close();
+                fs::remove(tmp_md5);
+
+                if (!local_md5.empty() && !remote_md5.empty() &&
+                    _stricmp(local_md5.c_str(), remote_md5.c_str()) == 0)
+                {
+                    // 摘要一致 → 无需任何下载和解析
+                    return true;
+                }
+            }
+        }
+        catch (...)
+        {
+            // .md5 文件不可用（服务器未提供/网络超时等），回退到完整下载
+        }
+        std::error_code ec;
+        fs::remove(tmp_md5, ec);
+    }
+
     // 1) 下载远程 dependents.json 到临时文件
     fs::path tmp_json = fs::temp_directory_path() / "gimap_remote_deps.json";
     {
@@ -162,7 +251,7 @@ bool GIMapDownloader::download()
         }
     }
 
-    // 3) 校验：sumMD5 一致则无需下载
+    // 3) 校验：sumMD5 一致则无需下载（安全兜底，0 步骤已处理大部分情况）
     if (pImpl->verifyDependents())
         return true;
 

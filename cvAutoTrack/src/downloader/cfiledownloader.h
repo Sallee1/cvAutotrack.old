@@ -5,8 +5,8 @@
 #include <vector>
 #include <openssl/md5.h>
 #include <openssl/evp.h>
-#include <curl/cURL.h>
 
+#include <curl/curl.h>
 namespace tianli {
 	class FileDownloader {
 	public:
@@ -43,6 +43,46 @@ namespace tianli {
 
 		int getLastErrorCode() const { return last_error_code; }
 		std::string getLastErrorMsg() const { return m_last_error_msg; }
+
+		static std::string calcFileMD5(const std::string& filePath)
+		{
+			std::ifstream file(filePath, std::ios::binary);
+			if (!file) return "";
+
+		#if OPENSSL_VERSION_MAJOR >= 3
+			EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+			if (!mdctx) return "";
+			const EVP_MD* md = EVP_md5();
+			if (!md) { EVP_MD_CTX_free(mdctx); return ""; }
+			if (EVP_DigestInit_ex(mdctx, md, nullptr) != 1) { EVP_MD_CTX_free(mdctx); return ""; }
+
+			char buffer[4096];
+			while (file.read(buffer, sizeof(buffer)) || file.gcount())
+				EVP_DigestUpdate(mdctx, buffer, file.gcount());
+
+			unsigned char digest[MD5_DIGEST_LENGTH];
+			unsigned int digest_len = 0;
+			if (EVP_DigestFinal_ex(mdctx, digest, &digest_len) != 1) { EVP_MD_CTX_free(mdctx); return ""; }
+			EVP_MD_CTX_free(mdctx);
+
+			char md5_str[33]{};
+			for (unsigned int i = 0; i < digest_len; ++i)
+				sprintf_s(&md5_str[i * 2], 3, "%02x", digest[i]);
+			return std::string(md5_str, 32);
+		#else
+			MD5_CTX context;
+			MD5_Init(&context);
+			char buffer[4096];
+			while (file.read(buffer, sizeof(buffer)) || file.gcount())
+				MD5_Update(&context, buffer, file.gcount());
+			unsigned char digest[MD5_DIGEST_LENGTH];
+			MD5_Final(digest, &context);
+			char md5_str[33]{};
+			for (int i = 0; i < MD5_DIGEST_LENGTH; ++i)
+				sprintf_s(&md5_str[i * 2], 3, "%02x", digest[i]);
+			return std::string(md5_str, 32);
+		#endif
+		}
 
 		/**
 		 * @brief 测试服务器连通性（HEAD 请求）
@@ -95,64 +135,7 @@ namespace tianli {
 
 		// 计算文件MD5
 		std::string calculateMD5() const {
-			std::ifstream file(m_file_path, std::ios::binary);
-			if (!file) return "";
-
-#if OPENSSL_VERSION_MAJOR >= 3
-			// OpenSSL 3.0及以上推荐使用EVP接口
-			EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
-			if (!mdctx) return "";
-
-			const EVP_MD* md = EVP_md5();
-			if (!md) {
-				EVP_MD_CTX_free(mdctx);
-				return "";
-			}
-
-			if (EVP_DigestInit_ex(mdctx, md, nullptr) != 1) {
-				EVP_MD_CTX_free(mdctx);
-				return "";
-			}
-
-			char buffer[4096];
-			while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
-				if (EVP_DigestUpdate(mdctx, buffer, file.gcount()) != 1) {
-					EVP_MD_CTX_free(mdctx);
-					return "";
-				}
-			}
-
-			unsigned char digest[MD5_DIGEST_LENGTH];
-			unsigned int digest_len = 0;
-			if (EVP_DigestFinal_ex(mdctx, digest, &digest_len) != 1) {
-				EVP_MD_CTX_free(mdctx);
-				return "";
-			}
-			EVP_MD_CTX_free(mdctx);
-
-			char md5_str[33]{};
-			for (unsigned int i = 0; i < digest_len; ++i) {
-				sprintf_s(&md5_str[i * 2], 3, "%02x", digest[i]);
-			}
-			return std::string(md5_str, 32);
-#else
-			MD5_CTX context;
-			MD5_Init(&context);
-
-			char buffer[4096];
-			while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
-				MD5_Update(&context, buffer, file.gcount());
-			}
-
-			unsigned char digest[MD5_DIGEST_LENGTH];
-			MD5_Final(digest, &context);
-
-			char md5_str[33]{};
-			for (int i = 0; i < MD5_DIGEST_LENGTH; ++i) {
-				sprintf_s(&md5_str[i * 2], 3, "%02x", digest[i]);
-			}
-			return std::string(md5_str, 32);
-#endif
+			return calcFileMD5(m_file_path);
 		}
 
 		// 校验MD5（忽略大小写，兼容服务器大写格式）

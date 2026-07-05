@@ -7,6 +7,7 @@ import shutil
 url = "https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta"
 directory = "../cvat_rc_beta"
 output_file = os.path.join(directory, "dependents.json")
+output_md5_file = os.path.join(directory, "dependents.json.md5")
 
 # Function to calculate MD5 hash of a file
 def calculate_md5(filepath):
@@ -39,7 +40,7 @@ def main():
     # Traverse the directory
     for root, _, files in os.walk(directory):
         for file in files:
-            if file == "dependents.json":
+            if file == "dependents.json" or file == "dependents.json.md5":
                 continue
 
             filepath = os.path.join(root, file)
@@ -83,6 +84,11 @@ def main():
 
         with open(output_file, "w") as f:
             json.dump(data, f, indent=4)
+    # save dependents.json.md5
+    dep_md5 = calculate_md5(output_file)
+    
+    with open(output_md5_file,mode = "w") as f:
+        f.write(dep_md5)
 
 if __name__ == "__main__":
     main()

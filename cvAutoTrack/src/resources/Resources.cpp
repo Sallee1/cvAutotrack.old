@@ -7,6 +7,7 @@
 #include "version/Version.h"
 #include "KeypointsCache.h"
 #include "resources/gimap_downloader.h"
+#include "resources/map_mapper_config.h"
 
 namespace TianLi::Resource::Utils
 {
@@ -70,8 +71,6 @@ using namespace TianLi::Resource::Utils;
 
 Resources::Resources()
 {
-	PaimonTemplate = TianLi::Resources::Load::load_image("paimon");
-	StarTemplate = TianLi::Resources::Load::load_image("star");
 	IconSightTemplate = TianLi::Resources::Load::load_image("icon_sight");
 	IconQuestTemplate = TianLi::Resources::Load::load_image("icon_quest");
 	UID = TianLi::Resources::Load::load_image("uid_");
@@ -86,20 +85,13 @@ Resources::Resources()
 	UIDnumber[8] = TianLi::Resources::Load::load_image("uid8");
 	UIDnumber[9] = TianLi::Resources::Load::load_image("uid9");
 
-	cv::cvtColor(StarTemplate, StarTemplate, cv::COLOR_RGBA2GRAY);
-	cv::cvtColor(UID, UID, cv::COLOR_RGBA2GRAY);
-	for (int i = 0; i < 10; i++)
-	{
-		cv::cvtColor(UIDnumber[i], UIDnumber[i], cv::COLOR_RGBA2GRAY);
-	}
 	install();
 }
 
 Resources::~Resources()
 {
-	PaimonTemplate.release();
 	IconSightTemplate.release();
-	StarTemplate.release();
+    IconQuestTemplate.release();
 
 	UID.release();
 	UIDnumber[0].release();
@@ -125,6 +117,7 @@ void Resources::install()
 {
 	if (is_installed == false)
 	{
+		fs::path download_target = fs::u8path(getDllPath() + "/../../CVAT_Resources_Beta").lexically_normal();
 		auto& gimap_downloader = GIMapDownloader::getInstance();
         try
         {
@@ -140,6 +133,49 @@ void Resources::install()
             std::wstring lex_what = ex_what.wstring();
             std::wstring warn_info = std::wstring(L"") + L"\"位置追踪\"资源下载失败！原因:\n" + lex_what;
             MessageBox(NULL, warn_info.c_str(), L"警告", MB_OK | MB_ICONWARNING);
+
+		// 加载地图映射配置
+		{
+			auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+
+			// 先尝试加载文件是否存在
+			bool metaLoaded = false;
+			{
+				std::ifstream testFile(download_target / "metadata.json");
+				if (testFile.is_open())
+				{
+					testFile.close();
+					metaLoaded = true;
+				}
+			}
+
+			if (metaLoaded)
+			{
+				if (!mapper.loadFromDir(download_target))
+				{
+					if (!mapper.isVersionCompatible())
+					{
+						std::wstring warn_info = L"\"metadata.json\" 大版本不兼容！\n"
+							L"当前 DLL 仅支持 layer_version " +
+							std::to_wstring(TianLi::Resources::MapMapperManager::SUPPORTED_MAJOR_VERSION) +
+							L".x\n请更新 cvAutoTrack 以兼容新的地图数据格式。";
+						MessageBox(NULL, warn_info.c_str(), L"严重错误", MB_OK | MB_ICONERROR);
+					}
+					else
+					{
+						std::wstring warn_info = L"\"metadata.json\" 加载失败, 坐标映射将使用默认值!";
+						MessageBox(NULL, warn_info.c_str(), L"警告", MB_OK | MB_ICONWARNING);
+					}
+				}
+			}
+		}
+
+        //调试底图配置（可选）
+        {
+            if (fs::exists("gimap.jpg"))
+            {
+                DebugMapTemplate = cv::imread("gimap.jpg", cv::IMREAD_COLOR);
+            }
         }
 
 		//LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF",true);
@@ -151,8 +187,8 @@ void Resources::release()
 {
 	if (is_installed == true)
 	{
-		MapTemplate.release();
-		MapTemplate = cv::Mat();
+		DebugMapTemplate.release();
+		DebugMapTemplate = cv::Mat();
 		is_installed = false;
 	}
 }

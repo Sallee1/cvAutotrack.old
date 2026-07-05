@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Utils.h"
-#include "resources/map_mapper.h"
+#include "resources/map_mapper_config.h"
 #include <resources/Resources.h>
 #include <resources/KeypointsCache.h>
 
@@ -299,48 +299,16 @@ namespace TianLi::Utils
 
 	std::pair<cv::Point2d, int> ConvertSpecialMapsPosition(double x, double y)
 	{
-		int id = 0;
-		cv::Point2d dstPoint = cv::Point2d(x, y);
-		cv::Point2i center = Resources::getInstance().map_relative_center;
-
-		//特征点已经做了坐标映射，这里不再映射图层
-		//先检查在哪个洞内
-		//for (auto& [key, value] : layer_mapper)
-		//{
-		//	auto srcRect = value.first + center;
-		//	auto dstRect = value.second + center;
-
-		//	if (srcRect.contains(cv::Point2d(dstPoint.x, dstPoint.y)))
-		//	{
-		//		dstPoint = {
-		//			((double)dstRect.width / srcRect.width) * (dstPoint.x - srcRect.x) + dstRect.x,
-		//			((double)dstRect.height / srcRect.height) * (dstPoint.y - srcRect.y) + dstRect.y };
-		//		break;
-		//	}
-		//}
-
-		//然后检查在哪个地图内
-		for (auto& [key, value] : map_mappers)
+		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		if (mapper.isLoaded())
 		{
-			auto srcRect = value.first + center;
-			auto dstRect = value.second;
-
-			if (srcRect.contains(dstPoint))
-			{
-				id = key.second;
-				dstPoint = {
-					((double)dstRect.width / srcRect.width) * (dstPoint.x - srcRect.x) + dstRect.x,
-					((double)dstRect.height / srcRect.height) * (dstPoint.y - srcRect.y) + dstRect.y };
-				return { dstPoint, id };
-			}
+			auto result = mapper.convertSpecialMap(x, y);
+			if (result.second > 0)
+				return result;
 		}
 
-		// 层级在地下，但是没有匹配到合适的点
-		if (dstPoint.y > 7800)
-		{
-			return { cv::Point(0,0),0 };
-		}
-		return { dstPoint, 0 };
+		// 模块未加载时，保持原坐标
+		return { cv::Point2d(x, y), 0 };
 	}
 
 	void draw_good_matches(const cv::Mat& img_scene, std::vector<cv::KeyPoint> keypoint_scene, const cv::Mat& img_object, std::vector<cv::KeyPoint> keypoint_object, std::vector<cv::DMatch>& good_matches)

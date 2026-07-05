@@ -165,27 +165,19 @@ target_link_options(cvAutoTrack PRIVATE
 set_target_properties(cvAutoTrack PROPERTIES VS_GLOBAL_VcpkgEnabled "false")
 
 # ============================================================================
-# 版本生成（PRE_BUILD）
-# 使用 cmake 脚本替代 bat，避免 GBK 编码问题
+# 生成前后置脚本（PRE_BUILD，合并为一个命令避免换行问题）
+# 1. 版本信息 Version.h
+# 2. 图片二进制嵌入头文件
 # ============================================================================
 set(VERSION_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/generate_version.cmake")
-
-add_custom_command(TARGET cvAutoTrack PRE_BUILD
-    COMMAND "${CMAKE_COMMAND}" -P "${VERSION_SCRIPT}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    COMMENT "生成版本信息 Version.h ……"
-)
-
-# ============================================================================
-# 图片二进制嵌入头文件生成（PRE_BUILD）
-# 调用封装好的批处理，从 resource/ 中的图片源文件自动生成头文件
-# ============================================================================
 set(IMG2BIN_BAT "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/binary/image_to_binary.bat")
 
 add_custom_command(TARGET cvAutoTrack PRE_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E echo [PRE_BUILD 1/2] Generate Version.h ...
+    COMMAND "${CMAKE_COMMAND}" -DCMAKE_BUILD_TYPE=$<CONFIG> -P "${VERSION_SCRIPT}"
+    COMMAND "${CMAKE_COMMAND}" -E echo [PRE_BUILD 2/2] Generate Binary Resources ...
     COMMAND "${IMG2BIN_BAT}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/binary"
-    COMMENT "生成图片二进制嵌入头文件 ……"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 # ============================================================================

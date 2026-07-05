@@ -37,8 +37,10 @@ else()
     message(FATAL_ERROR "无法解析版本标签: ${TAG_CONTENT} （期望格式如 Beta-6.5.1 或 6.5.1）")
 endif()
 
-# revision 自增
-math(EXPR VREVISION "${VREVISION} + 1")
+# revision 自增（仅 RelWithDebInfo 发布版本才修改 tag）
+if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    math(EXPR VREVISION "${VREVISION} + 1")
+endif()
 
 # ---- 获取 Git 分支名和 Hash ----
 execute_process(
@@ -94,10 +96,12 @@ namespace TianLi::Version
 file(WRITE "${VERSION_H_PATH}" "${VERSION_H_CONTENT}")
 message(STATUS "Version: ${BUILD_VERSION}")
 
-# ---- 更新 version_tag.tag（revision 自增后写回） ----
-if(VPREFIX STREQUAL "")
-    set(NEW_TAG "${VMAJOR}.${VMINOR}.${VREVISION}")
-else()
-    set(NEW_TAG "${VPREFIX}-${VMAJOR}.${VMINOR}.${VREVISION}")
+# ---- 更新 version_tag.tag（仅 RelWithDebInfo 发布版本才写回） ----
+if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    if(VPREFIX STREQUAL "")
+        set(NEW_TAG "${VMAJOR}.${VMINOR}.${VREVISION}")
+    else()
+        set(NEW_TAG "${VPREFIX}-${VMAJOR}.${VMINOR}.${VREVISION}")
+    endif()
+    file(WRITE "${TAG_FILE}" "${NEW_TAG}")
 endif()
-file(WRITE "${TAG_FILE}" "${NEW_TAG}")

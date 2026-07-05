@@ -17,13 +17,11 @@ public:
 	std::map<std::pair<int, int>, cv::Mat> MapBlockCache;
 
 public:
-	cv::Mat PaimonTemplate;
 	cv::Mat IconSightTemplate;
 	cv::Mat IconQuestTemplate;
-	cv::Mat StarTemplate;
-	cv::Mat MapTemplate;
 	cv::Mat UID;
 	cv::Mat UIDnumber[10];
+	cv::Mat DebugMapTemplate;
 
 	// 天理坐标映射关系参数 地图中心
 	// 地图中天理坐标中心的像素坐标

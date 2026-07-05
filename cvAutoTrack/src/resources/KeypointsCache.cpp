@@ -4,13 +4,16 @@
 #include <filesystem>
 #include <algorithm>
 #include <execution>
+#include <mutex>
+#include <atomic>
 #include "version/Version.h"
 #include "serialize.h"
 #include "resources/Resources.h"
-#include "resources/map_mapper.h"
+#include "resources/map_mapper_config.h"
 #include "utils/utils.progress.h"
+#include "match/IMatcher.h"
 
-void MapKeypointCache::serialize(std::string outFileName)
+bool MapKeypointCache::serialize(std::string outFileName)
 {
 	std::ofstream ofs(outFileName, std::fstream::out | std::fstream::binary);
 	Tianli::Resources::Utils::serializeStream ss(ofs);
@@ -31,27 +34,33 @@ void MapKeypointCache::serialize(std::string outFileName)
 	ss << this->bulid_version_end;
 	ss.align();
 	ofs.close();
+
+    return true;
 }
 
-void MapKeypointCache::deSerialize(std::string infileName, bool version_only)
+bool MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 {
-	std::ifstream ifs(infileName, std::fstream::out | std::fstream::binary);
-	Tianli::Resources::Utils::deSerializeStream dss(ifs);
-	dss >> this->bulid_time;
-	dss >> this->bulid_version;
+    try {
+	    std::ifstream ifs(infileName, std::fstream::out | std::fstream::binary);
+        if (!ifs.is_open())
+        {
+            return false;
+        }
 
-	if (version_only)
-	{
-		ifs.close();
-		return;
-	}
+	    Tianli::Resources::Utils::deSerializeStream dss(ifs);
+        dss >> this->bulid_time;
+        dss >> this->bulid_version;
 
-	dss >> this->keypoints;
-	dss >> this->descriptors;
+        if (version_only)
+        {
+            ifs.close();
+            return true;
+        }
 
-	//读取LSH元数据相关信息（可选）
-	try {
-		// 成功读取
+        dss >> this->keypoints;
+        dss >> this->descriptors;
+
+	    //读取LSH元数据相关信息（可选）
 		dss >> this->map_size;
 		dss >> this->lsh_cell;
 		dss >> this->lsh_grid_dims;
@@ -59,171 +68,154 @@ void MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 		dss >> this->lsh_kp_indices;
 		dss >> this->block_rects;
 		dss >> this->block_offsets;
-	}
-	catch (...) {
-		// 读取失败，则可能是旧版本缓存
-		this->map_size = {};
-		this->lsh_cell = {};
-		this->lsh_grid_dims = {};
-		this->lsh_cell_offsets.clear();
-		this->lsh_kp_indices.clear();
-		this->block_rects.clear();
-		this->block_offsets.clear();
-	}
-	dss >> this->bulid_version_end;
-	ifs.close();
+
+	    dss >> this->bulid_version_end;
+	    ifs.close();
+        return true;
+    }
+    catch (...)
+    {
+        //缓存读取失败，返回false
+        return false;
+    }
+    return false;
 }
 
 namespace {
-	/**
-	 * @brief 将输入的rect分块成子rect，且包含重叠区域
-	 * @param input_rect 输入rect
-	 * @param block_size 分块大小
-	 * @param padding 重叠区域大小
-	 * @return 返回值为pair的vector，first为包含重叠区域的子rect，second为不包含重叠区域的子rect
-	 */
-	std::vector<std::pair<cv::Rect2i, cv::Rect2i>> getRects(const cv::Rect2i& input_rect, const cv::Size2i& block_size, const cv::Size2i padding)
+	bool gen_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, std::vector<cv::Rect2i>& block_rects, std::vector<int>& block_offsets)
 	{
-		std::vector<std::pair<cv::Rect2i, cv::Rect2i>> rects;
-		int x_blocks = (input_rect.width + block_size.width - 1) / block_size.width;
-		int y_blocks = (input_rect.height + block_size.height - 1) / block_size.height;
-		for (int y = 0; y < y_blocks; ++y)
-		{
-			for (int x = 0; x < x_blocks; ++x)
-			{
-				int x_start = input_rect.x + x * block_size.width;
-				int y_start = input_rect.y + y * block_size.height;
-				int x_end = std::min(x_start + block_size.width, input_rect.x + input_rect.width);
-				int y_end = std::min(y_start + block_size.height, input_rect.y + input_rect.height);
-				cv::Rect2i inner_rect(x_start, y_start, x_end - x_start, y_end - y_start);
-				int padded_x_start = x_start - padding.width;
-				int padded_y_start = y_start - padding.height;
-				int padded_x_end = x_end + padding.width;
-				int padded_y_end = y_end + padding.height;
-				cv::Rect2i padded_rect(padded_x_start, padded_y_start, padded_x_end - padded_x_start, padded_y_end - padded_y_start);
-				padded_rect &= input_rect; //确保不超出输入rect范围
-				rects.emplace_back(padded_rect, inner_rect);
-			}
-		}
-		return rects;
-	}
+		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		const auto& tiles = mapper.getTileInfos();
 
-	bool gen_map_keypoint_cache(const GenshinMinimap& genshin_minimap, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors,
-		std::vector<cv::Rect2i>& block_rects, std::vector<int>& block_offsets)
-	{
-		auto& matcher = genshin_minimap.matcher;
-		auto& map_template = Resources::getInstance().MapTemplate;
+		if (tiles.empty()) return false;
 
-		//分块处理
-		int block_size = 1200;
-		int padding = 64; //64像素重叠
-		auto rects = getRects(cv::Rect2i(0, 0, map_template.cols, map_template.rows), cv::Size2i(block_size, block_size), cv::Size2i(padding, padding));
+		keypoints.clear();
+		descriptors = cv::Mat();
 
-		block_rects.clear();
-		block_offsets.clear();
-		block_offsets.push_back(0);
 		TianLi::Utils::Win32ProgressWindow progress_window;
-		progress_window.create(L"cvAutoTrack", static_cast<int>(rects.size()), L"正在生成特征点缓存...");
-		const auto update_progress = [&](size_t index)
-		{
-			progress_window.set_status(L"正在生成特征点缓存: " + std::to_wstring(index + 1) + L"/" + std::to_wstring(rects.size()));
-			progress_window.set_value(static_cast<int>(index + 1));
-		};
+		progress_window.create(L"cvAutoTrack", static_cast<int>(tiles.size()), L"正在从瓦片生成特征点缓存...");
 
-		for (size_t i = 0; i < rects.size(); ++i)
-		{
-			auto& rect = rects[i];
-			cv::Rect2i padded_rect = rect.first;
-			cv::Rect2i inner_rect = rect.second;
-
+		// 每个瓦片的线程局部结果
+		struct TileResult {
 			std::vector<cv::KeyPoint> kps;
 			cv::Mat desc;
+			cv::Rect2i output_rect;  // 瓦片在输出坐标空间的边界
+		};
+		std::vector<TileResult> tileResults(tiles.size());
+		std::atomic<bool> hasError{ false };
+		std::atomic<int> progressCount{ 0 };
+		std::mutex progressMutex;
 
-			//生成特征点
-			cv::Mat roi_map_template = map_template(padded_rect);
-			matcher->detect(roi_map_template, kps);
-
-			//清除填充区域的关键点
-			auto inner_rect_align = inner_rect;
-			inner_rect_align.x -= padded_rect.x;
-			inner_rect_align.y -= padded_rect.y;
-			kps.erase(std::remove_if(kps.begin(), kps.end(), [&](const cv::KeyPoint& kp) {
-				return inner_rect_align.contains(kp.pt) == false;
-				}), kps.end());
-
-			if (kps.empty())
-			{
-				block_rects.push_back(inner_rect);
-				block_offsets.push_back(block_offsets.back());
-				update_progress(i);
-				continue;
-			}
-
-			//计算描述子
-			matcher->compute(map_template(rect.first), kps, desc);
-
-			//调整关键点坐标到全图坐标系
-			for (auto& kp : kps)
-			{
-				kp.pt.x += rect.first.x;
-				kp.pt.y += rect.first.y;
-			}
-			//合并关键点和描述子，确保同一分块的描述子是连续追加
-			if (keypoints.empty())
-			{
-				keypoints = kps;
-				descriptors = desc;
-			}
-			else
-			{
-				cv::vconcat(descriptors, desc, descriptors);
-				keypoints.insert(keypoints.end(), kps.begin(), kps.end());
-			}
-
-			block_rects.push_back(inner_rect);
-			block_offsets.push_back(block_offsets.back() + static_cast<int>(kps.size()));
-			update_progress(i);
-		}
-		progress_window.close();
-		return true;
-	}
-
-	/**
-	 * @brief 使用映射表重映射关键点坐标
-	 * @param keypoints 关键点
-	 * @return 映射后的关键点
-	 */
-	void remap_keypoints(std::vector<cv::KeyPoint>& keypoints)
-	{
-		auto& layer_mapper = TianLi::Utils::layer_mapper;
-		std::vector<cv::KeyPoint> remapped_keypoints;
-		remapped_keypoints.reserve(keypoints.size());
-
-		cv::Point2i center = Resources::getInstance().map_relative_center;
-		cv::parallel_for_({ 0,static_cast<int>(keypoints.size()) },
+		// 并行处理所有瓦片
+		cv::parallel_for_({ 0, static_cast<int>(tiles.size()) },
 			[&](const cv::Range& range)
 			{
 				for (int i = range.start; i < range.end; i++)
 				{
-					auto& kp = keypoints[i];
-					auto& pt = kp.pt;
-					//图层映射
-					for (auto& [key, value] : layer_mapper)
-					{
-						auto srcRect = value.first + center;
-						auto dstRect = value.second + center;
+					if (hasError) break;
 
-						if (srcRect.contains(pt))
+					const auto& tile = tiles[i];
+
+					// 加载瓦片图像
+					fs::path imgPath = fs::u8path(mapper.getResourceDir()) / fs::u8path(tile.file_path);
+					// imread依赖ACP编码路径
+					cv::Mat tileImg = cv::imread(imgPath.string(),cv::IMREAD_GRAYSCALE);
+
+					if (tileImg.empty())
+					{
+						hasError = true;
+						return;
+					}
+
+					int img_w = tileImg.cols;
+					int img_h = tileImg.rows;
+					if (img_w <= 0 || img_h <= 0) continue;
+
+					// 查找 MAP 变换
+					auto& entry = mapper.getMappers().at(tile.map_id);
+
+					// 检测关键点
+					std::vector<cv::KeyPoint> kps;
+					cv::Mat desc;
+					matcher->detect(tileImg, kps);
+
+					if (!kps.empty())
+					{
+						// 计算描述子
+						matcher->compute(tileImg, kps, desc);
+
+						// 将像素坐标转换为输出坐标空间
+						// 像素 → 原始坐标(tile rect) → MAP变换 → 输出坐标
+						for (auto& kp : kps)
 						{
-							pt = cv::Point2f{
-								((float)dstRect.width / srcRect.width) * (pt.x - srcRect.x) + dstRect.x,
-								((float)dstRect.height / srcRect.height) * (pt.y - srcRect.y) + dstRect.y };
-							break;
+							double raw_x = tile.rect_x + (kp.pt.x / img_w) * tile.rect_w;
+							double raw_y = tile.rect_y + (kp.pt.y / img_h) * tile.rect_h;
+							entry.apply(raw_x, raw_y);
+
+							kp.pt = cv::Point2f(static_cast<float>(raw_x), static_cast<float>(raw_y));
 						}
+					}
+
+					// 计算瓦片在输出坐标空间的边界
+					{
+						double rx1 = tile.rect_x, ry1 = tile.rect_y;
+						double rx2 = tile.rect_x + tile.rect_w, ry2 = tile.rect_y + tile.rect_h;
+						entry.apply(rx1, ry1);
+						entry.apply(rx2, ry2);
+						int ox = static_cast<int>(std::floor(std::min(rx1, rx2)));
+						int oy = static_cast<int>(std::floor(std::min(ry1, ry2)));
+						int ow = static_cast<int>(std::ceil(std::abs(rx2 - rx1)));
+						int oh = static_cast<int>(std::ceil(std::abs(ry2 - ry1)));
+						tileResults[i].output_rect = cv::Rect2i(ox, oy, ow, oh);
+					}
+
+					tileResults[i].kps = std::move(kps);
+					tileResults[i].desc = std::move(desc);
+
+					// 更新进度（加锁保护 Win32 控件）
+					int cur = ++progressCount;
+					{
+						std::lock_guard<std::mutex> lock(progressMutex);
+						progress_window.set_value(cur);
+						progress_window.set_status(L"正在从瓦片生成特征点缓存: " + std::to_wstring(cur) + L"/" + std::to_wstring(tiles.size()));
 					}
 				}
 			}
 		);
+
+		progress_window.close();
+		if (hasError) return false;
+
+		// 合并所有瓦片的结果
+		block_rects.clear();
+		block_offsets.clear();
+		block_offsets.push_back(0);
+
+		for (auto& result : tileResults)
+		{
+			int kp_count = static_cast<int>(result.kps.size());
+			block_rects.push_back(result.output_rect);
+
+			if (kp_count > 0)
+			{
+				if (keypoints.empty())
+				{
+					keypoints = std::move(result.kps);
+					descriptors = result.desc.clone();
+				}
+				else
+				{
+					cv::vconcat(descriptors, result.desc, descriptors);
+					keypoints.insert(keypoints.end(),
+						std::make_move_iterator(result.kps.begin()),
+						std::make_move_iterator(result.kps.end()));
+				}
+			}
+
+			block_offsets.push_back(block_offsets.back() + kp_count);
+		}
+
+		return true;
 	}
 }
 
@@ -357,29 +349,63 @@ void KeypointGridLSH::query_and_gather(const cv::Rect2i& bbox,
 	gather_by_indices(idx, keypoints, descriptors, out_kps, out_desc);
 }
 
-bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, MapKeypointCache& cache)
+/**
+ * @brief 从关键点计算总地图边界，建 LSH 网格
+ */
+void build_lsh_grid(MapKeypointCache& cache)
 {
-	std::vector<cv::Rect2i> block_rects;
-	std::vector<int> block_offsets;
-	gen_map_keypoint_cache(genshin_minimap, cache.keypoints, cache.descriptors, block_rects, block_offsets);
-	remap_keypoints(cache.keypoints);
-	std::string build_time = __DATE__ " " __TIME__;
-	cache.bulid_time = build_time;
-	cache.bulid_version = TianLi::Version::build_version;
-
-	// fill LSH/grid metadata
+	auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
 	auto cell_size = Resources::getInstance().lsh_cell_size;
-	cache.map_size = { Resources::getInstance().MapTemplate.cols, Resources::getInstance().MapTemplate.rows };
 	cache.lsh_cell = { cell_size, cell_size };
+
+	// 计算输入边界时考虑 MAP 变换后的 tile 范围
+	cv::Rect2d totalBounds;
+	for (const auto& [id,bound] : mapper.getBounds())
+	{
+        if (totalBounds.width == 0 && totalBounds.height == 0)
+        {
+            totalBounds = bound.bounds;
+        }
+        else
+        {
+            totalBounds |= bound.bounds;
+        }
+	}
+
+	cache.map_size = {
+		static_cast<int>(std::ceil(totalBounds.width)),
+		static_cast<int>(std::ceil(totalBounds.height))
+	};
+
 	int gw = std::max(1, (cache.map_size.width + cache.lsh_cell.width - 1) / cache.lsh_cell.width);
 	int gh = std::max(1, (cache.map_size.height + cache.lsh_cell.height - 1) / cache.lsh_cell.height);
 	cache.lsh_grid_dims = { gw, gh };
 
-	// Build grid on remapped keypoints
 	KeypointGridLSH grid;
-	grid.build(cache.keypoints, { 0,0, cache.map_size.width, cache.map_size.height }, cache.lsh_cell);
+	grid.build(cache.keypoints, totalBounds, cache.lsh_cell);
 	cache.lsh_cell_offsets = grid.cell_offsets;
 	cache.lsh_kp_indices = grid.kp_indices;
+}
+
+bool save_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache& cache)
+{
+	std::vector<cv::Rect2i> block_rects;
+	std::vector<int> block_offsets;
+	gen_map_keypoint_cache(matcher, cache.keypoints, cache.descriptors, block_rects, block_offsets);
+	{
+		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		cache.bulid_version = TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime();
+		cache.bulid_version_end = cache.bulid_version;
+		cache.bulid_time = __DATE__ " " __TIME__;		//不读，仅供dll兼容
+	}
+
+
+
+	// 从关键点计算总地图边界并建 LSH 网格
+	if (!cache.keypoints.empty())
+	{
+		build_lsh_grid(cache);
+	}
 
 	// record block grouping
 	cache.block_rects = block_rects;
@@ -398,31 +424,36 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
 		return false;
 	}
 
-	try {
-		cache.deSerialize("cvAutoTrack_Cache.xml", true);
-	}
-	catch (std::exception) {   //缓存损坏
-		return false;
+    // bulid_version 包含 "#" + layer_version，反序列化后直接比较即可
+	{
+		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		if (cache.bulid_version != TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime())
+			return false;
 	}
 
-	if (cache.bulid_version != TianLi::Version::build_version)    //版本不一致
-		return false;
-
-	cache.deSerialize("cvAutoTrack_Cache.xml");
+    if (!cache.deSerialize("cvAutoTrack_Cache.xml"))
+    {
+        std::error_code ec;
+        fs::remove("cvAutoTrack_Cache.xml", ec);
+        return false;
+    }
 
 	if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
 		return false;
 
+	// bulid_version 已包含 DLL版本 + layer_version + update_time
+	// 反序列化后直接比较即可自动捕捉版本变更
+
 	return true;
 }
 
-MapKeypointCache get_map_keypoint(const GenshinMinimap& genshin_minimap)
+MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher)
 {
 	MapKeypointCache cache;
 	if (load_map_keypoint_cache(cache) == false)
 	{
 		cache = {};
-		save_map_keypoint_cache(genshin_minimap, cache);
+		save_map_keypoint_cache(matcher, cache);
 	}
 	return cache;
 }

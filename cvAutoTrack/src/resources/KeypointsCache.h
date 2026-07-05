@@ -11,8 +11,8 @@
 
 struct MapKeypointCache {
 public:
-	std::string bulid_time;
-	std::string bulid_version;
+	std::string bulid_time;            // metadata.json 的 update_time
+	std::string bulid_version;         // DLL版本号 + layer_version（用#分隔）
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
 	std::string bulid_version_end;
@@ -38,8 +38,8 @@ public:
 		keypoints(keypoints), descriptors(descriptors), bulid_version_end(bulid_version) {
 	}
 
-	void serialize(std::string outfileName);
-	void deSerialize(std::string infileName, bool version_only = false);
+	bool serialize(std::string outfileName);
+	bool deSerialize(std::string infileName, bool version_only = false);
 };
 
 // 用于bbox查询的简单基于网格的LSH
@@ -104,8 +104,11 @@ struct KeypointGridLSH {
 		cv::Mat& out_desc) const;
 };
 
-struct GenshinMinimap; // 前向声明
+class IMatcher; // 前向声明
 
-bool save_map_keypoint_cache(const GenshinMinimap& genshin_minimap, MapKeypointCache& cache);
-bool load_map_keypoint_cache(MapKeypointCache& cache);
-MapKeypointCache get_map_keypoint(const GenshinMinimap& genshin_minimap);
+/**
+ * @brief 生成/加载特征点缓存
+ * @param matcher 特征匹配器（用于 detect+compute）
+ * @return 缓存对象
+ */
+MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher);
