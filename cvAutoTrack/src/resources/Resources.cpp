@@ -118,12 +118,11 @@ void Resources::install()
 	if (is_installed == false)
 	{
 		fs::path download_target = fs::u8path(getDllPath() + "/../../CVAT_Resources_Beta").lexically_normal();
-		auto& gimap_downloader = GIMapDownloader::getInstance();
+        auto& gimap_downloader = GIMapDownloader::getInstance();
         try
         {
-            fs::path download_target = fs::u8path(getDllPath() + "/../CVAT_Resources").lexically_normal();
-		    gimap_downloader.setDependentsJsonPath(download_target);
-		    gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
+            gimap_downloader.setDependentsJsonPath(download_target);
+            gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
             gimap_downloader.setLocalPath(download_target);
             gimap_downloader.download();
         }
@@ -133,6 +132,7 @@ void Resources::install()
             std::wstring lex_what = ex_what.wstring();
             std::wstring warn_info = std::wstring(L"") + L"\"位置追踪\"资源下载失败！原因:\n" + lex_what;
             MessageBox(NULL, warn_info.c_str(), L"警告", MB_OK | MB_ICONWARNING);
+        }
 
 		// 加载地图映射配置
 		{
