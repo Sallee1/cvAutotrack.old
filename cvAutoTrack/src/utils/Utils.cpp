@@ -302,9 +302,8 @@ namespace TianLi::Utils
 		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
 		if (mapper.isLoaded())
 		{
-			auto result = mapper.convertSpecialMap(x, y);
-			if (result.second > 0)
-				return result;
+			auto result = mapper.convertPosition(x, y);
+		    return result;
 		}
 
 		// 模块未加载时，保持原坐标

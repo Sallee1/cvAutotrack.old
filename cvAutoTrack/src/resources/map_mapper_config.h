@@ -33,15 +33,10 @@ namespace TianLi::Resources
 		/** 应用变换 */
 		void apply(double& x, double& y) const
 		{
-			x = x * scale_x + center_x + offset_x;
-			y = y * scale_y + center_y + offset_y;
+			x = (x + center_x) * scale_x;
+            y = (y + center_y) * scale_y;
 		}
 
-        void removeOffset(double& x, double& y) const
-        {
-            x = x - offset_x;
-            y = y - offset_y;
-        }
 	};
 
 	/**
@@ -153,19 +148,28 @@ namespace TianLi::Resources
 		 * @param x,y 输入坐标（在统一输出空间中）
 		 * @return (坐标, map_id)，map_id=0 表示未匹配特殊地图（即 Teyvat）
 		 */
-		std::pair<cv::Point2d, int> convertSpecialMap(double x, double y) const
+		std::pair<cv::Point2d, int> convertPosition(double x, double y) const
 		{
-            int id = 0;
+            int out_id = 0;
             cv::Point2d out_pos{ x,y };
+            //TODO: 待重新实现地区检测
 			for (const auto& [id,bi] : bounds)
 			{
+                //跳过概率最大的提瓦特
+                if (id == 0) continue;
 				if (bi.bounds.contains(cv::Point2d(x, y)))
 				{
-                    mappers.at(id).removeOffset(out_pos.x, out_pos.y);
+                    out_pos.x -= mappers.at(id).offset_x;
+                    out_pos.y -= mappers.at(id).offset_y;
+                    out_id = id;
+                    break;
 				}
-                break;
 			}
-			return { out_pos,id };
+            
+            //根据id映射apply应用坐标
+            mappers.at(out_id).apply(out_pos.x, out_pos.y);
+
+			return { out_pos,out_id };
 		}
 
 		// ============ 版本信息 ============
@@ -345,8 +349,6 @@ namespace TianLi::Resources
 
 				// 应用 map_mapper 变换
 				auto& entry = mappers.at(tile.map_id);
-                entry.apply(tile_lt.x, tile_lt.y);
-                entry.apply(tile_rb.x, tile_rb.y);
 
 				cv::Rect2d& b = it->second;
 				if (b.width == 0 && b.height == 0)
@@ -363,7 +365,10 @@ namespace TianLi::Resources
 			bounds.clear();
 			for (auto& [id, rect] : mapBounds)
 			{
-				bounds[id] = MapBoundInfo{ id, mapPrefix[id], rect };
+                cv::Rect2d rect_with_offset = rect;
+                rect_with_offset.x += mappers.at(id).offset_x;
+                rect_with_offset.y += mappers.at(id).offset_y;
+				bounds[id] = MapBoundInfo{ id, mapPrefix[id], rect_with_offset };
 			}
 		}
 

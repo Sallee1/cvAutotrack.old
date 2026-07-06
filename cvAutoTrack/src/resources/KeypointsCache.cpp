@@ -152,7 +152,9 @@ namespace {
 						{
 							double raw_x = tile.rect_x + (kp.pt.x / img_w) * tile.rect_w;
 							double raw_y = tile.rect_y + (kp.pt.y / img_h) * tile.rect_h;
-							entry.apply(raw_x, raw_y);
+							//计算附加偏移量
+                            raw_x += entry.offset_x;
+                            raw_y += entry.offset_y;
 
 							kp.pt = cv::Point2f(static_cast<float>(raw_x), static_cast<float>(raw_y));
 						}
@@ -162,8 +164,14 @@ namespace {
 					{
 						double rx1 = tile.rect_x, ry1 = tile.rect_y;
 						double rx2 = tile.rect_x + tile.rect_w, ry2 = tile.rect_y + tile.rect_h;
-						entry.apply(rx1, ry1);
-						entry.apply(rx2, ry2);
+
+                        //计算附加偏移量
+                        rx1 += entry.offset_x;
+                        ry1 += entry.offset_y;
+                        rx2 += entry.offset_x;
+                        ry2 += entry.offset_y;
+
+
 						int ox = static_cast<int>(std::floor(std::min(rx1, rx2)));
 						int oy = static_cast<int>(std::floor(std::min(ry1, ry2)));
 						int ow = static_cast<int>(std::ceil(std::abs(rx2 - rx1)));
