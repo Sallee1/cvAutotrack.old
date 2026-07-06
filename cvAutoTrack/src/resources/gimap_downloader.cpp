@@ -159,7 +159,18 @@ bool GIMapDownloader::setHost(const std::string& host)
     while (!base_host.empty() && base_host.back() == '/')
         base_host.pop_back();
 
-    tianli::FileDownloader::testConnection(base_host + "/dependents.json");
+    // 用 GET 实际下载 dependents.json.md5（极小文件）来验证连通性，
+    // 避免 HEAD 请求被 CDN/对象存储拦截返回 403
+    {
+        fs::path tmp_md5 = fs::temp_directory_path() / "gimap_host_check.md5";
+        tianli::FileDownloader dl(tmp_md5.string(), base_host + "/dependents.json.md5");
+        if (!dl.download())
+            throw network_error("无法连接到服务器: [" +
+                                std::to_string(dl.getLastErrorCode()) + "] " +
+                                dl.getLastErrorMsg());
+        std::error_code ec;
+        fs::remove(tmp_md5, ec);
+    }
 
     pImpl->host = base_host;
     return true;
