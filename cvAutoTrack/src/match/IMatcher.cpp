@@ -10,7 +10,7 @@ void IMatcher::cache_flann_train_descriptors(const cv::Mat& train_descriptors)
 
 	const bool is_binary_descriptor = getIsBinaryDescriptor();
 	std::lock_guard<std::mutex> lock(m_flann_matcher_mutex);
-	const bool cache_hit = !m_cached_flann_matcher.empty()
+	const bool cache_hit = !m_cached_flann_index.empty()
 		&& m_cached_flann_train_descriptors.data == train_descriptors.data
 		&& m_cached_flann_train_descriptors.rows == train_descriptors.rows
 		&& m_cached_flann_train_descriptors.cols == train_descriptors.cols
@@ -22,13 +22,74 @@ void IMatcher::cache_flann_train_descriptors(const cv::Mat& train_descriptors)
 		return;
 	}
 
-	auto matcher = create_flann_matcher();
-	matcher->add(std::vector<cv::Mat>{ train_descriptors });
-	matcher->train();
+	auto index = create_flann_index();
+	if (is_binary_descriptor)
+	{
+		index->build(train_descriptors, cv::flann::LshIndexParams(20, 32, 2), cvflann::FLANN_DIST_HAMMING);
+	}
+	else
+	{
+		index->build(train_descriptors, cv::flann::KDTreeIndexParams(8), cvflann::FLANN_DIST_L2);
+	}
 
-	m_cached_flann_matcher = matcher;
+	m_cached_flann_index = index;
 	m_cached_flann_train_descriptors = train_descriptors;
 	m_cached_flann_is_binary_descriptor = is_binary_descriptor;
+}
+
+bool IMatcher::try_load_flann_index(const std::string& path, const cv::Mat& train_descriptors)
+{
+	if (train_descriptors.empty())
+		return false;
+
+	const bool is_binary_descriptor = getIsBinaryDescriptor();
+	std::lock_guard<std::mutex> lock(m_flann_matcher_mutex);
+
+	// 如果内存缓存已命中，无需加载
+	const bool cache_hit = !m_cached_flann_index.empty()
+		&& m_cached_flann_train_descriptors.data == train_descriptors.data
+		&& m_cached_flann_train_descriptors.rows == train_descriptors.rows
+		&& m_cached_flann_train_descriptors.cols == train_descriptors.cols
+		&& m_cached_flann_train_descriptors.type() == train_descriptors.type()
+		&& m_cached_flann_is_binary_descriptor == is_binary_descriptor;
+	if (cache_hit)
+		return true;
+
+	try
+	{
+		cv::Ptr<cv::flann::Index> index = cv::makePtr<cv::flann::Index>();
+		bool loaded = index->load(train_descriptors, path);
+		if (loaded)
+		{
+			m_cached_flann_index = index;
+			m_cached_flann_train_descriptors = train_descriptors;
+			m_cached_flann_is_binary_descriptor = is_binary_descriptor;
+			return true;
+		}
+	}
+	catch (...)
+	{
+		// 加载失败，静默返回 false
+	}
+
+	return false;
+}
+
+bool IMatcher::save_flann_index(const std::string& path)
+{
+	std::lock_guard<std::mutex> lock(m_flann_matcher_mutex);
+	if (m_cached_flann_index.empty())
+		return false;
+
+	try
+	{
+		m_cached_flann_index->save(path);
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
 }
 
 std::vector<std::vector<cv::DMatch>> IMatcher::flann_knnmatch(const cv::Mat& query_descriptors, int k)
@@ -39,13 +100,32 @@ std::vector<std::vector<cv::DMatch>> IMatcher::flann_knnmatch(const cv::Mat& que
 		return match_group;
 	}
 
-	auto matcher = get_cached_flann_matcher();
-	if (matcher.empty())
+	auto index = get_cached_flann_index();
+	if (index.empty())
 	{
 		return match_group;
 	}
 
-	matcher->knnMatch(query_descriptors, match_group, k);
+	cv::Mat indices, dists;
+	if (getIsBinaryDescriptor())
+		index->knnSearch(query_descriptors, indices, dists, k, cv::flann::SearchParams(256, 0.1f, true));
+	else
+		index->knnSearch(query_descriptors, indices, dists, k, cv::flann::SearchParams(256, 0.0f, true));
+
+	match_group.resize(query_descriptors.rows);
+	for (int i = 0; i < query_descriptors.rows; ++i)
+	{
+		match_group[i].reserve(k);
+		for (int j = 0; j < k; ++j)
+		{
+			int train_idx = indices.at<int>(i, j);
+			float dist = dists.at<float>(i, j);
+			// FLANN returns -1 for no match found
+			if (train_idx >= 0)
+				match_group[i].emplace_back(i, train_idx, dist);
+		}
+	}
+
 	return match_group;
 }
 
@@ -62,13 +142,26 @@ std::vector<cv::DMatch> IMatcher::flann_match(const cv::Mat& query_descriptors)
 		return matches;
 	}
 
-	auto matcher = get_cached_flann_matcher();
-	if (matcher.empty())
+	auto index = get_cached_flann_index();
+	if (index.empty())
 	{
 		return matches;
 	}
 
-	matcher->match(query_descriptors, matches);
+	cv::Mat indices, dists;
+	if (getIsBinaryDescriptor())
+		index->knnSearch(query_descriptors, indices, dists, 1, cv::flann::SearchParams(256, 0.1f, true));
+	else
+		index->knnSearch(query_descriptors, indices, dists, 1, cv::flann::SearchParams(256, 0.0f, true));
+
+	matches.reserve(query_descriptors.rows);
+	for (int i = 0; i < query_descriptors.rows; ++i)
+	{
+		int train_idx = indices.at<int>(i, 0);
+		if (train_idx >= 0)
+			matches.emplace_back(i, train_idx, dists.at<float>(i, 0));
+	}
+
 	return matches;
 }
 
@@ -156,22 +249,13 @@ cv::Ptr<cv::DescriptorMatcher> IMatcher::create_bf_matcher(bool cross_check)
 	return matcher;
 }
 
-cv::Ptr<cv::DescriptorMatcher> IMatcher::create_flann_matcher()
+cv::Ptr<cv::flann::Index> IMatcher::create_flann_index()
 {
-	if (getIsBinaryDescriptor())
-	{
-		cv::Ptr<cv::flann::LshIndexParams> index_params{ cv::makePtr<cv::flann::LshIndexParams>(20, 32, 2) };
-		cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0.1f, true) };
-		return cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
-	}
-
-	cv::Ptr<cv::flann::KDTreeIndexParams> index_params{ cv::makePtr<cv::flann::KDTreeIndexParams>(8) };
-	cv::Ptr<cv::flann::SearchParams> search_params{ cv::makePtr<cv::flann::SearchParams>(256, 0.0f, true) };
-	return cv::makePtr<cv::FlannBasedMatcher>(index_params, search_params);
+	return cv::makePtr<cv::flann::Index>();
 }
 
-cv::Ptr<cv::DescriptorMatcher> IMatcher::get_cached_flann_matcher()
+cv::Ptr<cv::flann::Index> IMatcher::get_cached_flann_index()
 {
 	std::lock_guard<std::mutex> lock(m_flann_matcher_mutex);
-	return m_cached_flann_matcher;
+	return m_cached_flann_index;
 }

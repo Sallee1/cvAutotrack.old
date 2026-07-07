@@ -16,7 +16,14 @@ public:
 	};
 
 public:
+	/// 构建或更新内存中的 FLANN 索引（从训练描述子）
 	virtual void cache_flann_train_descriptors(const cv::Mat& train_descriptors);
+
+	/// 尝试从磁盘加载已缓存的 FLANN 索引；失败时返回 false，调用方应使用 cache_flann_train_descriptors 重建
+	virtual bool try_load_flann_index(const std::string& path, const cv::Mat& train_descriptors);
+
+	/// 将当前内存中的 FLANN 索引保存到磁盘
+	virtual bool save_flann_index(const std::string& path);
 
 	virtual std::vector<std::vector<cv::DMatch>> flann_knnmatch(const cv::Mat& query_descriptors, int k = 2);
 
@@ -48,11 +55,11 @@ public:
 
 private:
 	cv::Ptr<cv::DescriptorMatcher> create_bf_matcher(bool cross_check = false);
-	cv::Ptr<cv::DescriptorMatcher> create_flann_matcher();
-	cv::Ptr<cv::DescriptorMatcher> get_cached_flann_matcher();
+	cv::Ptr<cv::flann::Index> create_flann_index();
+	cv::Ptr<cv::flann::Index> get_cached_flann_index();
 
-	std::mutex m_flann_matcher_mutex;
-	cv::Ptr<cv::DescriptorMatcher> m_cached_flann_matcher;
+	mutable std::mutex m_flann_matcher_mutex;
+	cv::Ptr<cv::flann::Index> m_cached_flann_index;
 	cv::Mat m_cached_flann_train_descriptors;
 	bool m_cached_flann_is_binary_descriptor = false;
 };

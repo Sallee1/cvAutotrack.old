@@ -85,7 +85,7 @@ Resources::Resources()
 	UIDnumber[8] = TianLi::Resources::Load::load_image("uid8");
 	UIDnumber[9] = TianLi::Resources::Load::load_image("uid9");
 
-	install();
+	// install() 不再在构造时调用，由 init_matcher() 在后台线程中触发
 }
 
 Resources::~Resources()
@@ -118,6 +118,10 @@ void Resources::install()
 	if (is_installed == false)
 	{
 		fs::path download_target = fs::u8path(getDllPath() + "/../../CVAT_Resources_Beta").lexically_normal();
+        if (!fs::exists(download_target))
+        {
+            fs::create_directories(download_target);
+        }
         auto& gimap_downloader = GIMapDownloader::getInstance();
         try
         {
