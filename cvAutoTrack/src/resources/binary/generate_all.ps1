@@ -52,6 +52,15 @@ function Convert-ImageToHeader {
         $null = New-Item -ItemType Directory -Path $dstDir -Force
     }
 
+    # 只有内容实际变化才写文件，避免触发不必要的重编译
+    $newContent = $sb.ToString()
+    if (Test-Path $dst) {
+        $oldContent = [System.IO.File]::ReadAllText($dst)
+        if ($oldContent -eq $newContent) {
+            return   # 内容无变化，跳过写文件
+        }
+    }
+
     [System.IO.File]::WriteAllText($dst, $sb.ToString())
 }
 
