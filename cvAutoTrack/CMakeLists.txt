@@ -102,6 +102,13 @@ target_include_directories(cvAutoTrack PRIVATE ${CVAT_INCLUDE_DIRS})
 # 导出宏
 target_compile_definitions(cvAutoTrack PRIVATE CVAUTOTRACK_EXPORTS)
 
+# 可选日志宏
+set(WITH_CVAT_DEBUG_LOG OFF CACHE BOOL "run with DEBUG_LOG")
+
+if(WITH_CVAT_DEBUG_LOG)
+    target_compile_definitions(cvAutoTrack PRIVATE _CVAT_DEBUG_LOG)
+endif()
+
 # RelNoOpz 模式下注入 _CVAT_DEBUG（关闭优化，但使用 Release 运行时库）
 target_compile_definitions(cvAutoTrack PRIVATE
     $<$<CONFIG:RelNoOpz>:_CVAT_DEBUG>

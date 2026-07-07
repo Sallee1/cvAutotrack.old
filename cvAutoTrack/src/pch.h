@@ -68,6 +68,12 @@ namespace fs = std::filesystem;
 #include <d2d1_3.h>
 #include <wincodec.h>
 
+// macro
+#ifdef _CVAT_DEBUG
+#ifndef _CVAT_DEBUG_LOG
+#define _CVAT_DEBUG_LOG
+#endif
+#endif
 // Helpers
 
 // DUMP部分

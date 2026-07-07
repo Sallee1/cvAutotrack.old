@@ -70,6 +70,13 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher,int cols,int rows, 
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&& map_keypoints_cache)
 {
 	if (m_isInit) return false;
+
+	// 拒绝空数据，防止后续匹配操作段错误
+	if (map_keypoints_cache.keypoints.empty() || map_keypoints_cache.descriptors.empty())
+	{
+		return false;
+	}
+
 	m_lsh_index = std::make_unique<KeypointGridLSH>();
 	m_lsh_index->fromCache(map_keypoints_cache);
 	m_map_kp.keypoints = std::move(map_keypoints_cache.keypoints);
@@ -80,7 +87,11 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&&
 		return false;
 	}
 	m_matcher = matcher;
-	m_matcher->cache_flann_train_descriptors(m_map_kp.descriptors);
+	// 优先从磁盘加载缓存的 FLANN 索引，失败则现场构建
+	if (!m_matcher->try_load_flann_index("cvAutoTrack_Cache.flann", m_map_kp.descriptors))
+	{
+		m_matcher->cache_flann_train_descriptors(m_map_kp.descriptors);
+	}
 	m_isInit = true;
 	return true;
 }
@@ -96,6 +107,9 @@ void Tracking::UnInit()
 
 void Tracking::match()
 {
+
+
+
 	bool calc_is_faile = false;
 	m_is_success_match = false;
 	do {
@@ -115,6 +129,9 @@ void Tracking::match()
 				m_pos = m_last_pos;
 				m_is_success_match = false;
 				m_isMatchAllMap = true;
+#ifdef _CVAT_DEBUG_LOG
+                printf("[DEBUG] 全局匹配失败\n");
+#endif
 				break;
 			}
 
@@ -122,6 +139,9 @@ void Tracking::match()
 			m_isMatchAllMap = false;
 			m_is_success_match = true;
 			m_inertial.reset();
+#ifdef _CVAT_DEBUG_LOG
+                printf("[DEBUG] 全局匹配成功\n");
+#endif
 			break;
 		}
 
@@ -142,6 +162,9 @@ void Tracking::match()
 			m_isMatchAllMap = false;
 			m_is_success_match = true;
 			m_inertial.reset();
+#ifdef _CVAT_DEBUG_LOG
+            printf("[DEBUG] 局部匹配成功\n");
+#endif
 			break;
 		}
 
@@ -200,6 +223,9 @@ void Tracking::match()
 				m_last_pos = m_pos;
 				m_is_success_match = true;
 				displacement = coord_dist;
+#ifdef _CVAT_DEBUG_LOG
+                printf("[DEBUG] 惯性导航成功\n");
+#endif
 			}
 		}
 
@@ -230,6 +256,9 @@ void Tracking::match()
 				m_last_pos = m_pos;
 				m_is_success_match = true;
 				m_inertial.reset();
+#ifdef _CVAT_DEBUG_LOG
+                printf("[DEBUG] 已恢复特征点匹配\n");
+#endif
 				break;
 			}
 
@@ -259,6 +288,7 @@ void Tracking::match()
 						m_is_success_match = true;
 						// 关键帧校正成功但特征仍然失败 → 继续惯性，刷新关键帧
 						m_inertial.captureKeyframe(m_miniMapCenter, m_pos);
+                        printf("[DEBUG] 惯性导航校准成功\n");
 						break;
 					}
 				}

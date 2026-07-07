@@ -283,3 +283,4 @@ cvat_rc*
 /api
 
 [Oo]ut
+CMakeUserPresets.json
