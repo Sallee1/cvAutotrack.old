@@ -121,6 +121,11 @@ namespace {
 					// 加载瓦片图像
 					fs::path imgPath = fs::u8path(mapper.getResourceDir()) / fs::u8path(tile.file_path);
 					// imread依赖ACP编码路径
+					if (!fs::exists(imgPath))
+					{
+						hasError = true;
+						return;
+					}
 					cv::Mat tileImg = cv::imread(imgPath.string(),cv::IMREAD_GRAYSCALE);
 
 					if (tileImg.empty())
@@ -196,11 +201,35 @@ namespace {
 		progress_window.close();
 		if (hasError) return false;
 
-		// 合并所有瓦片的结果
+		// 合并所有瓦片的结果 — 两遍扫描：先统计总量，再一次性预分配并逐块拷贝
 		block_rects.clear();
 		block_offsets.clear();
 		block_offsets.push_back(0);
 
+		// 第一遍：统计总关键点数和描述子参数
+		int total_kps = 0;
+		int desc_cols = 0;
+		int desc_type = 0;
+		for (auto& result : tileResults)
+		{
+			int n = static_cast<int>(result.kps.size());
+			total_kps += n;
+			if (n > 0 && desc_cols == 0)
+			{
+				desc_cols = result.desc.cols;
+				desc_type = result.desc.type();
+			}
+		}
+
+		// 预分配输出容器
+		if (total_kps > 0)
+		{
+			descriptors.create(total_kps, desc_cols, desc_type);
+			keypoints.reserve(total_kps);
+		}
+
+		// 第二遍：按块拷贝（利用 block_offsets 作为偏移量）
+		int offset = 0;
 		for (auto& result : tileResults)
 		{
 			int kp_count = static_cast<int>(result.kps.size());
@@ -208,21 +237,14 @@ namespace {
 
 			if (kp_count > 0)
 			{
-				if (keypoints.empty())
-				{
-					keypoints = std::move(result.kps);
-					descriptors = result.desc.clone();
-				}
-				else
-				{
-					cv::vconcat(descriptors, result.desc, descriptors);
-					keypoints.insert(keypoints.end(),
-						std::make_move_iterator(result.kps.begin()),
-						std::make_move_iterator(result.kps.end()));
-				}
+				result.desc.copyTo(descriptors.rowRange(offset, offset + kp_count));
+				keypoints.insert(keypoints.end(),
+					std::make_move_iterator(result.kps.begin()),
+					std::make_move_iterator(result.kps.end()));
 			}
 
-			block_offsets.push_back(block_offsets.back() + kp_count);
+			offset += kp_count;
+			block_offsets.push_back(offset);
 		}
 
 		return true;
@@ -403,7 +425,10 @@ bool save_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, MapKeypoi
 {
 	std::vector<cv::Rect2i> block_rects;
 	std::vector<int> block_offsets;
-	gen_map_keypoint_cache(matcher, cache.keypoints, cache.descriptors, block_rects, block_offsets);
+	if (!gen_map_keypoint_cache(matcher, cache.keypoints, cache.descriptors, block_rects, block_offsets))
+	{
+		return false;
+	}
 	{
 		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
 		cache.bulid_version = TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime();
@@ -426,6 +451,12 @@ bool save_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, MapKeypoi
 	std::filesystem::remove("cvAutoTrack_Cache.xml");
 	cache.serialize("cvAutoTrack_Cache.xml");
 
+	// 构建并缓存 FLANN 索引到独立文件
+	std::error_code ec;
+	fs::remove("cvAutoTrack_Cache.flann", ec);
+	matcher->cache_flann_train_descriptors(cache.descriptors);
+	matcher->save_flann_index("cvAutoTrack_Cache.flann");
+
 	return true;
 }
 
@@ -441,13 +472,17 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
     {
 		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
 		if (cache.bulid_version != TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime())
+		{
+			// 版本变更，缓存已过期；但保留文件作为回退，不删除
 			return false;
-
+		}
     }
     else
 	{
+		// 反序列化失败，缓存文件损坏，删除后重新生成
         std::error_code ec;
         fs::remove("cvAutoTrack_Cache.xml", ec);
+		fs::remove("cvAutoTrack_Cache.flann", ec);
         return false;
 	}
 
@@ -455,11 +490,13 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
     {
         std::error_code ec;
         fs::remove("cvAutoTrack_Cache.xml", ec);
+		fs::remove("cvAutoTrack_Cache.flann", ec);
         return false;
     }
 
 	if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
     {
+		// 保留文件作为回退
         return false;
     }
 
@@ -472,10 +509,23 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
 MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher)
 {
 	MapKeypointCache cache;
-	if (load_map_keypoint_cache(cache) == false)
+
+	// Stage 1: 尝试加载现有缓存（含版本校验）
+	if (load_map_keypoint_cache(cache))
 	{
-		cache = {};
-		save_map_keypoint_cache(matcher, cache);
+		return cache;
 	}
+
+	// Stage 2: 缓存不存在或已过期，尝试重新生成
+	cache = {};
+	if (save_map_keypoint_cache(matcher, cache))
+	{
+		return cache;
+	}
+
+	// Stage 3: 生成失败（如瓦片下载未完成），回退到旧缓存
+	// 直接反序列化，不经过版本校验
+	cache = {};
+	cache.deSerialize("cvAutoTrack_Cache.xml");
 	return cache;
 }
