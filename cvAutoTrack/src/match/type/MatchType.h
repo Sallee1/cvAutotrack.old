@@ -53,32 +53,25 @@ struct GenshinScreenConfig
 // 用于获取原神画面的相关变量
 struct GenshinScreen
 {
+	struct HdrToneMapCache {
+		double white_point = 6.0;	// 缓存的白点值（参考白亮度）
+	};
+
 	cv::Rect rect_client;
 	std::chrono::system_clock::time_point last_time = std::chrono::system_clock::now();
 	cv::Mat img_screen;
 
 	struct Imgs {
-		cv::Mat icon_sight_maybe;
-		cv::Mat icon_sight;
-		cv::Mat minimap_maybe;
-		cv::Mat minimap;
-		cv::Mat avatar_maybe;
-		cv::Mat avatar;
-		cv::Mat uid_maybe;
-		cv::Mat uid;
+		cv::Mat minimap_maybe;		// 左上 1/4 区域，8UC4（HDR 已提前 tone map）
+		cv::Mat uid_maybe;		// 右下 UID 区域，8UC4
 	}imgs;
 	struct Rects {
-		cv::Rect icon_sight_maybe;
-		cv::Rect icon_sight;
-		cv::Rect minimap_maybe;
-		cv::Rect minimap;
-		cv::Rect avatar_maybe;
-		cv::Rect avatar;
-		cv::Rect uid_maybe;
-		cv::Rect uid;
+		cv::Rect icon_sight_maybe;	// 在 tl_sdr 内的偏移
+		cv::Rect uid;				// 在 giFrame 坐标系中的 UID 矩形
 	}rects;
 
 	GenshinScreenConfig config;
+	HdrToneMapCache hdr_cache;
 };
 
 struct GenshinIconSightConfig

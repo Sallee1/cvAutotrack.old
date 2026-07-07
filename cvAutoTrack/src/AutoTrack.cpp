@@ -24,6 +24,7 @@
 #include "match/matcher_impl/AkazeMatcher.h"
 #include "match/matcher_impl/SURFMatcher.h"
 #include "match/matcher_impl/FAST_SURFMatcher.h"
+#include "genshin/genshin.screen.h"
 
 #include <cinttypes>
 
@@ -263,7 +264,19 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
 		ErrorCode::getInstance() = { 252,"画面为空" };
 		return false;
 	}
-	cv::Mat out_info_img = genshin_screen.img_screen.clone();
+
+	// 准备调试用全帧图像
+	cv::Mat out_info_img;
+	if (genshin_screen.img_screen.depth() == CV_32F)
+	{
+		// HDR 路径：临时对副本做一次全帧 tone map，不污染缓存
+		auto& cache = genshin_screen.hdr_cache;
+		out_info_img = TianLi::Genshin::tone_map_hdr_to_sdr(genshin_screen.img_screen, cache.white_point);
+	}
+	else
+	{
+		out_info_img = genshin_screen.img_screen.clone();
+	}
 	switch (genshin_handle.config.frame_source->type)
 	{
 	case tianli::frame::frame_source::source_type::bitblt:
@@ -538,7 +551,7 @@ bool AutoTrack::GetUID(int& uid)
 		return false;
 	}
 
-	cv::Mat& giUIDRef = genshin_screen.imgs.uid;
+	cv::Mat& giUIDRef = genshin_screen.imgs.uid_maybe;
 
 	std::vector<cv::Mat> channels;
 
@@ -600,7 +613,7 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
 			ErrorCode::getInstance() = config.err;
 		}
 	}
-	cv::Mat& giUIDRef = genshin_screen.imgs.uid;
+	cv::Mat& giUIDRef = genshin_screen.imgs.uid_maybe;
 	// uid
 	{
 		std::vector<cv::Mat> channels;
@@ -726,7 +739,7 @@ bool AutoTrack::getGengshinImpactWnd()
 
 bool AutoTrack::getGengshinImpactScreen()
 {
-	if (!TianLi::Genshin::get_genshin_screen(genshin_handle, genshin_screen))
+	if (!TianLi::Genshin::get_genshin_screen(genshin_handle, genshin_screen, &genshin_minimap))
 	{
 		ErrorCode::getInstance() = { 433, "截图失败" };
 		return false;
@@ -736,30 +749,9 @@ bool AutoTrack::getGengshinImpactScreen()
 
 bool AutoTrack::getMiniMapRefMat()
 {
-	genshin_minimap.img_minimap = genshin_screen.img_screen(genshin_minimap.rect_minimap).clone();
-
-	if (genshin_handle.config.frame_source->type == tianli::frame::frame_source::source_type::window_graphics ||
-		genshin_handle.config.is_force_used_no_alpha)
-	{
-		genshin_screen.config.is_used_alpha = false;
-	}
-	else
-	{
-		genshin_screen.config.is_used_alpha = true;
-	}
-
-	if (TianLi::Genshin::find_minimap(genshin_screen, genshin_minimap) == false)
-	{
+	// 小地图已在 get_genshin_screen 中检测完毕，此处仅验证结果有效
+	if (genshin_minimap.img_minimap.empty())
 		return false;
-	}
-
-	// 根据当前使用的模式，调整minimap的大小
-	if (genshin_screen.config.is_controller_mode == true)
-	{
-		const auto& controller_ui_scale = genshin_screen.config.controller_ui_scale;
-		cv::resize(genshin_minimap.img_minimap, genshin_minimap.img_minimap, cv::Size(),
-			1.0 / controller_ui_scale, 1.0 / controller_ui_scale, cv::INTER_AREA);
-	}
 	return true;
 }
 

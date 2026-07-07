@@ -1,65 +1,74 @@
 #include "pch.h"
 #include "genshin.screen.h"
+#include "genshin.minimap.h"
 #include <chrono>
 
 namespace TianLi::Genshin {
     void init_screen_frames(GenshinScreen& out_genshin_screen);
 
-
-    inline cv::Mat tone_map_hdr_to_sdr(const cv::Mat& hdr_rgba)
+    /**
+     * @brief 从 HDR 帧左上角 ROI 采样白点值（只扫 R 通道）
+     */
+    inline double detect_white_point(const cv::Mat& hdr_rgba)
     {
+        CV_Assert(hdr_rgba.channels() == 4 && hdr_rgba.depth() == CV_32F);
+        const int W = hdr_rgba.cols;
+        const int H = hdr_rgba.rows;
+        const cv::Rect tl_roi(0, 0, static_cast<int>(W * 0.22), static_cast<int>(H * 0.22));
+
+        cv::Mat roi_view(hdr_rgba, tl_roi);
+        cv::Mat r_chan(roi_view.size(), CV_32FC1);
+        int from_to[] = { 0, 0 };
+        cv::mixChannels(&roi_view, 1, &r_chan, 1, from_to, 1);
+        double max_val;
+        cv::minMaxLoc(r_chan, nullptr, &max_val);
+        return (std::max)(max_val, 6.0);
+    }
+
+    /**
+     * @brief HDR→SDR 色调映射（单 ROI）
+     * @param hdr_rgba  输入 RGBA 32F/16F 图像（ROI 视图）
+     * @param white_point 白点值
+     * @return          BGRA 8UC4 SDR 图像
+     */
+    cv::Mat tone_map_hdr_to_sdr(const cv::Mat& hdr_rgba, double white_point)
+    {
+        CV_Assert(hdr_rgba.channels() == 4);
+
         cv::Mat hdr_float;
-
-        if (hdr_rgba.depth() == CV_16F)
-        {
+        if (hdr_rgba.depth() == CV_16F || hdr_rgba.depth() != CV_32F)
             hdr_rgba.convertTo(hdr_float, CV_32F);
-        }
         else
-        {
-            hdr_float = hdr_rgba.clone();
-        }
+            hdr_float = hdr_rgba;
 
-        //交换RGB->BGR
-        cv::cvtColor(hdr_float, hdr_float, cv::COLOR_RGBA2BGRA);
-        std::vector<cv::Mat> channels;
-        cv::split(hdr_float, channels);
+        const float inv_max = 1.0f / static_cast<float>(white_point);
+        const float gamma   = 1.0f / 2.2f;
 
-        //采集白点值，先尝试线性压缩
-        //原神是假HDR，UI的最亮点可以作为白点参考
-        double min, max;
-        cv::minMaxLoc(channels[0], &min, &max);
-        (void)min;
-        //使用当前的SDR白点亮度压缩
-        max = std::max(max, 6.0);
+        hdr_float.forEach<cv::Vec4f>([inv_max, gamma](cv::Vec4f& p, const int*) {
+            p[0] = std::pow(p[0] * inv_max, gamma);   // B
+            p[1] = std::pow(p[1] * inv_max, gamma);   // G
+            p[2] = std::pow(p[2] * inv_max, gamma);   // R
+            p[3] = 1.0f;
+        });
 
-        for (int i = 0; i < 3; ++i)
-        {
-            channels[i] = channels[i] / max;    //亮度压缩
-            cv::pow(channels[i], 1.0 / 2.2, channels[i]);
-        }
-        channels[3] = cv::Mat::ones(channels[3].size(), channels[3].type());
-
-        cv::Mat merged;
-        cv::merge(channels, merged);
         cv::Mat sdr_bgra;
-        merged.convertTo(sdr_bgra, CV_8UC4, 255.0);
+        hdr_float.convertTo(sdr_bgra, CV_8UC4, 255.0);
+        cv::cvtColor(sdr_bgra, sdr_bgra, cv::COLOR_RGBA2BGRA);
         return sdr_bgra;
     }
 
     /**
-     * @brief 预处理原始帧
-     * @param mat 待处理的帧
+     * @brief 预处理原始帧（仅处理非 HDR 路径：alpha 剥离 + 亮度提升）
      */
     void preprocess_raw_frame(cv::Mat& mat);
 
-    bool get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen)
+    bool get_genshin_screen(const GenshinHandle& genshin_handle, GenshinScreen& out_genshin_screen,
+                            GenshinMinimap* out_minimap)
     {
         static HBITMAP hBmp;
 
-        //auto& giHandle = genshin_handle.handle;
         auto& giRect = genshin_handle.rect;
         auto& giRectClient = genshin_handle.rect_client;
-        //auto& giScale = genshin_handle.scale;
         auto& giFrame = out_genshin_screen.img_screen;
 
         auto now_time = std::chrono::system_clock::now();
@@ -80,11 +89,39 @@ namespace TianLi::Genshin {
         }
 
         {
-            if (giFrame.empty())return false;
+            if (giFrame.empty()) return false;
 
             out_genshin_screen.rect_client = cv::Rect(giRect.left, giRect.top, giRectClient.right - giRectClient.left, giRectClient.bottom - giRectClient.top);
-            preprocess_raw_frame(giFrame);
+
+            if (giFrame.depth() == CV_32F)
+            {
+                // HDR 路径：先检测白点，再对各 ROI 做粒度色调映射
+                out_genshin_screen.hdr_cache.white_point = detect_white_point(giFrame);
+            }
+            else
+            {
+                // SDR 路径：alpha 剥离 + 亮度提升
+                preprocess_raw_frame(giFrame);
+            }
             init_screen_frames(out_genshin_screen);
+
+            // ---- 截图后立即执行小地图定位（避免后续单独调用）----
+            if (out_minimap)
+            {
+                out_genshin_screen.config.is_used_alpha =
+                    (genshin_handle.config.frame_source->type != tianli::frame::frame_source::source_type::window_graphics &&
+                     !genshin_handle.config.is_force_used_no_alpha);
+
+                if (find_minimap(out_genshin_screen, *out_minimap))
+                {
+                    if (out_genshin_screen.config.is_controller_mode)
+                    {
+                        const auto& s = out_genshin_screen.config.controller_ui_scale;
+                        cv::resize(out_minimap->img_minimap, out_minimap->img_minimap, cv::Size(),
+                            1.0 / s, 1.0 / s, cv::INTER_AREA);
+                    }
+                }
+            }
         }
         return true;
     }
@@ -92,94 +129,55 @@ namespace TianLi::Genshin {
     void init_screen_frames(GenshinScreen& out_genshin_screen)
     {
         auto& giFrame = out_genshin_screen.img_screen;
+        const bool is_hdr = (giFrame.depth() == CV_32F);
+        const double white_point = is_hdr ? out_genshin_screen.hdr_cache.white_point : 0.0;
 
-        // 根据宽高比裁剪帧
-        // 原神客户端左上角对齐，当前屏幕宽高比大于16:9时，高度不变填充宽度
-        // 宽高比小于16:9时，宽度不变填充高度
-        // 为了正确获取左上角的小地图的可能性区域
-        // 需要左上角对齐裁剪填充的部分
+        // 根据宽高比裁剪帧（原神客户端左上角对齐）
         int x_size = giFrame.cols;
         int y_size = giFrame.rows;
 
         float screen_ratio = static_cast<float>(x_size) / static_cast<float>(y_size);
-        if(screen_ratio > (16.0f / 9.0f))
+        if (screen_ratio > (16.0f / 9.0f))
         {
-            // 宽屏，裁剪左右
             x_size = static_cast<int>(y_size * (16.0f / 9.0f));
             y_size = y_size;
         }
-        else if(screen_ratio < (16.0f / 9.0f))
+        else if (screen_ratio < (16.0f / 9.0f))
         {
-            // 高屏，裁剪上下
             x_size = x_size;
             y_size = static_cast<int>(x_size * (9.0f / 16.0f));
         }
 
+        // 小地图标定可能性区域（在 tl_sdr 坐标系内，原点 (0,0)）
+        out_genshin_screen.rects.icon_sight_maybe = cv::Rect(
+            static_cast<int>(x_size * 0.10), 0,
+            static_cast<int>(x_size * 0.12), static_cast<int>(y_size * 0.10));
 
-        // 小地图标定可能性区域计算参数
-        int icon_sight_mayArea_left = static_cast<int>(x_size * 0.10);
-        int icon_sight_mayArea_top = 0;
-        int icon_sight_mayArea_width = static_cast<int>(x_size * 0.12);
-        int icon_sight_mayArea_height = static_cast<int>(y_size * 0.10);
-        // 小地图标定可能性区域
-        cv::Rect Area_icon_sight_mayArea(
-            icon_sight_mayArea_left,
-            icon_sight_mayArea_top,
-            icon_sight_mayArea_width,
-            icon_sight_mayArea_height);
-        out_genshin_screen.rects.icon_sight_maybe = Area_icon_sight_mayArea;
-
-        // 小地图可能性区域计算参数
-        int miniMap_mayArea_left = 0;
-        int miniMap_mayArea_top = 0;
-        int miniMap_mayArea_width = static_cast<int>(x_size * 0.18);
-        int miniMap_mayArea_height = static_cast<int>(y_size * 0.22);
-        // 小地图可能性区域
-        cv::Rect Area_MiniMap_mayArea(
-            miniMap_mayArea_left,
-            miniMap_mayArea_top,
-            miniMap_mayArea_width,
-            miniMap_mayArea_height);
-        out_genshin_screen.rects.minimap_maybe = Area_MiniMap_mayArea;
-
-        // UID可能性区域计算参数
-        // UID在右下角，所以需要包括填充区域的偏移
-        int UID_mayArea_left = static_cast<int>(x_size * 0.88) + (x_size - x_size);
-        int UID_mayArea_top = static_cast<int>(y_size * 0.97) + (y_size - y_size);
-        int UID_mayArea_width = x_size - UID_mayArea_left + (x_size - x_size);
-        int UID_mayArea_height = y_size - UID_mayArea_top + (y_size - y_size);
-        // UID可能性区域
-        cv::Rect Area_UID_mayArea(
-            UID_mayArea_left,
-            UID_mayArea_top,
-            UID_mayArea_width,
-            UID_mayArea_height);
-        out_genshin_screen.rects.uid_maybe = Area_UID_mayArea;
-        out_genshin_screen.rects.uid_maybe += cv::Size2i{ (giFrame.cols - x_size),(giFrame.rows - y_size) };
-
+        // UID 区域（giFrame 坐标系）
         int UID_Rect_x = cvCeil(x_size - x_size * (1.0 - 0.865));
         int UID_Rect_y = cvCeil(y_size - 1080.0 * (1.0 - 0.9755));
         int UID_Rect_w = cvCeil(1920 * 0.11);
         int UID_Rect_h = cvCeil(1920 * 0.0938 * 0.11);
         out_genshin_screen.rects.uid = cv::Rect(UID_Rect_x, UID_Rect_y, UID_Rect_w, UID_Rect_h);
-        out_genshin_screen.rects.uid += cv::Size2i{ (giFrame.cols - x_size),(giFrame.rows - y_size) };
+        out_genshin_screen.rects.uid += cv::Size2i{ (giFrame.cols - x_size), (giFrame.rows - y_size) };
 
-        // 获取maybe区域
-        out_genshin_screen.imgs.icon_sight_maybe = giFrame(out_genshin_screen.rects.icon_sight_maybe);
-        out_genshin_screen.imgs.minimap_maybe = giFrame(out_genshin_screen.rects.minimap_maybe);
-        out_genshin_screen.imgs.uid_maybe = giFrame(out_genshin_screen.rects.uid_maybe);
-        out_genshin_screen.imgs.uid = giFrame(out_genshin_screen.rects.uid);
+        // ---- 一次 tone map，两块 8UC4 clone（后续 UI 检测全从 SDR 读，零 HDR 判断）----
+        const cv::Rect tl_roi(0, 0, x_size / 4, y_size / 4);
+        if (is_hdr)
+        {
+            out_genshin_screen.imgs.minimap_maybe = tone_map_hdr_to_sdr(giFrame(tl_roi).clone(), white_point);
+            out_genshin_screen.imgs.uid_maybe = tone_map_hdr_to_sdr(giFrame(out_genshin_screen.rects.uid).clone(), white_point);
+        }
+        else
+        {
+            out_genshin_screen.imgs.minimap_maybe = giFrame(tl_roi).clone();
+            out_genshin_screen.imgs.uid_maybe = giFrame(out_genshin_screen.rects.uid).clone();
+        }
     }
 
     void preprocess_raw_frame(cv::Mat& mat)
     {
-        //处理hdr截图输入
-        if (mat.depth() == CV_32F || mat.depth() == CV_16F)
-        {
-            mat = tone_map_hdr_to_sdr(mat);
-        }
-
-        //提取alpha通道
+        // 仅处理非 HDR 路径（8U 输入）
         bool is_grayscale = (mat.channels() == 1);
         bool has_alpha = (mat.channels() == 4);
 
@@ -190,14 +188,13 @@ namespace TianLi::Genshin {
         {
             bgr_mat = cv::Mat(mat.size(), CV_8UC3);
             alpha_mat = cv::Mat(mat.size(), CV_8UC1);
-            bgr_a_channels = std::vector{ bgr_mat,alpha_mat };
+            bgr_a_channels = std::vector{ bgr_mat, alpha_mat };
             cv::mixChannels(mat, bgr_a_channels, { 0,0,1,1,2,2,3,3 });
         }
         else {
             bgr_mat = mat;
         }
 
-        //目前主要工作是提亮，因为画面中有标准白，不是问题，但没有标准黑是个问题
         double min_col, max_col;
         cv::Mat grayscale_mat;
         if (!is_grayscale) {
@@ -221,7 +218,5 @@ namespace TianLi::Genshin {
         else {
             mat = bgr_mat;
         }
-
-        return;
     }
 }

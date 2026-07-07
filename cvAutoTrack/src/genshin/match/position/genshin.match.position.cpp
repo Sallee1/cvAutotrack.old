@@ -9,34 +9,52 @@
 
 namespace {
 	Tracking g_surf_match;
-	bool g_is_init = false;
+	std::atomic<bool> g_is_init{false};
 }
 
 namespace TianLi::Genshin::Match
 {
 	void init_matcher(const std::shared_ptr<IMatcher>& matcher)
 	{
-		if (g_is_init) return;
+		if (g_is_init.load()) return;
+
+		// install 包含网络下载 + metadata 加载，在后台线程中执行
 		Resources::getInstance().install();
 
 		// 读取关键点缓存
 		MapKeypointCache map_keypoints_cache = get_map_keypoint(matcher);
-		g_surf_match.Init(matcher, std::move(map_keypoints_cache));
+		if (!g_surf_match.Init(matcher, std::move(map_keypoints_cache)))
+		{
+			// 所有缓存生成和回退均失败，放弃此次初始化
+			MessageBox(NULL,
+				L"初始化位置追踪失败！\n"
+				L"热更新下载失败且本地无可用的特征点缓存。\n"
+				L"请检查网络连接，或尝试重新启动程序。\n"
+				L"更多信息请查看日志文件。",
+				L"严重错误", MB_OK | MB_ICONERROR);
+			Resources::getInstance().release();
+			return;
+		}
 #ifdef _CVAT_DEBUG
 		g_surf_match.setMap(Resources::getInstance().DebugMapTemplate);
 #else
 		// 正式发布版本，释放图像，因为目前已经可以实现无图匹配
 		Resources::getInstance().release();
 #endif
-		g_is_init = true;
+		g_is_init.store(true);
 	}
 
 	void uninit_matcher()
 	{
-		if (!g_is_init) return;
+		if (!g_is_init.load()) return;
 		g_surf_match.UnInit();
 		Resources::getInstance().release();
-		g_is_init = false;
+		g_is_init.store(false);
+	}
+
+	bool is_matcher_ready()
+	{
+		return g_is_init.load();
 	}
 }
 
@@ -163,10 +181,8 @@ cv::Point2d match_no_continuity_2nd(bool& calc_is_faile)
 
 void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position)
 {
-	if (!g_is_init)
+	if (!g_is_init.load())
 	{
-		// 兼容旧式未主动 init 的情况
-		init_matcher(genshin_minimap.matcher);
 		return;
 	}
 

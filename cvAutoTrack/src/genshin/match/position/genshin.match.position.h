@@ -18,6 +18,11 @@ namespace TianLi::Genshin::Match
 	void uninit_matcher();
 
 	/**
+	 * @brief 查询匹配器是否已完成初始化（线程安全）
+	 */
+	bool is_matcher_ready();
+
+	/**
 	 * @brief 获取角色坐标（依赖 init_matcher 已调用）
 	 */
 	void get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position);

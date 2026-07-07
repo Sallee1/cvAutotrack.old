@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "genshin.minimap.h"
+#include "genshin.screen.h"
 #include "resources/Resources.h"
 
 namespace TianLi::Genshin {
@@ -126,7 +127,7 @@ namespace TianLi::Genshin {
 				is_first = false;
 			}
 
-			cv::Mat icon_sight_maybe = genshin_screen.imgs.icon_sight_maybe.clone();
+			cv::Mat icon_sight_maybe = genshin_screen.imgs.minimap_maybe(genshin_screen.rects.icon_sight_maybe);
 			
 			std::vector<GenshinIconSight> matched_icon_sights;
 			//暗形状匹配（大部分情况）
@@ -210,13 +211,15 @@ namespace TianLi::Genshin {
 				);
 			}
 
-			if (rect_Icon_quest_maybe.x < 0 || rect_Icon_quest_maybe.y < 0)
+		if (rect_Icon_quest_maybe.x < 0 || rect_Icon_quest_maybe.y < 0
+			|| rect_Icon_quest_maybe.x + rect_Icon_quest_maybe.width > genshin_screen.imgs.minimap_maybe.cols
+			|| rect_Icon_quest_maybe.y + rect_Icon_quest_maybe.height > genshin_screen.imgs.minimap_maybe.rows)
 			{
 				//假阳性结果可能会导致越界
 				return false;
 			}
 
-			cv::Mat img_icon_quest_maybe = genshin_screen.img_screen(rect_Icon_quest_maybe).clone();
+		cv::Mat img_icon_quest_maybe = genshin_screen.imgs.minimap_maybe(rect_Icon_quest_maybe);
 			//cv::imshow("debug_icon_quest_maybe", img_icon_quest_maybe);
 			//cv::waitKey(1);
 
@@ -294,8 +297,8 @@ namespace TianLi::Genshin {
 	public:
 		bool cailb_minimap_impl(const GenshinScreen& genshin_screen, GenshinMinimap& out_genshin_minimap)
 		{
-			// rect
-			cv::Rect minimap_rect = genshin_screen.rects.minimap;
+			// rect: 当 is_search_mode==false 时使用已标定的 minimap 矩形（目前 is_search_mode 始终为 true）
+			cv::Rect minimap_rect;
 			if (genshin_screen.config.is_search_mode)
 			{
 				GenshinIconSight genshin_icon_sight;
@@ -315,9 +318,10 @@ namespace TianLi::Genshin {
 						genshin_icon_sight.rect_Icon_sight.y + genshin_icon_sight.rect_Icon_sight.height / 2 - genshin_screen.config.icon_size / 2,
 						genshin_screen.config.icon_size, genshin_screen.config.icon_size };
 					}
-					genshin_icon_sight.rect_Icon_sight &= cv::Rect{ 0,0,genshin_screen.imgs.icon_sight_maybe.cols, genshin_screen.imgs.icon_sight_maybe.rows };
+					genshin_icon_sight.rect_Icon_sight &= cv::Rect{ 0,0,genshin_screen.imgs.minimap_maybe.cols, genshin_screen.imgs.minimap_maybe.rows };
 #ifdef _CVAT_DEBUG
-					cv::Mat debug_icon_sight_found = genshin_screen.imgs.icon_sight_maybe(genshin_icon_sight.rect_Icon_sight);
+                    cv::Mat debug_icon_sight_maybe = genshin_screen.imgs.minimap_maybe(genshin_screen.rects.icon_sight_maybe);
+					cv::Mat debug_icon_sight_found = debug_icon_sight_maybe(genshin_icon_sight.rect_Icon_sight);
 #endif
 				}
 
@@ -345,8 +349,8 @@ namespace TianLi::Genshin {
 				}
 
 				if(minimap_rect_maybe.x < 0 || minimap_rect_maybe.y < 0 ||
-					minimap_rect_maybe.x + minimap_rect_maybe.width > genshin_screen.img_screen.cols ||
-					minimap_rect_maybe.y + minimap_rect_maybe.height >  genshin_screen.img_screen.rows)
+					minimap_rect_maybe.x + minimap_rect_maybe.width > genshin_screen.imgs.minimap_maybe.cols ||
+					minimap_rect_maybe.y + minimap_rect_maybe.height > genshin_screen.imgs.minimap_maybe.rows)
 				{
 					return false;
 				}
@@ -355,7 +359,7 @@ namespace TianLi::Genshin {
 			}
 			// center point
 			auto minimap_center = cv::Point(minimap_rect.x + (minimap_rect.width) / 2, minimap_rect.y + (minimap_rect.height) / 2);
-			out_genshin_minimap.img_minimap = genshin_screen.img_screen(minimap_rect).clone();
+			out_genshin_minimap.img_minimap = genshin_screen.imgs.minimap_maybe(minimap_rect).clone();
 			out_genshin_minimap.minimap_diameter = std::min(out_genshin_minimap.img_minimap.rows, out_genshin_minimap.img_minimap.cols) * 0.95f;
 			paddingminimap(out_genshin_minimap.img_minimap, out_genshin_minimap.img_minimap_padding, static_cast<int>(out_genshin_minimap.img_minimap.rows * 0.05f), 32);
 

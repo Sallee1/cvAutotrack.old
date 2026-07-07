@@ -103,31 +103,35 @@ namespace tianli::frame::capture
             return false;
         }
 
-        cv::Mat copied_frame;
         if (desc.Format == DXGI_FORMAT_R16G16B16A16_FLOAT)
         {
             cv::Mat hdr_mat(frame_size.Height, frame_size.Width, CV_16FC4, data, pitch);
-            copied_frame = hdr_mat.clone();
+            if (client_box_available)
+            {
+                auto cw = static_cast<int32_t>(client_box.right - client_box.left);
+                auto ch = static_cast<int32_t>(client_box.bottom - client_box.top);
+                this->source_frame = hdr_mat(cv::Rect(0, 0, cw, ch)).clone();
+            }
+            else
+            {
+                this->source_frame = hdr_mat.clone();
+            }
         }
         else
         {
             cv::Mat bgra_mat(frame_size.Height, frame_size.Width, CV_8UC4, data, pitch);
-            copied_frame = bgra_mat.clone();
+            if (client_box_available)
+            {
+                auto cw = static_cast<int32_t>(client_box.right - client_box.left);
+                auto ch = static_cast<int32_t>(client_box.bottom - client_box.top);
+                this->source_frame = bgra_mat(cv::Rect(0, 0, cw, ch)).clone();
+            }
+            else
+            {
+                this->source_frame = bgra_mat.clone();
+            }
         }
         m_d3dContext->Unmap(buffer_texture.get(), 0);
-
-        if (client_box_available)
-        {
-            auto client_width = static_cast<int32_t>(client_box.right - client_box.left);
-            auto client_height = static_cast<int32_t>(client_box.bottom - client_box.top);
-            if (client_width > frame_size.Width || client_height > frame_size.Height)
-                return false;
-            this->source_frame = copied_frame(cv::Rect(0, 0, client_width, client_height)).clone();
-        }
-        else
-        {
-            this->source_frame = copied_frame;
-        }
 
         if (this->source_frame.empty())
             return false;
