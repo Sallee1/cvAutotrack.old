@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AutoTrack.h"
+#include <thread>
 
 #include "ErrorCode.h"
 #include "resources/Resources.h"
@@ -24,6 +25,8 @@
 #include "match/matcher_impl/SURFMatcher.h"
 #include "match/matcher_impl/FAST_SURFMatcher.h"
 
+#include <cinttypes>
+
 AutoTrack::AutoTrack()
 {
 	ErrorCode::getInstance().enableWirteFile();
@@ -35,9 +38,8 @@ AutoTrack::AutoTrack()
 	genshin_handle.config.frame_source->initialization();
 	genshin_avatar_position.config.pos_filter = std::make_shared<Kalman>();
 
-	// 构造时创建 matcher 并初始化
+	// 构造时仅创建 matcher（轻量），初始化在工作线程中异步执行
 	genshin_minimap.matcher = std::shared_ptr<IMatcher>(new FAST_SURFMatcher(0.01, 1, 1, false, true));
-	init_matcher();
 }
 
 void AutoTrack::init_matcher()
@@ -47,8 +49,27 @@ void AutoTrack::init_matcher()
 
 bool AutoTrack::init()
 {
-	init_matcher();
-    return true;
+	// 已初始化完成
+	if (TianLi::Genshin::Match::is_matcher_ready())
+		return true;
+
+	// 已在初始化中，不重复启动线程
+	bool expected = false;
+	if (!m_init_pending.compare_exchange_strong(expected, true))
+		return true;
+
+	// 后台线程执行重量级初始化（Resources::install + 特征点缓存 + LSH 网格）
+	std::thread([this]() {
+		try {
+			init_matcher();
+		}
+		catch (...) {
+			// 初始化异常，重置标志位允许下次 retry
+		}
+		m_init_pending.store(false);
+	}).detach();
+
+	return true;
 }
 
 bool AutoTrack::uninit()
@@ -247,8 +268,6 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
 	{
 	case tianli::frame::frame_source::source_type::bitblt:
 	{
-		// 绘制paimon Rect
-		cv::rectangle(out_info_img, genshin_screen.rects.icon_sight, cv::Scalar(0, 0, 255), 2);
 		// 绘制miniMap Rect
 		cv::rectangle(out_info_img, genshin_minimap.rect_minimap, cv::Scalar(0, 0, 255), 2);
 		cv::Rect Avatar = genshin_minimap.rect_avatar;
@@ -263,8 +282,6 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
 	}
 	case tianli::frame::frame_source::source_type::window_graphics:
 	{
-		// 绘制paimon Rect
-		cv::rectangle(out_info_img, genshin_screen.rects.icon_sight, cv::Scalar(0, 0, 255), 2);
 		// 绘制miniMap Rect
 		cv::rectangle(out_info_img, genshin_minimap.rect_minimap, cv::Scalar(0, 0, 255), 2);
 		cv::Rect Avatar = genshin_minimap.rect_avatar;
@@ -345,6 +362,14 @@ bool AutoTrack::SetResourcePath(const char* path)
 
 bool AutoTrack::GetTransformOfMap(double& x, double& y, double& a, int& mapId)
 {
+	// 触发自动懒初始化
+	init();
+	if (!TianLi::Genshin::Match::is_matcher_ready())
+	{
+		ErrorCode::getInstance() = { 30, "匹配器尚未初始化完成" };
+		return false;
+	}
+
 	double x2 = 0, y2 = 0, a2 = 0;
 	int mapId2 = 0;
 
@@ -363,10 +388,27 @@ bool AutoTrack::GetTransformOfMap(double& x, double& y, double& a, int& mapId)
 
 bool AutoTrack::GetPosition(double& x, double& y)
 {
+	// 触发自动懒初始化
+	init();
+	if (!TianLi::Genshin::Match::is_matcher_ready())
+	{
+		ErrorCode::getInstance() = { 30, "匹配器尚未初始化完成" };
+		return false;
+	}
+
+#ifdef _CVAT_DEBUG_LOG
+    auto __begin_time = std::chrono::steady_clock::now();
+#endif
+
 	if (try_get_genshin_windows() == false)
 	{
 		return false;
 	}
+
+#ifdef _CVAT_DEBUG_LOG
+    auto __capture_time_len = std::chrono::steady_clock::now() - __begin_time;
+    printf("[DEBUG] 截图耗时：%lld ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(__capture_time_len).count());
+#endif
 	if (getMiniMapRefMat() == false)
 	{
 		//ErrorCode::getInstance() = { 1001, "获取坐标时，没有识别到paimon" };
@@ -379,6 +421,9 @@ bool AutoTrack::GetPosition(double& x, double& y)
 		return false;
 	}
 
+#ifdef _CVAT_DEBUG_LOG
+    __begin_time = std::chrono::steady_clock::now();
+#endif
 	TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
 
 	cv::Point2d pos = genshin_avatar_position.position;
@@ -387,6 +432,10 @@ bool AutoTrack::GetPosition(double& x, double& y)
 		ErrorCode::getInstance() = { 20, "追踪失败，且没有历史信息" };
 		return false;
 	}
+#ifdef _CVAT_DEBUG_LOG
+    auto __tracking_time_len = std::chrono::steady_clock::now() - __begin_time;
+    printf("[DEBUG] 匹配耗时：%lld ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(__tracking_time_len).count());
+#endif
 
 	x = pos.x;
 	y = pos.y;
@@ -414,8 +463,10 @@ bool AutoTrack::GetPositionOfMap(double& x, double& y, int& mapId)
 
 bool AutoTrack::GetDirection(double& a)
 {
-	if (try_get_genshin_windows() == false)
+	// GetDirection 不触发截图，复用 GetPosition 已截取的画面
+	if (genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
 	{
+		ErrorCode::getInstance() = { 2004, "尚未获取画面，请先调用 GetPosition" };
 		return false;
 	}
 	if (getMiniMapRefMat() == false)
@@ -442,8 +493,10 @@ bool AutoTrack::GetDirection(double& a)
 
 bool AutoTrack::GetRotation(double& a)
 {
-	if (try_get_genshin_windows() == false)
+	// GetRotation 不触发截图，复用 GetPosition 已截取的画面
+	if (genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
 	{
+		ErrorCode::getInstance() = { 3004, "尚未获取画面，请先调用 GetPosition" };
 		return false;
 	}
 	if (getMiniMapRefMat() == false)
@@ -478,8 +531,10 @@ bool AutoTrack::GetStarJson(char* jsonBuff)
 
 bool AutoTrack::GetUID(int& uid)
 {
-	if (try_get_genshin_windows() == false)
+	// GetUID 不触发截图，复用 GetPosition 已截取的画面
+	if (genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
 	{
+		ErrorCode::getInstance() = { 4004, "尚未获取画面，请先调用 GetPosition" };
 		return false;
 	}
 
@@ -511,23 +566,11 @@ bool AutoTrack::GetUID(int& uid)
 
 bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& r, int& uid)
 {
-	if (try_get_genshin_windows() == false)
+	// 触发自动懒初始化
+	init();
+	if (!TianLi::Genshin::Match::is_matcher_ready())
 	{
-		return false;
-	}
-	if (getMiniMapRefMat() == false)
-	{
-		//ErrorCode::getInstance() = { 1001, "获取所有信息时，没有识别到paimon" };
-		return false;
-	}
-	if (genshin_minimap.img_minimap.empty())
-	{
-		ErrorCode::getInstance() = { 5, "原神小地图区域为空" };
-		return false;
-	}
-	if (genshin_minimap.rect_avatar.empty())
-	{
-		ErrorCode::getInstance() = { 11,"原神角色小箭头区域为空" };
+		ErrorCode::getInstance() = { 30, "匹配器尚未初始化完成" };
 		return false;
 	}
 

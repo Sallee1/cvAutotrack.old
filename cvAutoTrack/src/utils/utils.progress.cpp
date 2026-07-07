@@ -99,17 +99,14 @@ namespace TianLi::Utils
 
 	void Win32ProgressWindow::close()
 	{
-		if (dialog_) {
-			dialog_->StopProgressDialog();
-			dialog_->Release();
-			dialog_ = nullptr;
-		}
-		// StopProgressDialog 在调用线程上处理窗口消息，PostQuitMessage 发到的是
-		// 调用线程（主线程）。显式向 UI 线程发 WM_QUIT 确保消息循环退出。
-		if (ui_thread_id_ != 0)
+		if (ui_thread_id_ != 0 && dialog_) {
+			// 将 StopProgressDialog + Release 封送到 UI 线程执行（COM STA 规则）
 			PostThreadMessageW(ui_thread_id_, WM_QUIT, 0, 0);
+		}
 		if (ui_thread_.joinable())
 			ui_thread_.join();
+		// UI 线程的消息循环中已通过 StopProgressDialog+Release 清理 dialog_
+		dialog_ = nullptr;
 	}
 
 	Win32ProgressWindow::~Win32ProgressWindow()

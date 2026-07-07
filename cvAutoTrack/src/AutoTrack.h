@@ -1,5 +1,6 @@
 #pragma once
 #include "match/type/MatchType.h"
+#include <atomic>
 
 class AutoTrack
 {
@@ -79,6 +80,9 @@ private:
     bool getGengshinImpactWnd();
     bool getGengshinImpactScreen();
     bool getMiniMapRefMat();
+
+    // 异步初始化：后台线程执行 init_matcher()
+    std::atomic<bool> m_init_pending{false};
 
 #ifdef _DEBUG
     void showMatchResult(double x, double y, int mapId, double angle, double rotate);
