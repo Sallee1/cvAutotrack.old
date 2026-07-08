@@ -30,6 +30,10 @@ void Tracking::setMiniMap(const GenshinMinimap& minimap)
 	toGray(m_miniMapCenter);
 }
 
+void Tracking::setMatchAllMapNext() {
+    m_isMatchAllMap = true;
+}
+
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 {
 	if (m_isInit)return true;

@@ -413,8 +413,12 @@ bool AutoTrack::GetPosition(double& x, double& y)
     auto __begin_time = std::chrono::steady_clock::now();
 #endif
 
+    // 设定一个特殊标志位用于全图匹配，避免卡住
+    static bool is_match_all_map = false;
+
 	if (try_get_genshin_windows() == false)
 	{
+        is_match_all_map = true;
 		return false;
 	}
 
@@ -425,11 +429,13 @@ bool AutoTrack::GetPosition(double& x, double& y)
 	if (getMiniMapRefMat() == false)
 	{
 		//ErrorCode::getInstance() = { 1001, "获取坐标时，没有识别到paimon" };
+        is_match_all_map = true;
 		return false;
 	}
 
 	if (genshin_minimap.img_minimap.empty())
 	{
+        is_match_all_map = true;
 		ErrorCode::getInstance() = { 5, "原神小地图区域为空" };
 		return false;
 	}
@@ -437,7 +443,9 @@ bool AutoTrack::GetPosition(double& x, double& y)
 #ifdef _CVAT_DEBUG_LOG
     __begin_time = std::chrono::steady_clock::now();
 #endif
-	TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position);
+	TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position, is_match_all_map);
+
+    is_match_all_map = false;
 
 	cv::Point2d pos = genshin_avatar_position.position;
 	if (!genshin_avatar_position.config.is_exist_last_match_minimap)

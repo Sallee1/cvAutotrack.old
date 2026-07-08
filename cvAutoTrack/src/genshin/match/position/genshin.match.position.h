@@ -25,5 +25,5 @@ namespace TianLi::Genshin::Match
 	/**
 	 * @brief 获取角色坐标（依赖 init_matcher 已调用）
 	 */
-	void get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position);
+	void get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position, bool is_match_all_map = false);
 }

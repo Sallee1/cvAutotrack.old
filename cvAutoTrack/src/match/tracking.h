@@ -70,8 +70,7 @@ struct InertialNavigator
     // ================================================================
     static constexpr double EMA_ALPHA = 0.3;
     static constexpr double PIXEL_DRIFT_THRESHOLD = 80.0;      // 像素累积漂移阈值
-    static constexpr double PEAK_VETO_THRESHOLD = 0.20;        // 一票否决最低峰值
-    static constexpr double VETO_DROP_RATE = 0.50;             // 突降率 > 50% 判传送
+    static constexpr double PEAK_VETO_THRESHOLD = 0.60;        // 相位匹配门限
     static constexpr int MAX_INERTIAL_FRAMES = 600;             // 惯性导航最大持续帧数，超限切全局匹配
     static constexpr int CORRECTION_COOLDOWN = 5;              // 校正失败冷却
 
@@ -132,13 +131,12 @@ struct InertialNavigator
     }
 
     /// 一票否决
+    /// peak 低于 PEAK_VETO_THRESHOLD 即直接否决（无论是否突降），
+    /// 避免持续低峰值时卡在惯性模式不切全局匹配。
     bool needsVeto(double current_peak) const
     {
         if (consecutive_frames < 3) return false;
-        if (current_peak >= PEAK_VETO_THRESHOLD) return false;
-        double drop_rate = (prev_peak - current_peak) /
-                           (std::max)(prev_peak, 1e-6);
-        return drop_rate > VETO_DROP_RATE;
+        return current_peak < PEAK_VETO_THRESHOLD;
     }
 
     void reset()
@@ -232,6 +230,8 @@ public:
 	 *        - minimap_diameter 用于边缘剔除
 	 */
 	void setMiniMap(const GenshinMinimap& minimap);
+
+    void setMatchAllMapNext();
 
 	bool Init(const std::shared_ptr<IMatcher>& matcher);
 	bool Init(const std::shared_ptr<IMatcher>& matcher, int cols, int rows, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors);
