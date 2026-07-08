@@ -72,6 +72,10 @@ struct GenshinScreen
 
 	GenshinScreenConfig config;
 	HdrToneMapCache hdr_cache;
+
+	// 脏标记：每次截图时先置 false，成功后才置 true
+	// GetDirection / GetRotation / GetUID 等只读接口只在 is_screen_fresh == true 时工作
+	bool is_screen_fresh = false;
 };
 
 struct GenshinIconSightConfig

@@ -476,8 +476,8 @@ bool AutoTrack::GetPositionOfMap(double& x, double& y, int& mapId)
 
 bool AutoTrack::GetDirection(double& a)
 {
-	// GetDirection 不触发截图，复用 GetPosition 已截取的画面
-	if (genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
+	// GetDirection 不触发截图，只对最近成功截取的画面负责
+	if (!genshin_screen.is_screen_fresh || genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
 	{
 		ErrorCode::getInstance() = { 2004, "尚未获取画面，请先调用 GetPosition" };
 		return false;
@@ -506,8 +506,8 @@ bool AutoTrack::GetDirection(double& a)
 
 bool AutoTrack::GetRotation(double& a)
 {
-	// GetRotation 不触发截图，复用 GetPosition 已截取的画面
-	if (genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
+	// GetRotation 不触发截图，只对最近成功截取的画面负责
+	if (!genshin_screen.is_screen_fresh || genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
 	{
 		ErrorCode::getInstance() = { 3004, "尚未获取画面，请先调用 GetPosition" };
 		return false;
@@ -544,8 +544,8 @@ bool AutoTrack::GetStarJson(char* jsonBuff)
 
 bool AutoTrack::GetUID(int& uid)
 {
-	// GetUID 不触发截图，复用 GetPosition 已截取的画面
-	if (genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
+	// GetUID 不触发截图，只对最近成功截取的画面负责
+	if (!genshin_screen.is_screen_fresh || genshin_screen.img_screen.empty() || !genshin_handle.is_exist)
 	{
 		ErrorCode::getInstance() = { 4004, "尚未获取画面，请先调用 GetPosition" };
 		return false;
@@ -709,6 +709,8 @@ bool AutoTrack::try_get_genshin_windows()
 		ErrorCode::getInstance() = { 0, "正常退出" };
 		return false;
 	}
+	// 开始新的截图周期，先标脏。后续截图成功后再标净
+	genshin_screen.is_screen_fresh = false;
 	if (!getGengshinImpactWnd())
 	{
 		ErrorCode::getInstance() = { 101, "未能找到原神窗口句柄" };
@@ -744,6 +746,7 @@ bool AutoTrack::getGengshinImpactScreen()
 		ErrorCode::getInstance() = { 433, "截图失败" };
 		return false;
 	}
+	genshin_screen.is_screen_fresh = true;
 	return true;
 }
 
