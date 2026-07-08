@@ -84,6 +84,26 @@ static bool iequals(const std::string& a, const std::string& b)
 }
 
 //=============================================================================
+// 日期时间比较（用于 metadata.json 的 update_time）
+// 格式: "YYYY-M-D HH:MM:SS" 或 "YYYY-MM-DD HH:MM:SS"
+// 返回: -1 (t1 < t2), 0 (相等), 1 (t1 > t2)
+//=============================================================================
+static int compareUpdateTime(const std::string& t1, const std::string& t2)
+{
+    int y1 = 0, m1 = 0, d1 = 0, hh1 = 0, mm1 = 0, ss1 = 0;
+    int y2 = 0, m2 = 0, d2 = 0, hh2 = 0, mm2 = 0, ss2 = 0;
+    sscanf_s(t1.c_str(), "%d-%d-%d %d:%d:%d", &y1, &m1, &d1, &hh1, &mm1, &ss1);
+    sscanf_s(t2.c_str(), "%d-%d-%d %d:%d:%d", &y2, &m2, &d2, &hh2, &mm2, &ss2);
+    if (y1 != y2) return y1 < y2 ? -1 : 1;
+    if (m1 != m2) return m1 < m2 ? -1 : 1;
+    if (d1 != d2) return d1 < d2 ? -1 : 1;
+    if (hh1 != hh2) return hh1 < hh2 ? -1 : 1;
+    if (mm1 != mm2) return mm1 < mm2 ? -1 : 1;
+    if (ss1 != ss2) return ss1 < ss2 ? -1 : 1;
+    return 0;
+}
+
+//=============================================================================
 // PIMPL 实现
 //=============================================================================
 class GIMapDownloaderImpl {
@@ -113,6 +133,7 @@ public:
     fs::path dependents_json_path;
     Json local_dependents_json;
     Json remote_dependents_json;
+    std::string remote_deps_md5; // 远程 dependents.json 的期望 MD5（来自 .md5 文件）
 };
 
 //=============================================================================
@@ -206,6 +227,12 @@ bool GIMapDownloader::download()
                 ifs.close();
                 fs::remove(tmp_md5);
 
+                // 保存远程 MD5 用于后续对 dependents.json 的校验
+                if (!remote_md5.empty())
+                {
+                    pImpl->remote_deps_md5 = remote_md5;
+                }
+
                 if (!local_md5.empty() && !remote_md5.empty() &&
                     _stricmp(local_md5.c_str(), remote_md5.c_str()) == 0)
                 {
@@ -222,14 +249,60 @@ bool GIMapDownloader::download()
         fs::remove(tmp_md5, ec);
     }
 
-    // 1) 下载远程 dependents.json 到临时文件
+    // 1) 下载远程 dependents.json 到临时文件，带 MD5 校验和重试
     fs::path tmp_json = fs::temp_directory_path() / "gimap_remote_deps.json";
     {
-        tianli::FileDownloader dl(tmp_json.string(), pImpl->host + "/dependents.json");
-        if (!dl.download())
-            throw network_error("下载远程 dependents.json 失败: [" +
-                                std::to_string(dl.getLastErrorCode()) + "] " +
-                                dl.getLastErrorMsg());
+        bool dl_ok = false;
+        std::string dl_error;
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            if (attempt > 0)
+            {
+                std::error_code ec_retry;
+                fs::remove(tmp_json, ec_retry);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+
+            tianli::FileDownloader dl(tmp_json.string(), pImpl->host + "/dependents.json");
+            if (dl.download())
+            {
+                std::string actual_md5 = calcFileMD5(tmp_json.string());
+                if (iequals(actual_md5, pImpl->remote_deps_md5))
+                {
+                    dl_ok = true;
+                    break;
+                }
+                dl_error = "MD5 不匹配: 期望 " + pImpl->remote_deps_md5 + ", 实际 " + actual_md5;
+            }
+            else
+            {
+                dl_error = "[" + std::to_string(dl.getLastErrorCode()) + "] " + dl.getLastErrorMsg();
+            }
+        }
+
+        if (!dl_ok)
+        {
+            std::error_code ec_clean;
+            fs::remove(tmp_json, ec_clean);
+
+            std::string warn_msg = "\"位置追踪\" 远程 dependents.json 下载校验失败！\n原因: " + dl_error + "\n将使用本地缓存，请检查网络后重试。";
+            MessageBox(NULL, fs::u8path(warn_msg).wstring().c_str(), L"警告", MB_OK | MB_ICONWARNING);
+
+            // 尝试加载本地缓存
+            fs::path local_json = pImpl->dependents_json_path / "dependents.json";
+            if (fs::exists(local_json))
+            {
+                std::ifstream ifs_local(local_json);
+                if (ifs_local.is_open())
+                {
+                    try { ifs_local >> pImpl->local_dependents_json; } catch (...) {}
+                }
+                pImpl->remote_dependents_json = pImpl->local_dependents_json;
+                if (!pImpl->remote_dependents_json.is_null())
+                    return true; // 走本地缓存
+            }
+            throw network_error("无法获取远程依赖列表且本地缓存不可用");
+        }
     }
 
     // 解析远程 JSON
@@ -266,7 +339,7 @@ bool GIMapDownloader::download()
     if (pImpl->verifyDependents())
         return true;
 
-    // 2) 必须有远程列表
+    // 必须有远程列表
     if (pImpl->remote_dependents_json.is_null())
         throw network_error("缺少远程依赖列表，请先调用 setHost");
 
@@ -274,11 +347,133 @@ bool GIMapDownloader::download()
     if (filelist_it == pImpl->remote_dependents_json.end() || !filelist_it->is_array())
         throw network_error("远程 dependents.json 缺少 filelist 字段或格式错误");
 
-    // 3) 确定下载根目录
+    // 确定下载根目录
     if (pImpl->local_path.empty())
         pImpl->local_path = pImpl->dependents_json_path;
 
-    // 4) 增量筛查
+    // 4) metadata.json 特殊处理：下载 + MD5 校验 + update_time 比对 + 重试 + 回退
+    bool metadata_handled = false; // 已在本次流程中下载成功
+    bool metadata_skipped = false; // 已是最新，无需加入 pending
+    for (const auto& entry : *filelist_it)
+    {
+        if (entry["filename"] != "metadata.json") continue;
+
+        std::string meta_md5 = entry.value("md5", "");
+        std::string meta_url = entry["url"].get<std::string>();
+        fs::path meta_target = pImpl->local_path / "metadata.json";
+        fs::path tmp_meta = fs::temp_directory_path() / "gimap_remote_meta.json";
+
+        // 读取本地 metadata.json 的 update_time
+        std::string local_update_time;
+        {
+            std::ifstream ifs_local(meta_target);
+            if (ifs_local.is_open())
+            {
+                Json local_meta;
+                try { ifs_local >> local_meta; local_update_time = local_meta.value("update_time", ""); } catch (...) {}
+            }
+        }
+
+        // 下载 + 验证 metadata.json（最多 4 次 = 首次 + 3 次重试）
+        bool meta_ok = false;
+        std::string remote_update_time;
+        std::string meta_error;
+
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            if (attempt > 0)
+            {
+                std::error_code ec_retry;
+                fs::remove(tmp_meta, ec_retry);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+
+            tianli::FileDownloader dl(tmp_meta.string(), meta_url, meta_md5);
+            if (dl.download())
+            {
+                // 解析 update_time
+                Json remote_meta;
+                {
+                    std::ifstream ifs_rmeta(tmp_meta);
+                    if (ifs_rmeta.is_open()) try { ifs_rmeta >> remote_meta; } catch (...) {}
+                }
+                remote_update_time = remote_meta.value("update_time", "");
+
+                if (remote_update_time.empty())
+                {
+                    meta_error = "无法解析远程 metadata.json 的 update_time";
+                    continue;
+                }
+
+                // 与本地 update_time 比对
+                if (!local_update_time.empty())
+                {
+                    int cmp = compareUpdateTime(remote_update_time, local_update_time);
+                    if (cmp < 0)
+                    {
+                        meta_error = "远程版本 (" + remote_update_time + ") 早于本地 (" + local_update_time + ")，CDN 缓存未刷新";
+                        continue;
+                    }
+                    else if (cmp == 0)
+                    {
+                        // 日期一致 → 文件相同，无需重下
+                        if (fs::exists(meta_target))
+                        {
+                            std::error_code ec_clean;
+                            fs::remove(tmp_meta, ec_clean);
+                            metadata_skipped = true;
+                            meta_ok = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 远程版本比本地新（或本地不存在），接受
+                meta_ok = true;
+                break;
+            }
+            else
+            {
+                meta_error = dl.getLastErrorMsg();
+            }
+        }
+
+        if (meta_ok)
+        {
+            if (!metadata_skipped)
+            {
+                // 将下载好的 metadata.json 移动到目标位置
+                std::error_code ec_rename;
+                fs::create_directories(meta_target.parent_path());
+                fs::rename(tmp_meta, meta_target, ec_rename);
+                if (ec_rename)
+                {
+                    std::error_code ec_clean;
+                    fs::remove(tmp_meta, ec_clean);
+                    throw network_error("移动 metadata.json 失败: " + ec_rename.message());
+                }
+                metadata_handled = true;
+            }
+        }
+        else
+        {
+            std::error_code ec_clean;
+            fs::remove(tmp_meta, ec_clean);
+
+            std::string warn_msg = "\"位置追踪\" metadata.json 下载或验证失败！\n原因: " + meta_error + "\n将使用本地缓存，请检查网络后重试。";
+            MessageBox(NULL, fs::u8path(warn_msg).wstring().c_str(), L"警告", MB_OK | MB_ICONWARNING);
+
+            if (fs::exists(meta_target))
+            {
+                // 本地有缓存，回退
+                return true;
+            }
+            throw network_error("metadata.json 下载失败且本地无可用缓存");
+        }
+        break;
+    }
+
+    // 5) 增量筛查
     struct PendingFile {
         std::string filename;
         fs::path    target_path;   // 目标路径
@@ -290,6 +485,9 @@ bool GIMapDownloader::download()
     for (const auto& entry : *filelist_it)
     {
         std::string filename = entry["filename"].get<std::string>();
+        // metadata.json 已提前处理，跳过
+        if (filename == "metadata.json" && (metadata_handled || metadata_skipped)) continue;
+
         std::string url     = entry["url"].get<std::string>();
         std::string md5     = entry.value("md5", "");
 

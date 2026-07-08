@@ -4,7 +4,7 @@ import json
 import shutil
 
 # Directory to process
-url = "https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta"
+url = "https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta_v1"
 directory = "../cvat_rc_beta"
 output_file = os.path.join(directory, "dependents.json")
 output_md5_file = os.path.join(directory, "dependents.json.md5")

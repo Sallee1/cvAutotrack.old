@@ -107,6 +107,8 @@ namespace {
 		std::atomic<bool> hasError{ false };
 		std::atomic<int> progressCount{ 0 };
 		std::mutex progressMutex;
+		std::string first_missing_file;
+		std::mutex missing_file_mutex;
 
 		// 并行处理所有瓦片
 		cv::parallel_for_({ 0, static_cast<int>(tiles.size()) },
@@ -123,6 +125,10 @@ namespace {
 					// imread依赖ACP编码路径
 					if (!fs::exists(imgPath))
 					{
+						{
+							std::lock_guard<std::mutex> lock(missing_file_mutex);
+							if (first_missing_file.empty()) first_missing_file = tile.file_path;
+						}
 						hasError = true;
 						return;
 					}
@@ -130,6 +136,10 @@ namespace {
 
 					if (tileImg.empty())
 					{
+						{
+							std::lock_guard<std::mutex> lock(missing_file_mutex);
+							if (first_missing_file.empty()) first_missing_file = tile.file_path;
+						}
 						hasError = true;
 						return;
 					}
@@ -199,7 +209,16 @@ namespace {
 		);
 
 		progress_window.close();
-		if (hasError) return false;
+		if (hasError)
+		{
+			// 在非并行主线程中弹窗警告
+			std::string warn_msg = "特征点缓存生成失败：地图瓦片缺失！\n";
+			if (!first_missing_file.empty())
+				warn_msg += "缺少文件: " + first_missing_file + "\n";
+			warn_msg += "请检查资源下载是否完整，将尝试使用旧缓存回退。";
+			MessageBox(NULL, fs::u8path(warn_msg).wstring().c_str(), L"警告", MB_OK | MB_ICONWARNING);
+			return false;
+		}
 
 		// 合并所有瓦片的结果 — 两遍扫描：先统计总量，再一次性预分配并逐块拷贝
 		block_rects.clear();

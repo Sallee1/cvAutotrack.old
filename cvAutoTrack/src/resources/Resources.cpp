@@ -126,7 +126,7 @@ void Resources::install()
         try
         {
             gimap_downloader.setDependentsJsonPath(download_target);
-            gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
+            gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta_v1");
             gimap_downloader.setLocalPath(download_target);
             gimap_downloader.download();
         }
