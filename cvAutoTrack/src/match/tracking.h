@@ -69,12 +69,10 @@ struct InertialNavigator
     // 小地图直径约 200px，以下阈值以此为参照
     // ================================================================
     static constexpr double EMA_ALPHA = 0.3;
-    static constexpr int CORRECTION_INTERVAL = 15;             // 固定间隔（帧）
     static constexpr double PIXEL_DRIFT_THRESHOLD = 80.0;      // 像素累积漂移阈值
-    static constexpr double PEAK_CORRECTION_THRESHOLD = 0.35;  // EMA 低于此触发校正
     static constexpr double PEAK_VETO_THRESHOLD = 0.20;        // 一票否决最低峰值
     static constexpr double VETO_DROP_RATE = 0.50;             // 突降率 > 50% 判传送
-    static constexpr int MAX_INERTIAL_FRAMES = 600;             // 预计提供最多一分钟的惯性预测
+    static constexpr int MAX_INERTIAL_FRAMES = 600;             // 惯性导航最大持续帧数，超限切全局匹配
     static constexpr int CORRECTION_COOLDOWN = 5;              // 校正失败冷却
 
     // 大步关键帧校正参数
@@ -110,6 +108,8 @@ struct InertialNavigator
         keyframe_pos = pos;
         steps_since_keyframe = 0;
         pixel_since_keyframe = 0.0;
+        pixel_displacement = 0.0;
+        coord_displacement = 0.0;
     }
 
     void releaseKeyframe() { keyframe = cv::Mat(); }
@@ -118,17 +118,12 @@ struct InertialNavigator
     void updateLastFrame(const cv::Mat& frame) { last_frame = frame.clone(); }
     void releaseLastFrame() { last_frame = cv::Mat(); }
 
-    /// 是否需要重试校正？（带冷却，硬上限不受冷却限制）
+    /// 是否需要大步校正？（仅漂移超阈值时触发，避免退化为逐步更新）
     bool needsCorrection() const
     {
-        // 纯惯性太久，无论当前状态如何均强制校正
-        if (consecutive_frames >= MAX_INERTIAL_FRAMES)
-            return true;
         if (consecutive_frames - last_correction_attempt < CORRECTION_COOLDOWN)
             return false;
-        return consecutive_frames >= CORRECTION_INTERVAL
-            || pixel_displacement >= PIXEL_DRIFT_THRESHOLD
-            || peak_ema < PEAK_CORRECTION_THRESHOLD;
+        return pixel_displacement >= PIXEL_DRIFT_THRESHOLD;
     }
 
     void markCorrectionAttempted()
@@ -179,12 +174,54 @@ public:
 	std::unique_ptr<KeypointGridLSH> m_lsh_index;
 
     double m_tracking_scale = 1.0;      // 缩放参考，用于惯性导航（由特征匹配更新）
+    double m_tracking_scale_smooth = 1.0; // 平滑后的缩放系数
+    int m_scale_sample_count = 0;        // 平滑窗口样本数
+
+    void updateTrackingScale(double raw_scale)
+    {
+        static constexpr double JUMP_THRESHOLD = 0.10;   // 相对于平滑值变化超 ±10%，判为缩放切换
+        static constexpr int MAX_WINDOW = 10;              // 最大平滑窗口
+
+        // 首次直接接受
+        if (m_scale_sample_count == 0)
+        {
+            m_tracking_scale_smooth = raw_scale;
+            m_scale_sample_count = 1;
+            m_tracking_scale = raw_scale;
+            return;
+        }
+
+        // 差异超 10% → 缩放已切换，重新累积
+        double diff_ratio = std::abs(raw_scale - m_tracking_scale_smooth) / m_tracking_scale_smooth;
+        if (diff_ratio > JUMP_THRESHOLD)
+        {
+            m_tracking_scale_smooth = raw_scale;
+            m_scale_sample_count = 1;
+            m_tracking_scale = raw_scale;
+            return;
+        }
+
+        // 正常平滑累积（运行平均）
+        int n = std::min(m_scale_sample_count, MAX_WINDOW);
+        m_tracking_scale_smooth = (m_tracking_scale_smooth * n + raw_scale) / (n + 1);
+        m_scale_sample_count++;
+        m_tracking_scale = m_tracking_scale_smooth;
+    }
+
     InertialNavigator m_inertial;       // 惯性导航状态（校正决策 + 传送检测）
 
 	bool m_isInit = false;
 	bool m_isContinuity = false;
 
 	bool m_is_success_match = false;
+
+#ifdef _CVAT_PURE_INS
+	// ========== 调试：惯性导航与特征匹配并行对比 ==========
+	std::ofstream m_debug_csv;          // CSV 输出文件
+	int m_debug_step = 0;               // 惯性步数计数器
+	cv::Point2d m_debug_local_pos = { NAN, NAN }; // 局部匹配结果（用于 CSV）
+	bool m_debug_local_ok = false;      // 局部匹配是否成功
+#endif
 
 	void setMap(cv::Mat gi_map);
 	/**
@@ -201,6 +238,10 @@ public:
 	bool Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&& map_keypoints_cache);
 	void UnInit();
 	void match();
+
+#ifdef _CVAT_PURE_INS
+	void match_debug();
+#endif
 
 	cv::Point2d getLocalPos();
 	bool getIsContinuity();

@@ -109,6 +109,12 @@ if(WITH_CVAT_DEBUG_LOG)
     target_compile_definitions(cvAutoTrack PRIVATE _CVAT_DEBUG_LOG)
 endif()
 
+set(WITH_CVAT_PURE_INS OFF CACHE BOOL "run Only INS")
+
+if(WITH_CVAT_PURE_INS)
+    target_compile_definitions(cvAutoTrack PRIVATE _CVAT_PURE_INS)
+endif()
+
 # RelNoOpz 模式下注入 _CVAT_DEBUG（关闭优化，但使用 Release 运行时库）
 target_compile_definitions(cvAutoTrack PRIVATE
     $<$<CONFIG:RelNoOpz>:_CVAT_DEBUG>

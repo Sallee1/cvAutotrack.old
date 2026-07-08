@@ -107,8 +107,10 @@ void Tracking::UnInit()
 
 void Tracking::match()
 {
-
-
+#ifdef _CVAT_PURE_INS
+	match_debug();
+	return;
+#endif
 
 	bool calc_is_faile = false;
 	m_is_success_match = false;
@@ -237,32 +239,11 @@ void Tracking::match()
 			m_inertial.captureKeyframe(m_miniMapCenter, m_pos);
 		}
 
-		// B2c. 校正触发（固定间隔 / 漂移超阈值）：
-		//      1) 先尝试局部特征匹配（最精确）
-		//      2) 失败则尝试大步关键帧校正（二线回退）
-		//      3) 也失败 → 切全局匹配兜底
+		// B2c. 漂移超阈值 → 大步关键帧校正
 		if (m_inertial.needsCorrection())
 		{
 			m_inertial.markCorrectionAttempted();
 
-			// 第一优先：局部特征匹配
-			bool retry_failed = false;
-			cv::Point2d retry_pos = match_continuity(retry_failed);
-
-			if (!retry_failed && !std::isnan(retry_pos.x))
-			{
-				// 校正成功 — 用高精度特征匹配结果替换惯性估计
-				m_pos = retry_pos;
-				m_last_pos = m_pos;
-				m_is_success_match = true;
-				m_inertial.reset();
-#ifdef _CVAT_DEBUG_LOG
-                printf("[DEBUG] 已恢复特征点匹配\n");
-#endif
-				break;
-			}
-
-			// 局部匹配失败 → 第二优先：大步关键帧校正
 			if (m_inertial.hasKeyframe())
 			{
 				double kf_peak = 0.0;
@@ -286,18 +267,35 @@ void Tracking::match()
 						m_pos.y = corrected_y;
 						m_last_pos = m_pos;
 						m_is_success_match = true;
-						// 关键帧校正成功但特征仍然失败 → 继续惯性，刷新关键帧
+						// 刷新关键帧
 						m_inertial.captureKeyframe(m_miniMapCenter, m_pos);
-                        printf("[DEBUG] 惯性导航校准成功\n");
+#ifdef _CVAT_DEBUG_LOG
+						printf("[DEBUG] 惯性导航校准成功\n");
+#endif
 						break;
 					}
 				}
 			}
 
-			// 两者都失败 → 切全局匹配
+			// 关键帧校正失败 → 切全局匹配
 			m_isMatchAllMap = true;
 			m_isContinuity = false;
 			m_inertial.reset();
+#ifdef _CVAT_DEBUG_LOG
+			printf("[DEBUG] 关键帧校正失败，切全局匹配\n");
+#endif
+		}
+
+		// B2d. 惯性超限 → 终止惯性，切全局匹配（避免累积误差过大）
+		if (m_inertial.consecutive_frames >= InertialNavigator::MAX_INERTIAL_FRAMES)
+		{
+			m_isMatchAllMap = true;
+			m_isContinuity = false;
+			m_inertial.reset();
+#ifdef _CVAT_DEBUG_LOG
+			printf("[DEBUG] 惯性导航超限，切全局匹配\n");
+#endif
+			break;
 		}
 
 	} while (false);
@@ -531,7 +529,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		{
 			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0f, img_object.rows / 2.0f) };
 			cv::transform(out_pt, out_pt, H);
-            m_tracking_scale = scale;
+            updateTrackingScale(scale);
 			return out_pt[0];
 		}
 	}
@@ -598,3 +596,230 @@ bool Tracking::getIsContinuity()
 {
 	return m_isContinuity;
 }
+
+//=============================================================================
+// 调试版 match：惯性导航与局部特征匹配并行，纯惯性输出 + CSV 记录
+// 由 _CVAT_PURE_INS 宏控制编译
+//=============================================================================
+#ifdef _CVAT_PURE_INS
+
+void Tracking::match_debug()
+{
+	// 首次调用时打开 CSV
+	if (!m_debug_csv.is_open())
+	{
+		m_debug_csv.open("tracking_debug.csv");
+		m_debug_csv << "step,elapsed_ms,inertial_x,inertial_y,local_x,local_y,error_px,local_ok,peak\n";
+		m_debug_step = 0;
+	}
+
+	auto t_start = std::chrono::high_resolution_clock::now();
+
+	bool calc_is_faile = false;
+	m_is_success_match = false;
+
+	double peak = 0.0;
+	double pixel_dist = 0.0;
+
+	do {
+		// ============================================================
+		// 全局匹配（首次 / 传送恢复）
+		// ============================================================
+		if (m_isMatchAllMap)
+		{
+			m_isContinuity = false;
+			m_pos = match_no_continuity(calc_is_faile);
+			if (std::isnan(m_pos.x) || std::isnan(m_pos.y))
+				calc_is_faile = true;
+
+			if (calc_is_faile)
+			{
+				m_pos = m_last_pos;
+				m_is_success_match = false;
+				m_isMatchAllMap = true;
+				printf("[TRACKING_DEBUG] 全局匹配失败\n");
+				break;
+			}
+
+			m_last_pos = m_pos;
+			m_isMatchAllMap = false;
+			m_is_success_match = true;
+			m_inertial.reset();
+			m_debug_step = 0;
+			// 全局匹配成功 → 用当前帧初始化惯导
+			m_inertial.captureKeyframe(m_miniMapCenter, m_pos);
+			printf("[TRACKING_DEBUG] 全局匹配成功: (%.1f, %.1f)\n", m_pos.x, m_pos.y);
+			break;
+		}
+
+		// ============================================================
+		// 连续追踪模式：局部特征匹配 + 惯性导航同时进行
+		// ============================================================
+		m_isContinuity = true;
+		m_debug_step++;
+
+		// --- 局部特征匹配（B1） ---
+		bool local_failed = false;
+		cv::Point2d local_pos = match_continuity(local_failed);
+		if (std::isnan(local_pos.x) || std::isnan(local_pos.y))
+			local_failed = true;
+
+		m_debug_local_ok = !local_failed;
+		if (m_debug_local_ok)
+        {
+            m_debug_local_pos = local_pos;
+        }
+		else
+        {
+            m_isMatchAllMap = true; // 局部匹配失败 → 切全局匹配
+            break;
+        }
+		// 局部失败时保持上一次结果不变
+
+		// --- 惯性导航（帧间相位相关） ---
+		cv::Point2d diff_delta = { NAN, NAN };
+		bool inertial_ok = false;
+		cv::Point2d inertial_pos = m_last_pos;
+
+		if (!(m_last_pos.x == 0 && m_last_pos.y == 0) && !m_miniMapCenter.empty())
+		{
+			if (m_inertial.hasLastFrame()
+				&& m_inertial.last_frame.size() == m_miniMapCenter.size())
+			{
+				diff_delta = DiffMatch::phaseCorrelate(
+					m_inertial.last_frame, m_miniMapCenter, peak);
+			}
+
+			if (!m_inertial.needsVeto(peak))
+			{
+				if (peak >= DiffMatch::CONFIDENCE_THRESHOLD
+					&& !std::isnan(diff_delta.x) && !std::isnan(diff_delta.y))
+				{
+					pixel_dist = std::sqrt(
+						diff_delta.x * diff_delta.x +
+						diff_delta.y * diff_delta.y);
+
+					double scale = m_tracking_scale;
+					double new_x = m_last_pos.x + diff_delta.x * scale;
+					double new_y = m_last_pos.y + diff_delta.y * scale;
+
+					double coord_dist = pixel_dist * scale;
+					if (coord_dist < DEFAULT_SOME_MAP_SIZE_R)
+					{
+						inertial_pos.x = new_x;
+						inertial_pos.y = new_y;
+						inertial_ok = true;
+					}
+				}
+			}
+			else
+			{
+				// 传送检测 → 切全局匹配
+				m_isMatchAllMap = true;
+				m_isContinuity = false;
+				m_inertial.reset();
+				m_debug_step = 0;
+				printf("[TRACKING_DEBUG] 传送检测，切全局匹配\n");
+				break;
+			}
+		}
+
+		// 记录惯导状态（位移、峰值），供 needsCorrection 决策
+		if (inertial_ok)
+		{
+			m_inertial.record(peak,
+				std::sqrt(std::pow(inertial_pos.x - m_last_pos.x, 2) + std::pow(inertial_pos.y - m_last_pos.y, 2)),
+				pixel_dist);
+		}
+
+		// --- B2c 大步关键帧校正（不依赖 inertial_ok，按 needsCorrection 触发） ---
+		if (m_inertial.needsCorrection())
+		{
+			m_inertial.markCorrectionAttempted();
+
+			if (m_inertial.hasKeyframe())
+			{
+				double kf_peak = 0.0;
+				cv::Point2d kf_delta = DiffMatch::phaseCorrelate(
+					m_inertial.keyframe, m_miniMapCenter, kf_peak);
+
+				if (kf_peak >= InertialNavigator::KEYFRAME_PEAK_THRESHOLD
+					&& !std::isnan(kf_delta.x) && !std::isnan(kf_delta.y))
+				{
+					double scale = m_tracking_scale;
+					double corrected_x = m_inertial.keyframe_pos.x + kf_delta.x * scale;
+					double corrected_y = m_inertial.keyframe_pos.y + kf_delta.y * scale;
+
+					double kf_distance = std::sqrt(
+						kf_delta.x * kf_delta.x +
+						kf_delta.y * kf_delta.y) * scale;
+
+					if (kf_distance < DEFAULT_SOME_MAP_SIZE_R)
+					{
+						inertial_pos.x = corrected_x;
+						inertial_pos.y = corrected_y;
+						inertial_ok = true;
+						peak = kf_peak;
+						// 刷新关键帧
+						m_inertial.captureKeyframe(m_miniMapCenter, inertial_pos);
+						printf("[TRACKING_DEBUG] 大步关键帧校正成功\n");
+					}
+				}
+			}
+		}
+
+		// --- 复合结果：坐标只采纳惯性导航 ---
+		if (inertial_ok)
+		{
+			m_pos = inertial_pos;
+			m_is_success_match = true;
+			m_inertial.record(peak,
+				std::sqrt(std::pow(m_pos.x - m_last_pos.x, 2) + std::pow(m_pos.y - m_last_pos.y, 2)),
+				pixel_dist);
+			m_last_pos = m_pos;
+		}
+		else
+		{
+			// 相位相关完全失败 → 位置已丢失 → 切全局匹配
+			m_pos = m_last_pos;
+			m_is_success_match = false;
+			m_isMatchAllMap = true;
+			m_isContinuity = false;
+			m_inertial.reset();
+			m_debug_step = 0;
+			printf("[TRACKING_DEBUG] 惯性导航失败，切全局匹配\n");
+		}
+
+	} while (false);
+
+	// 每帧无条件更新惯性导航上一帧（全局匹配成功时已缓存关键帧，这里补 last_frame）
+	m_inertial.updateLastFrame(m_miniMapCenter);
+
+	// ============================================================
+	// CSV 记录 + 打印
+	// ============================================================
+	auto t_end = std::chrono::high_resolution_clock::now();
+	double elapsed = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+
+	double local_x = m_debug_local_ok ? m_debug_local_pos.x : m_last_pos.x;
+	double local_y = m_debug_local_ok ? m_debug_local_pos.y : m_last_pos.y;
+	double error = std::sqrt(
+		std::pow(m_pos.x - local_x, 2) +
+		std::pow(m_pos.y - local_y, 2));
+
+	m_debug_csv << m_debug_step << "," << elapsed
+		<< "," << m_pos.x << "," << m_pos.y
+		<< "," << local_x << "," << local_y
+		<< "," << error << "," << (m_debug_local_ok ? 1 : 0) << "," << peak << "\n";
+	m_debug_csv.flush();
+
+	printf("[TRACKING_DEBUG] step=%d elapsed=%.1fms "
+		"inertial=(%.1f,%.1f) local=(%.1f,%.1f) "
+		"error=%.1fpx local_ok=%d peak=%.3f\n",
+		m_debug_step, elapsed,
+		m_pos.x, m_pos.y,
+		local_x, local_y,
+		error, m_debug_local_ok ? 1 : 0, peak);
+}
+
+#endif // _CVAT_PURE_INS
