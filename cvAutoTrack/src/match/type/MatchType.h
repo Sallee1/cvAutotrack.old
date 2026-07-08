@@ -123,6 +123,9 @@ struct GenshinMinimap
 	//匹配器
 	std::shared_ptr<IMatcher> matcher;
 	GenshinMinimapConfig config;
+
+	// 脏标记：每次截图时先置 false，小地图成功定位到 paimon 后才置 true
+	bool is_minimap_fresh = false;
 };
 
 struct GenshinAvatarDirectionConfig

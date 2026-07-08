@@ -113,8 +113,7 @@ namespace TianLi::Genshin {
                      !genshin_handle.config.is_force_used_no_alpha);
 
                 if (find_minimap(out_genshin_screen, *out_minimap))
-                {
-                    if (out_genshin_screen.config.is_controller_mode)
+                {                    out_minimap->is_minimap_fresh = true;                    if (out_genshin_screen.config.is_controller_mode)
                     {
                         const auto& s = out_genshin_screen.config.controller_ui_scale;
                         cv::resize(out_minimap->img_minimap, out_minimap->img_minimap, cv::Size(),

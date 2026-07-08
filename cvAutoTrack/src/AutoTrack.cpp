@@ -711,6 +711,7 @@ bool AutoTrack::try_get_genshin_windows()
 	}
 	// 开始新的截图周期，先标脏。后续截图成功后再标净
 	genshin_screen.is_screen_fresh = false;
+	genshin_minimap.is_minimap_fresh = false;
 	if (!getGengshinImpactWnd())
 	{
 		ErrorCode::getInstance() = { 101, "未能找到原神窗口句柄" };
@@ -754,6 +755,8 @@ bool AutoTrack::getMiniMapRefMat()
 {
 	// 小地图已在 get_genshin_screen 中检测完毕，此处仅验证结果有效
 	if (genshin_minimap.img_minimap.empty())
+		return false;
+	if (!genshin_minimap.is_minimap_fresh)
 		return false;
 	return true;
 }
