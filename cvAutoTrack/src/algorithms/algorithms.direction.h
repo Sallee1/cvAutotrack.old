@@ -11,9 +11,11 @@ double last_direction = 0;
 
 void direction_calculation(cv::Mat& giAvatarRef, double& a, direction_calculation_config& config)
 {
-	cv::resize(giAvatarRef, giAvatarRef, cv::Size(), 2, 2);
+	// 使用本地副本，避免反复修改源图像导致尺寸不断翻倍（内存泄漏）
+	cv::Mat avatar = giAvatarRef.clone();
+	cv::resize(avatar, avatar, cv::Size(), 2, 2);
 	std::vector<cv::Mat> lis;
-	cv::split(giAvatarRef, lis);
+	cv::split(avatar, lis);
 
 	cv::Mat gray0;
 	cv::Mat gray1;
