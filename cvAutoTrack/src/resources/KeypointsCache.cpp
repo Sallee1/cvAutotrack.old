@@ -467,84 +467,96 @@ bool save_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, MapKeypoi
 	cache.block_rects = block_rects;
 	cache.block_offsets = block_offsets;
 
-	std::filesystem::remove("cvAutoTrack_Cache.xml");
-	cache.serialize("cvAutoTrack_Cache.xml");
+	std::filesystem::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache);
+    cache.serialize(Resources::getInstance().CachePath.cvAutoTrack_Cache);
 
 	// 构建并缓存 FLANN 索引到独立文件
 	std::error_code ec;
-	fs::remove("cvAutoTrack_Cache.flann", ec);
-	matcher->cache_flann_train_descriptors(cache.descriptors);
-	matcher->save_flann_index("cvAutoTrack_Cache.flann");
+	fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann, ec);
+    matcher->cache_flann_train_descriptors(cache.descriptors);
+    matcher->save_flann_index(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann);
 
-	return true;
+    return true;
 }
 
 bool load_map_keypoint_cache(MapKeypointCache& cache)
 {
-	if (std::filesystem::exists("cvAutoTrack_Cache.xml") == false)
-	{
-		return false;
-	}
+    if (std::filesystem::exists(Resources::getInstance().CachePath.cvAutoTrack_Cache) == false)
+    {
+        return false;
+    }
 
     // bulid_version 包含 "#" + layer_version，反序列化后直接比较即可
-    if (cache.deSerialize("cvAutoTrack_Cache.xml", true))
+    if (cache.deSerialize(Resources::getInstance().CachePath.cvAutoTrack_Cache, true))
     {
-		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
-		if (cache.bulid_version != TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime())
-		{
-			// 版本变更，缓存已过期；但保留文件作为回退，不删除
-			return false;
-		}
+        auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+        if (cache.bulid_version != TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime())
+        {
+            // 版本变更，缓存已过期；但保留文件作为回退，不删除
+            return false;
+        }
     }
     else
-	{
-		// 反序列化失败，缓存文件损坏，删除后重新生成
-        std::error_code ec;
-        fs::remove("cvAutoTrack_Cache.xml", ec);
-		fs::remove("cvAutoTrack_Cache.flann", ec);
-        return false;
-	}
-
-    if (!cache.deSerialize("cvAutoTrack_Cache.xml"))
     {
+        // 反序列化失败，缓存文件损坏，删除后重新生成
         std::error_code ec;
-        fs::remove("cvAutoTrack_Cache.xml", ec);
-		fs::remove("cvAutoTrack_Cache.flann", ec);
+        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache, ec);
+        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann, ec);
         return false;
     }
 
-	if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
+    if (!cache.deSerialize(Resources::getInstance().CachePath.cvAutoTrack_Cache))
     {
-		// 保留文件作为回退
+        std::error_code ec;
+        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache, ec);
+        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann, ec);
         return false;
     }
 
-	// bulid_version 已包含 DLL版本 + layer_version + update_time
-	// 反序列化后直接比较即可自动捕捉版本变更
+    if (cache.bulid_version != cache.bulid_version_end)    //写入不完整
+    {
+        // 保留文件作为回退
+        return false;
+    }
 
-	return true;
+    // bulid_version 已包含 DLL版本 + layer_version + update_time
+    // 反序列化后直接比较即可自动捕捉版本变更
+
+    return true;
 }
 
 MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher)
 {
-	MapKeypointCache cache;
+    MapKeypointCache cache;
+    auto& cache_path = Resources::getInstance().CachePath;
 
-	// Stage 1: 尝试加载现有缓存（含版本校验）
-	if (load_map_keypoint_cache(cache))
-	{
-		return cache;
-	}
+    // Stage 1: 尝试加载现有缓存（含版本校验）
+    if (load_map_keypoint_cache(cache))
+    {
+        // 同步加载 FLANN 索引 — 优先从磁盘加载，失败则现场构建
+        if (!matcher->try_load_flann_index(cache_path.cvAutoTrack_Cache_flann, cache.descriptors))
+        {
+            matcher->cache_flann_train_descriptors(cache.descriptors);
+        }
+        return cache;
+    }
 
-	// Stage 2: 缓存不存在或已过期，尝试重新生成
-	cache = {};
-	if (save_map_keypoint_cache(matcher, cache))
-	{
-		return cache;
-	}
+    // Stage 2: 缓存不存在或已过期，尝试重新生成
+    cache = {};
+    if (save_map_keypoint_cache(matcher, cache))
+    {
+        // save 内部已保存 FLANN 索引，无需重复操作
+        return cache;
+    }
 
-	// Stage 3: 生成失败（如瓦片下载未完成），回退到旧缓存
-	// 直接反序列化，不经过版本校验
-	cache = {};
-	cache.deSerialize("cvAutoTrack_Cache.xml");
-	return cache;
+    // Stage 3: 生成失败（如瓦片下载未完成），回退到旧缓存
+    // 直接反序列化，不经过版本校验
+    cache = {};
+    cache.deSerialize(cache_path.cvAutoTrack_Cache);
+    // 回退模式下只尝试从磁盘加载，不重建（避免耗时）
+    if (!cache.keypoints.empty())
+    {
+        matcher->try_load_flann_index(cache_path.cvAutoTrack_Cache_flann, cache.descriptors);
+    }
+    return cache;
 }

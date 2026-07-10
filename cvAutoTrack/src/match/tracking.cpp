@@ -91,11 +91,6 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher, MapKeypointCache&&
 		return false;
 	}
 	m_matcher = matcher;
-	// 优先从磁盘加载缓存的 FLANN 索引，失败则现场构建
-	if (!m_matcher->try_load_flann_index("cvAutoTrack_Cache.flann", m_map_kp.descriptors))
-	{
-		m_matcher->cache_flann_train_descriptors(m_map_kp.descriptors);
-	}
 	m_isInit = true;
 	return true;
 }

@@ -127,6 +127,7 @@ void Resources::install()
         {
             gimap_downloader.setDependentsJsonPath(download_target);
             gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta_v1");
+            //gimap_downloader.setHost("https://cvat-ota.cocogoat.cn/download/cvautotrack/cvat_rc_beta");
             gimap_downloader.setLocalPath(download_target);
             gimap_downloader.download();
         }
@@ -175,13 +176,28 @@ void Resources::install()
 		}
 
         //调试底图配置（可选）
+#ifdef _CVAT_DEBUG
         {
             if (fs::exists("gimap.jpg"))
             {
                 DebugMapTemplate = cv::imread("gimap.jpg", cv::IMREAD_COLOR);
             }
         }
+        //调试参数（可选
+        {
+            if (fs::exists("debug.json"))
+            {
+                auto fs = std::ifstream("debug.json");
+                Json debug_json;
+                debug_json << fs;
+                fs.close();
 
+                //目前只解析偏移量，用于将特征点叠图到gimap.jpg
+                DebugParams.offset.x = debug_json["offset"][0];
+                DebugParams.offset.y = debug_json["offset"][1];
+            }
+        }
+#endif
 		//LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF",true);
 		is_installed = true;
 	}

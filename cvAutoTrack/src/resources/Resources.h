@@ -21,17 +21,28 @@ public:
 	cv::Mat IconQuestTemplate;
 	cv::Mat UID;
 	cv::Mat UIDnumber[10];
-	cv::Mat DebugMapTemplate;
+    // 缓存路径
 
-	// 天理坐标映射关系参数 地图中心
-	// 地图中天理坐标中心的像素坐标
-	const cv::Point2f map_relative_center = { 6668, 4262 }; // 天理坐标中点
-	// 地图中图片像素与天理坐标系的比例
-	const float map_relative_scale = 3.413333f; // 天理坐标缩放
+    struct {
+#ifdef _CVAT_DEBUG
+        const std::string cvAutoTrack_Cache = "cvAutoTrack_Cache.debug.xml";
+        const std::string cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.debug.flann";
+#else
+        const std::string cvAutoTrack_Cache = "cvAutoTrack_Cache.xml";
+        const std::string cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.flann";
+#endif
+    } CachePath;
+
 	// 手柄模式相对于键鼠模式ui大小的缩放值的倒数
 	const float controller_ui_scale = 1.2f;
 	//lsh的块大小
 	int lsh_cell_size = 600;
+
+    //调试参数
+	cv::Mat DebugMapTemplate;
+    struct {
+        cv::Point2d offset = {0,0};
+    } DebugParams;
 public:
 	void install();
 	void release();
