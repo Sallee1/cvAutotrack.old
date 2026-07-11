@@ -8,8 +8,8 @@ cv::Mat binary_to_mat(const unsigned char* image_binary, size_t binary_size)
 	return cv::imdecode(image_array, cv::IMREAD_UNCHANGED);
 }
 
-cv::Mat TianLi::Resources::Load::load_image(std::string name)
+cv::Mat TianLi::Load::load_image(std::string name)
 {
-	auto image_binary = TianLi::Resources::Binary::get_image_binary(name.c_str());
+	auto image_binary = TianLi::Binary::get_image_binary(name.c_str());
 	return binary_to_mat(image_binary.data, image_binary.size);
 }

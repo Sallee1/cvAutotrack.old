@@ -17,7 +17,7 @@
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
 
-namespace TianLi::Resources
+namespace TianLi
 {
 	/**
 	 * @brief 单个 MAP 的坐标映射参数
@@ -170,6 +170,11 @@ namespace TianLi::Resources
                     break;
 				}
 			}
+#ifdef _CVAT_DEBUG
+            //去除为了绘图添加的额外偏移量
+            out_pos.x -= Resources::getInstance().DebugParams.offset.x;
+            out_pos.y -= Resources::getInstance().DebugParams.offset.y;
+#endif
             
             //根据id映射apply应用坐标
             mappers.at(out_id).apply(out_pos.x, out_pos.y);
@@ -312,8 +317,8 @@ namespace TianLi::Resources
 
 #ifdef _CVAT_DEBUG
                                     //如果是调试模式，加上偏移量用于叠图
-                                    info.rect_x += ::Resources::getInstance().DebugParams.offset.x;
-                                    info.rect_y += ::Resources::getInstance().DebugParams.offset.y;
+                                    info.rect_x += Resources::getInstance().DebugParams.offset.x;
+                                    info.rect_y += Resources::getInstance().DebugParams.offset.y;
 #endif
 								}
 

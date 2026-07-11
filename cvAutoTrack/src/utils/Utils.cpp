@@ -299,7 +299,7 @@ namespace TianLi::Utils
 
 	std::pair<cv::Point2d, int> ConvertSpecialMapsPosition(double x, double y)
 	{
-		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		auto& mapper = TianLi::MapMapperManager::getInstance();
 		if (mapper.isLoaded())
 		{
 			auto result = mapper.convertPosition(x, y);

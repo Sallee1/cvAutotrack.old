@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "pch.h"
 
-namespace Tianli::Resources::Utils
+namespace TianLi::Utils
 {
 	class serializeStream
 	{
