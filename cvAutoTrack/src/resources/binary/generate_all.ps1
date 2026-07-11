@@ -30,7 +30,7 @@ function Convert-ImageToHeader {
     $sb = [System.Text.StringBuilder]::new()
     $null = $sb.AppendLine("#pragma once")
     $null = $sb.AppendLine("")
-    $null = $sb.AppendLine("namespace TianLi::Resources::Binary::Image::$type")
+    $null = $sb.AppendLine("namespace TianLi::Binary::Image::$type")
     $null = $sb.AppendLine("{")
     $null = $sb.Append("    const unsigned char $name[] = {")
 
