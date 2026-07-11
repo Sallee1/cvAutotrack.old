@@ -29,7 +29,9 @@ public:
     bool ImportMapBlockCenterScale(int x, int y, double scale);
 
     bool SetHandle(long long int handle = 0);
+    [[deprecated("旧版硬编码坐标参数已废弃，调用无效果")]]
     bool SetWorldCenter(double x, double y);
+    [[deprecated("旧版硬编码坐标参数已废弃，调用无效果")]]
     bool SetWorldScale(double scale);
     bool GetTransformOfMap(double& x, double& y, double& a, int& mapId);
     bool GetPosition(double& x, double& y);
@@ -84,7 +86,4 @@ private:
     // 异步初始化：后台线程执行 init_matcher()
     std::atomic<bool> m_init_pending{false};
 
-#ifdef _DEBUG
-    void showMatchResult(double x, double y, int mapId, double angle, double rotate);
-#endif // DEBUG
 };

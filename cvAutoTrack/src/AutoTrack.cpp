@@ -32,9 +32,6 @@ AutoTrack::AutoTrack()
 {
 	ErrorCode::getInstance().enableWirteFile();
 
-	genshin_avatar_position.target_map_world_center = Resources::getInstance().map_relative_center;
-	genshin_avatar_position.target_map_world_scale = Resources::getInstance().map_relative_scale;
-
 	genshin_handle.config.frame_source = std::make_shared<tianli::frame::capture::capture_window_graphics>();
 	genshin_handle.config.frame_source->initialization();
 	genshin_avatar_position.config.pos_filter = std::make_shared<Kalman>();
@@ -174,16 +171,17 @@ bool AutoTrack::SetHandle(long long int handle)
 	return IsWindow(genshin_handle.handle);
 }
 
+// [弃用] 旧版硬编码坐标参数已废弃，SetWorldCenter/SetWorldScale 当前为空操作
 bool AutoTrack::SetWorldCenter(double x, double y)
 {
-	genshin_avatar_position.target_map_world_center.x = x;
-	genshin_avatar_position.target_map_world_center.y = y;
+	UNREFERENCED_PARAMETER(x);
+	UNREFERENCED_PARAMETER(y);
 	return true;
 }
 
 bool AutoTrack::SetWorldScale(double scale)
 {
-	genshin_avatar_position.target_map_world_scale = static_cast<float>(scale);
+	UNREFERENCED_PARAMETER(scale);
 	return true;
 }
 
@@ -645,9 +643,6 @@ bool AutoTrack::GetAllInfo(double& x, double& y, int& mapId, double& a, double& 
 		}
 	}
 
-#ifdef _DEBUG
-	showMatchResult(x, y, mapId, a, r);
-#endif // _DEBUG
 	return clear_error_logs();
 }
 
@@ -769,35 +764,4 @@ bool AutoTrack::getMiniMapRefMat()
 	return true;
 }
 
-#ifdef _DEBUG
-#define _Pi 3.1415926
-Resources* resource = &Resources::getInstance();
-inline void AutoTrack::showMatchResult(double x, double y, int mapId, double angle, double rotate)
-{
-	cv::Point2d pos(x, y);
-	cv::Point ipos = static_cast<cv::Point>(pos);
-	//转换到绝对坐标
-	if (mapId == 0)
-		pos = TianLi::Utils::TransferAxes_inv(pos, genshin_avatar_position.target_map_world_center, genshin_avatar_position.target_map_world_scale);
 
-	//获取附近的地图
-	cv::Mat gi_map = resource->MapTemplate;
-	cv::Mat subMap = TianLi::Utils::get_some_map(gi_map, ipos, 150).clone();
-
-	cv::Point2i center(subMap.size[1] / 2, subMap.size[0] / 2);
-
-	//绘制扇形
-	cv::Mat sectorMask = subMap.clone();
-	cv::ellipse(sectorMask, center, cv::Size2i(100, 100), -rotate - 135, 0, 90, cv::Scalar(255, 255, 255, 100), -1, cv::LINE_AA);
-	cv::addWeighted(subMap, 0.75, sectorMask, 0.25, 0, subMap);
-
-	//绘制玩家方向
-	cv::Point2d direct(0, 0);
-	direct.x = -(30 * sin((angle / 180.0) * _Pi)) + center.x;
-	direct.y = -(30 * cos((angle / 180.0) * _Pi)) + center.y;
-	cv::arrowedLine(subMap, center, direct, cv::Scalar(255, 255, 0), 5, cv::LINE_AA, 0, 0.5);
-
-	//在图中显示坐标信息
-	cv::imshow("Visual Debug", subMap);
-}
-#endif

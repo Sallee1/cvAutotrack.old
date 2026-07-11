@@ -52,18 +52,22 @@ extern "C"
     bool CVAUTOTRACK_API SetHandle(long long int handle);
 
     /**
-     * @brief 覆盖世界坐标中心设置
+     * @brief [已弃用] 覆盖世界坐标中心设置
      * @param x x坐标
      * @param y y坐标
      * @return 是否成功
+     * @deprecated 旧版硬编码坐标参数已废弃，调用无效果
      */
+    [[deprecated("旧版硬编码坐标参数已废弃，调用无效果")]]
     bool CVAUTOTRACK_API SetWorldCenter(double x, double y);
 
     /**
-     * @brief 覆盖世界坐标缩放
+     * @brief [已弃用] 覆盖世界坐标缩放
      * @param scale 缩放
      * @return 是否成功
+     * @deprecated 旧版硬编码坐标参数已废弃，调用无效果
      */
+    [[deprecated("旧版硬编码坐标参数已废弃，调用无效果")]]
     bool CVAUTOTRACK_API SetWorldScale(double scale);
 
     //__declspec(deprecated("** Not implemented**"))
@@ -262,7 +266,7 @@ extern "C"
         bool (*SetTrackCachePath)(const char*);
         bool (*SetTrackCacheName)(const char*);
 
-        // 坐标配置接口
+        // [已弃用] 坐标配置接口
         bool (*SetWorldCenter)(double, double);
         bool (*SetWorldScale)(double);
 
