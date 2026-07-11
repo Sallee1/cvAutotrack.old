@@ -9,7 +9,7 @@
 #include "resources/gimap_downloader.h"
 #include "resources/map_mapper_config.h"
 
-namespace TianLi::Resource::Utils
+namespace
 {
 	void LoadBitmap_ID2Mat(int IDB, cv::Mat& mat)
 	{
@@ -64,26 +64,25 @@ namespace TianLi::Resource::Utils
 		FreeResource(imageResDataHandle);
 	}
 }
-using namespace TianLi::Resource::Utils;
 
 #include "resources.load.h"
 #include <match/type/MatchType.h>
 
 Resources::Resources()
 {
-	IconSightTemplate = TianLi::Resources::Load::load_image("icon_sight");
-	IconQuestTemplate = TianLi::Resources::Load::load_image("icon_quest");
-	UID = TianLi::Resources::Load::load_image("uid_");
-	UIDnumber[0] = TianLi::Resources::Load::load_image("uid0");
-	UIDnumber[1] = TianLi::Resources::Load::load_image("uid1");
-	UIDnumber[2] = TianLi::Resources::Load::load_image("uid2");
-	UIDnumber[3] = TianLi::Resources::Load::load_image("uid3");
-	UIDnumber[4] = TianLi::Resources::Load::load_image("uid4");
-	UIDnumber[5] = TianLi::Resources::Load::load_image("uid5");
-	UIDnumber[6] = TianLi::Resources::Load::load_image("uid6");
-	UIDnumber[7] = TianLi::Resources::Load::load_image("uid7");
-	UIDnumber[8] = TianLi::Resources::Load::load_image("uid8");
-	UIDnumber[9] = TianLi::Resources::Load::load_image("uid9");
+	IconSightTemplate = TianLi::Load::load_image("icon_sight");
+	IconQuestTemplate = TianLi::Load::load_image("icon_quest");
+	UID = TianLi::Load::load_image("uid_");
+	UIDnumber[0] = TianLi::Load::load_image("uid0");
+	UIDnumber[1] = TianLi::Load::load_image("uid1");
+	UIDnumber[2] = TianLi::Load::load_image("uid2");
+	UIDnumber[3] = TianLi::Load::load_image("uid3");
+	UIDnumber[4] = TianLi::Load::load_image("uid4");
+	UIDnumber[5] = TianLi::Load::load_image("uid5");
+	UIDnumber[6] = TianLi::Load::load_image("uid6");
+	UIDnumber[7] = TianLi::Load::load_image("uid7");
+	UIDnumber[8] = TianLi::Load::load_image("uid8");
+	UIDnumber[9] = TianLi::Load::load_image("uid9");
 
 	// install() 不再在构造时调用，由 init_matcher() 在后台线程中触发
 }
@@ -117,6 +116,30 @@ void Resources::install()
 {
 	if (is_installed == false)
 	{
+        //调试底图配置（可选）
+#ifdef _CVAT_DEBUG
+        {
+            if (fs::exists("gimap.jpg"))
+            {
+                DebugMapTemplate = cv::imread("gimap.jpg", cv::IMREAD_COLOR);
+            }
+        }
+        //调试参数（可选
+        {
+            if (fs::exists("debug.json"))
+            {
+                auto fs = std::ifstream("debug.json");
+                Json debug_json;
+                debug_json << fs;
+                fs.close();
+
+                //目前只解析偏移量，用于将特征点叠图到gimap.jpg
+                DebugParams.offset.x = debug_json["offset"][0];
+                DebugParams.offset.y = debug_json["offset"][1];
+            }
+        }
+#endif
+
 		fs::path download_target = fs::u8path(getDllPath() + "/../../CVAT_Resources_Beta").lexically_normal();
         if (!fs::exists(download_target))
         {
@@ -141,7 +164,7 @@ void Resources::install()
 
 		// 加载地图映射配置
 		{
-			auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+			auto& mapper = TianLi::MapMapperManager::getInstance();
 
 			// 先尝试加载文件是否存在
 			bool metaLoaded = false;
@@ -162,7 +185,7 @@ void Resources::install()
 					{
 						std::wstring warn_info = L"\"metadata.json\" 大版本不兼容！\n"
 							L"当前 DLL 仅支持 layer_version " +
-							std::to_wstring(TianLi::Resources::MapMapperManager::SUPPORTED_MAJOR_VERSION) +
+							std::to_wstring(TianLi::MapMapperManager::SUPPORTED_MAJOR_VERSION) +
 							L".x\n请更新 cvAutoTrack 以兼容新的地图数据格式。";
 						MessageBox(NULL, warn_info.c_str(), L"严重错误", MB_OK | MB_ICONERROR);
 					}
@@ -174,30 +197,6 @@ void Resources::install()
 				}
 			}
 		}
-
-        //调试底图配置（可选）
-#ifdef _CVAT_DEBUG
-        {
-            if (fs::exists("gimap.jpg"))
-            {
-                DebugMapTemplate = cv::imread("gimap.jpg", cv::IMREAD_COLOR);
-            }
-        }
-        //调试参数（可选
-        {
-            if (fs::exists("debug.json"))
-            {
-                auto fs = std::ifstream("debug.json");
-                Json debug_json;
-                debug_json << fs;
-                fs.close();
-
-                //目前只解析偏移量，用于将特征点叠图到gimap.jpg
-                DebugParams.offset.x = debug_json["offset"][0];
-                DebugParams.offset.y = debug_json["offset"][1];
-            }
-        }
-#endif
 		//LoadImg_ID2Mat(IDB_AVIF_GIMAP, MapTemplate, L"AVIF",true);
 		is_installed = true;
 	}
