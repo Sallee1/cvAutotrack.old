@@ -284,3 +284,12 @@ cvat_rc*
 
 [Oo]ut
 CMakeUserPresets.json
+
+# archive
+*.exe
+*.dll
+*.lib
+*.obj
+*.o
+*.a
+*.so
