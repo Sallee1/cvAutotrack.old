@@ -22,7 +22,7 @@ namespace TianLi::Genshin {
         cv::mixChannels(&roi_view, 1, &r_chan, 1, from_to, 1);
         double max_val;
         cv::minMaxLoc(r_chan, nullptr, &max_val);
-        return (std::max)(max_val, 6.0);
+        return (std::min)(max_val, 6.0);
     }
 
     /**
@@ -95,8 +95,11 @@ namespace TianLi::Genshin {
 
             if (giFrame.depth() == CV_32F)
             {
-                // HDR 路径：先检测白点，再对各 ROI 做粒度色调映射
-                out_genshin_screen.hdr_cache.white_point = detect_white_point(giFrame);
+                // HDR 路径：小地图首次成功检测后白点亮度即锁定，不再重复计算
+                if (!out_genshin_screen.hdr_cache.white_point_locked)
+                {
+                    out_genshin_screen.hdr_cache.white_point = detect_white_point(giFrame);
+                }
             }
             else
             {
@@ -113,7 +116,10 @@ namespace TianLi::Genshin {
                      !genshin_handle.config.is_force_used_no_alpha);
 
                 if (find_minimap(out_genshin_screen, *out_minimap))
-                {                    out_minimap->is_minimap_fresh = true;                    if (out_genshin_screen.config.is_controller_mode)
+                {                    
+                    out_minimap->is_minimap_fresh = true;
+                    out_genshin_screen.hdr_cache.white_point_locked = true;                    
+                    if (out_genshin_screen.config.is_controller_mode)
                     {
                         const auto& s = out_genshin_screen.config.controller_ui_scale;
                         cv::resize(out_minimap->img_minimap, out_minimap->img_minimap, cv::Size(),

@@ -55,6 +55,7 @@ struct GenshinScreen
 {
 	struct HdrToneMapCache {
 		double white_point = 6.0;	// 缓存的白点值（参考白亮度）
+		bool white_point_locked = false; // 小地图首次成功检测后锁定，不再重复计算
 	};
 
 	cv::Rect rect_client;
