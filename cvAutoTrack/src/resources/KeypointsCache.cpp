@@ -152,25 +152,34 @@ namespace {
 					auto& entry = mapper.getMappers().at(tile.map_id);
 
 					// 检测关键点
+
+                    //填充64px边距，确保边缘生成数据
+                    int padding_size = 64;
+                    cv::copyMakeBorder(tileImg, tileImg, 64, 64, 64, 64);
 					std::vector<cv::KeyPoint> kps;
 					cv::Mat desc;
 					matcher->detect(tileImg, kps);
 
 					if (!kps.empty())
 					{
+                        // 清理界外点
+                        kps.erase(std::remove_if(kps.begin(), kps.end(), [&](const cv::KeyPoint& kp) {
+                            return !cv::Rect2i(padding_size, padding_size, img_w, img_h).contains(kp.pt);}), 
+                        kps.end());
+
 						// 计算描述子
 						matcher->compute(tileImg, kps, desc);
 
-						// 将像素坐标转换为输出坐标空间
+						// 将像素坐标转换为输出坐标空间，并清理边界外点
 						// 像素 → 原始坐标(tile rect) → MAP变换 → 输出坐标
 						for (auto& kp : kps)
 						{
+                            kp.pt -= cv::Point2f{ padding_size , padding_size };      //去除填充的影响
 							double raw_x = tile.rect_x + (kp.pt.x / img_w) * tile.rect_w;
 							double raw_y = tile.rect_y + (kp.pt.y / img_h) * tile.rect_h;
 							//计算附加偏移量
                             raw_x += entry.offset_x;
                             raw_y += entry.offset_y;
-
 							kp.pt = cv::Point2f(static_cast<float>(raw_x), static_cast<float>(raw_y));
 						}
 					}
