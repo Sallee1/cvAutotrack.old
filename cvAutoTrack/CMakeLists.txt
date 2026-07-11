@@ -1,37 +1,5 @@
 project(cvAutoTrack LANGUAGES CXX C RC)
 
-# ============================================================================
-# 第三方依赖路径（可通过 -D 或 CMakePresets 覆盖）
-# ============================================================================
-set(OPENCV_STATIC_DIR  "C:/Packages/opencv-static"  CACHE PATH "OpenCV 静态库根目录")
-set(CURL_STATIC_DIR    "C:/Packages/curl-static"    CACHE PATH "libcurl 静态库根目录")
-set(OPENSSL_STATIC_DIR "C:/Packages/openssl-static" CACHE PATH "OpenSSL 静态库根目录")
-set(NLOHMANN_JSON_DIR  "C:/Packages/nlohmann_json"  CACHE PATH "nlohmann-json 头文件目录")
-
-# ============================================================================
-# 编译定义
-# ============================================================================
-add_definitions(-D_WINDOWS -D_USRDLL)
-add_definitions(-DUNICODE -D_UNICODE)
-
-# ============================================================================
-# MSVC 运行时库：静态链接（/MT Release, /MTd Debug）
-# 原 vcxproj 使用 MultiThreaded，且 OpenCV 静态库也为 /MT
-# ============================================================================
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-# ============================================================================
-# RelNoOpz 自定义配置：关闭所有优化，但使用 Release 运行时库（/MT 而非 /MTd）
-# 这样可以在 Debug 时无需切换 Debug 库（Windows 的 debug/release 库不通用）
-# ============================================================================
-set(CMAKE_CXX_FLAGS_RELNOOPZ "/Od /D NDEBUG /Zi /Ob0")
-set(CMAKE_C_FLAGS_RELNOOPZ   "/Od /D NDEBUG /Zi /Ob0")
-set(CMAKE_EXE_LINKER_FLAGS_RELNOOPZ    "/DEBUG")
-set(CMAKE_SHARED_LINKER_FLAGS_RELNOOPZ "/DEBUG")
-
-# ============================================================================
-# 头文件目录
-# ============================================================================
 set(CVAT_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -41,9 +9,6 @@ set(CVAT_INCLUDE_DIRS
     "${NLOHMANN_JSON_DIR}/include"
 )
 
-# ============================================================================
-# 源文件
-# ============================================================================
 set(CVAT_SOURCES
     # 入口
     src/AutoTrack.cpp
@@ -92,9 +57,6 @@ set(CVAT_SOURCES
 
 )
 
-# ============================================================================
-# DLL 目标
-# ============================================================================
 add_library(cvAutoTrack SHARED ${CVAT_SOURCES})
 
 target_include_directories(cvAutoTrack PRIVATE ${CVAT_INCLUDE_DIRS})
@@ -109,27 +71,14 @@ if(WITH_CVAT_DEBUG_LOG)
     target_compile_definitions(cvAutoTrack PRIVATE _CVAT_DEBUG_LOG)
 endif()
 
-set(WITH_CVAT_PURE_INS OFF CACHE BOOL "run Only INS")
-
-if(WITH_CVAT_PURE_INS)
-    target_compile_definitions(cvAutoTrack PRIVATE _CVAT_PURE_INS)
+# RELEASE_NO_OPTIMIZE 模式下注入 _CVAT_DEBUG（关闭优化，增加调试宏）
+if(RELEASE_NO_OPTIMIZE)
+    target_compile_definitions(cvAutoTrack PRIVATE _CVAT_DEBUG)
 endif()
 
-# RelNoOpz 模式下注入 _CVAT_DEBUG（关闭优化，但使用 Release 运行时库）
-target_compile_definitions(cvAutoTrack PRIVATE
-    $<$<CONFIG:RelNoOpz>:_CVAT_DEBUG>
-)
-
-# ============================================================================
-# 预编译头（pch.h）
-# ============================================================================
+# 预编译头
 target_precompile_headers(cvAutoTrack PRIVATE src/pch.h)
 
-# ============================================================================
-# 链接库（静态链接）
-# ============================================================================
-# 链接库（静态链接）
-# ============================================================================
 set(CVAT_LIB_DIRS
     "${OPENCV_STATIC_DIR}/staticlib"
     "${CURL_STATIC_DIR}/lib"
@@ -158,20 +107,6 @@ target_link_libraries(cvAutoTrack PRIVATE
 
     # Windows
     dxgi  windowsapp
-)
-
-# ============================================================================
-# 编译器选项
-# ============================================================================
-target_compile_options(cvAutoTrack PRIVATE
-    /utf-8
-    /Zc:char8_t-
-    /fp:fast
-)
-
-target_link_options(cvAutoTrack PRIVATE
-    /IGNORE:4099
-    /DEBUG
 )
 
 # 屏蔽系统 vcpkg 全局集成（避免灌入 C:\vcpkg\installed\*.lib 等无关库）

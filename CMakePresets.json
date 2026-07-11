@@ -3,47 +3,48 @@
     "configurePresets": [
         {
             "name": "default",
-            "displayName": "x64-Release",
-            "description": "Release x64 构建（对应原 vcxproj Release|x64）",
+            "hidden": true,
             "generator": "Visual Studio 18 2026",
             "architecture": "x64",
-            "binaryDir": "${sourceDir}/build/x64-Release",
             "cacheVariables": {
-                "CMAKE_CONFIGURATION_TYPES": "RelWithDebInfo;RelNoOpz",
-                "CMAKE_INSTALL_PREFIX":"${sourceDir}/out/install",
-                "CVAT_COPY_TO_GAMEDIR":true
+                "CMAKE_CONFIGURATION_TYPES": "Release",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install",
+                "CVAT_COPY_TO_GAMEDIR": true
             }
         },
         {
-            "name": "debug",
-            "displayName": "x64-Debug",
-            "description": "Debug x64 构建（不优化，带调试信息）",
-            "generator": "Visual Studio 18 2026",
-            "architecture": "x64",
-            "binaryDir": "${sourceDir}/build/x64-Debug",
+            "name": "release",
+            "displayName": "x64 Release",
+            "description": "Release x64 构建（全优化）",
+            "inherits": "default",
+            "binaryDir": "${sourceDir}/out/build/x64-Release",
             "cacheVariables": {
-                "CMAKE_CONFIGURATION_TYPES": "Debug"
+                "RELEASE_NO_OPTIMIZE": "OFF"
+            }
+        },
+        {
+            "name": "relnoopz",
+            "displayName": "x64 RelNoOpz",
+            "description": "Release x64 构建（关闭优化，方便调试 OpenCV）",
+            "inherits": "default",
+            "binaryDir": "${sourceDir}/out/build/x64-RelNoOpz",
+            "cacheVariables": {
+                "RELEASE_NO_OPTIMIZE": "ON"
             }
         }
     ],
     "buildPresets": [
         {
-            "name": "relwithdebinfo",
-            "displayName": "构建 RelWithDebInfo",
-            "configurePreset": "default",
-            "configuration": "RelWithDebInfo"
+            "name": "release",
+            "displayName": "构建 Release",
+            "configurePreset": "release",
+            "configuration": "Release"
         },
         {
             "name": "relnoopz",
             "displayName": "构建 RelNoOpz",
-            "configurePreset": "default",
-            "configuration": "RelNoOpz"
-        },
-        {
-            "name": "debug",
-            "displayName": "构建 Debug",
-            "configurePreset": "debug",
-            "configuration": "Debug"
+            "configurePreset": "relnoopz",
+            "configuration": "Release"
         }
     ]
 }
