@@ -9,6 +9,11 @@
 #include <nlohmann/json.hpp>
 #include <opencv2/core.hpp>
 
+#ifdef _CVAT_DEBUG
+#include <resources/Resources.h>
+#endif
+
+
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
 
@@ -304,6 +309,12 @@ namespace TianLi::Resources
 									info.rect_y = imgJson["rect"][1].get<double>();
 									info.rect_w = imgJson["rect"][2].get<double>();
 									info.rect_h = imgJson["rect"][3].get<double>();
+
+#ifdef _CVAT_DEBUG
+                                    //如果是调试模式，加上偏移量用于叠图
+                                    info.rect_x += ::Resources::getInstance().DebugParams.offset.x;
+                                    info.rect_y += ::Resources::getInstance().DebugParams.offset.y;
+#endif
 								}
 
 								tileInfos.push_back(info);
