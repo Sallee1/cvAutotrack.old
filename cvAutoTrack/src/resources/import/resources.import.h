@@ -1,5 +1,5 @@
 #pragma once
-namespace TianLi::Resources::Import
+namespace TianLi::Import
 {
 	static int MAP_BLOCK_SIZE = 1024;
 	

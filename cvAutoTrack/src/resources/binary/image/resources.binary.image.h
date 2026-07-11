@@ -12,7 +12,7 @@
 #include "uid/resources.binary.image.uid7.h"
 #include "uid/resources.binary.image.uid8.h"
 #include "uid/resources.binary.image.uid9.h"
-namespace TianLi::Resources::Binary::Image
+namespace TianLi::Binary::Image
 {
     const unsigned char* image_list[] =
     {

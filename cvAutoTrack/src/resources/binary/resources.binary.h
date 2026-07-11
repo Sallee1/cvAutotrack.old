@@ -1,6 +1,6 @@
 #pragma once
 
-namespace TianLi::Resources::Binary
+namespace TianLi::Binary
 {
 	struct binary_resources
 	{

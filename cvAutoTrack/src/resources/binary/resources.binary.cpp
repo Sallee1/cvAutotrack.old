@@ -2,7 +2,7 @@
 #include "resources.binary.h"
 #include "image/resources.binary.image.h"
 
-TianLi::Resources::Binary::binary_resources TianLi::Resources::Binary::get_image_binary(const char* name)
+TianLi::Binary::binary_resources TianLi::Binary::get_image_binary(const char* name)
 {
 	for (int i = 0; i < sizeof(Image::image_list); i++)
 	{

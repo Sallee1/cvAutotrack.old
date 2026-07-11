@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "resources.import.h"
 
-cv::Mat TianLi::Resources::Import::import_mat_from_data(int width, int height, const unsigned char* data, int data_size)
+cv::Mat TianLi::Import::import_mat_from_data(int width, int height, const unsigned char* data, int data_size)
 {
 	if (data_size != width * height * 4)
 	{
