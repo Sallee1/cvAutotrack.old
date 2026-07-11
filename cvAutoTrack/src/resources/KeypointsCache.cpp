@@ -16,7 +16,7 @@
 bool MapKeypointCache::serialize(std::string outFileName)
 {
 	std::ofstream ofs(outFileName, std::fstream::out | std::fstream::binary);
-	Tianli::Resources::Utils::serializeStream ss(ofs);
+	TianLi::Utils::serializeStream ss(ofs);
 	ss << this->bulid_time;
 	ss << this->bulid_version;
 	ss << this->keypoints;
@@ -48,7 +48,7 @@ bool MapKeypointCache::deSerialize(std::string infileName, bool version_only)
             return false;
         }
 
-	    Tianli::Resources::Utils::deSerializeStream dss(ifs);
+	    TianLi::Utils::deSerializeStream dss(ifs);
         dss >> this->bulid_time;
         dss >> this->bulid_version;
 
@@ -86,7 +86,7 @@ bool MapKeypointCache::deSerialize(std::string infileName, bool version_only)
 namespace {
 	bool gen_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors, std::vector<cv::Rect2i>& block_rects, std::vector<int>& block_offsets)
 	{
-		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		auto& mapper = TianLi::MapMapperManager::getInstance();
 		const auto& tiles = mapper.getTileInfos();
 
 		if (tiles.empty()) return false;
@@ -155,7 +155,7 @@ namespace {
 
                     //填充64px边距，确保边缘生成数据
                     int padding_size = 64;
-                    cv::copyMakeBorder(tileImg, tileImg, 64, 64, 64, 64);
+                    cv::copyMakeBorder(tileImg, tileImg, padding_size, padding_size, padding_size, padding_size,cv::BORDER_CONSTANT);
 					std::vector<cv::KeyPoint> kps;
 					cv::Mat desc;
 					matcher->detect(tileImg, kps);
@@ -174,7 +174,7 @@ namespace {
 						// 像素 → 原始坐标(tile rect) → MAP变换 → 输出坐标
 						for (auto& kp : kps)
 						{
-                            kp.pt -= cv::Point2f{ padding_size , padding_size };      //去除填充的影响
+                            kp.pt -= cv::Point2f{ static_cast<float>(padding_size) , static_cast<float>(padding_size) };      //去除填充的影响
 							double raw_x = tile.rect_x + (kp.pt.x / img_w) * tile.rect_w;
 							double raw_y = tile.rect_y + (kp.pt.y / img_h) * tile.rect_h;
 							//计算附加偏移量
@@ -414,7 +414,7 @@ void KeypointGridLSH::query_and_gather(const cv::Rect2i& bbox,
  */
 void build_lsh_grid(MapKeypointCache& cache)
 {
-	auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+	auto& mapper = TianLi::MapMapperManager::getInstance();
 	auto cell_size = Resources::getInstance().lsh_cell_size;
 	cache.lsh_cell = { cell_size, cell_size };
 
@@ -458,7 +458,7 @@ bool save_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, MapKeypoi
 		return false;
 	}
 	{
-		auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+		auto& mapper = TianLi::MapMapperManager::getInstance();
 		cache.bulid_version = TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime();
 		cache.bulid_version_end = cache.bulid_version;
 		cache.bulid_time = __DATE__ " " __TIME__;		//不读，仅供dll兼容
@@ -498,7 +498,7 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
     // bulid_version 包含 "#" + layer_version，反序列化后直接比较即可
     if (cache.deSerialize(Resources::getInstance().CachePath.cvAutoTrack_Cache, true))
     {
-        auto& mapper = TianLi::Resources::MapMapperManager::getInstance();
+        auto& mapper = TianLi::MapMapperManager::getInstance();
         if (cache.bulid_version != TianLi::Version::build_version + "#L" + mapper.getLayerVersion() + "#G" + mapper.getGameVersion() + "@" + mapper.getUpdateTime())
         {
             // 版本变更，缓存已过期；但保留文件作为回退，不删除
