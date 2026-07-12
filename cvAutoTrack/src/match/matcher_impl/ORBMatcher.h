@@ -1,21 +1,20 @@
 #pragma once
 #include <match/IMatcher.h>
-#include <opencv2/xfeatures2d.hpp>
 
-class FAST_SURFMatcher :public IMatcher {
+class ORBMatcher : public IMatcher {
 private:
-	cv::Ptr<cv::xfeatures2d::SURF> detector;
-	cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(cv::NORM_HAMMING);
-	bool is_bf_matcher = true;
+	cv::Ptr<cv::ORB> orb;
 
 public:
-	FAST_SURFMatcher(double hessianThreshold = 100,
-		int nOctaves = 4, int nOctaveLayers = 3,
-		bool extended = false, bool upright = false)
+	ORBMatcher(int nfeatures = 100000, float scaleFactor = 1.2f, int nlevels = 1,
+		int edgeThreshold = 15, int firstLevel = 0, int WTA_K = 2,
+		cv::ORB::ScoreType scoreType = cv::ORB::FAST_SCORE,
+		int patchSize = 31, int fastThreshold = 20)
 	{
-		detector = cv::xfeatures2d::SURF::create(hessianThreshold, nOctaves, nOctaveLayers, extended, upright);
+		orb = cv::ORB::create(nfeatures, scaleFactor, nlevels, edgeThreshold,
+			firstLevel, WTA_K, scoreType, patchSize, fastThreshold);
 	}
-	virtual ~FAST_SURFMatcher() = default;
+	virtual ~ORBMatcher() = default;
 
 	// 通过 IMatcher 继承（_impl 系列由基类金字塔调用）
 	virtual bool detect_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints) override;

@@ -1,6 +1,9 @@
 #pragma once
 #include "match/type/MatchType.h"
 #include <atomic>
+#include <memory>
+
+class IMatcher;
 
 class AutoTrack
 {
@@ -78,6 +81,7 @@ private:
 private:
     void init_matcher();
     bool third_is_load = false;
+    std::shared_ptr<IMatcher> m_tile_matcher;
     bool try_get_genshin_windows();
     bool getGengshinImpactWnd();
     bool getGengshinImpactScreen();

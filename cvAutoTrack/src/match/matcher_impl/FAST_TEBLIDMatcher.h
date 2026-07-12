@@ -2,20 +2,18 @@
 #include <match/IMatcher.h>
 #include <opencv2/xfeatures2d.hpp>
 
-class FAST_SURFMatcher :public IMatcher {
+class FAST_TEBLIDMatcher : public IMatcher {
 private:
-	cv::Ptr<cv::xfeatures2d::SURF> detector;
-	cv::Ptr<cv::DescriptorMatcher> matcher = cv::BFMatcher::create(cv::NORM_HAMMING);
-	bool is_bf_matcher = true;
+	cv::Ptr<cv::Feature2D> teblid;
 
 public:
-	FAST_SURFMatcher(double hessianThreshold = 100,
-		int nOctaves = 4, int nOctaveLayers = 3,
-		bool extended = false, bool upright = false)
+	/// @param scale_factor 采样窗口缩放: 1.0f=ORB, 5.0f=FAST/BRISK, 6.25f=KAZE/SURF/AKAZE
+	/// @param n_bits 描述子位数: TEBLID::SIZE_256_BITS(102, 32字节) 或 TEBLID::SIZE_512_BITS(103, 64字节)
+	FAST_TEBLIDMatcher(float scale_factor = 5.0f, int n_bits = cv::xfeatures2d::TEBLID::SIZE_256_BITS)
 	{
-		detector = cv::xfeatures2d::SURF::create(hessianThreshold, nOctaves, nOctaveLayers, extended, upright);
+		teblid = cv::xfeatures2d::TEBLID::create(scale_factor, n_bits);
 	}
-	virtual ~FAST_SURFMatcher() = default;
+	virtual ~FAST_TEBLIDMatcher() = default;
 
 	// 通过 IMatcher 继承（_impl 系列由基类金字塔调用）
 	virtual bool detect_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints) override;

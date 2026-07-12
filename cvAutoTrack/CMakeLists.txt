@@ -36,10 +36,14 @@ set(CVAT_SOURCES
 
     # 匹配
     src/match/diff/DiffMatch.cpp
+    src/match/FlannIndex.cpp
     src/match/IMatcher.cpp
     src/match/matcher_impl/AkazeMatcher.cpp
-    src/match/matcher_impl/FAST_SURFMatcher.cpp
+    src/match/matcher_impl/ORBMatcher.cpp
+    src/match/matcher_impl/FAST_TEBLIDMatcher.cpp
     src/match/matcher_impl/SURFMatcher.cpp
+    src/match/matcher_impl/FAST_AkazeMatcher.cpp
+    src/match/matcher_impl/FAST_SURFMatcher.cpp
     src/match/tracking.cpp
 
     # 资源

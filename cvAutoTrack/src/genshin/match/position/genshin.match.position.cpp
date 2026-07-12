@@ -14,16 +14,17 @@ namespace {
 
 namespace TianLi::Genshin::Match
 {
-	void init_matcher(const std::shared_ptr<IMatcher>& matcher)
+	void init_matcher(const std::shared_ptr<IMatcher>& tile_matcher, const std::shared_ptr<IMatcher>& tracking_matcher)
 	{
 		if (g_is_init.load()) return;
 
 		// install 包含网络下载 + metadata 加载，在后台线程中执行
 		Resources::getInstance().install();
 
-		// 读取关键点缓存
-		MapKeypointCache map_keypoints_cache = get_map_keypoint(matcher);
-		if (!g_surf_match.Init(matcher, std::move(map_keypoints_cache)))
+		// 瓦片特征点生成用无金字塔 matcher
+		MapKeypointCache map_keypoints_cache = get_map_keypoint(tile_matcher);
+		// 追踪匹配用带金字塔的 matcher
+		if (!g_surf_match.Init(tracking_matcher, std::move(map_keypoints_cache)))
 		{
 			// 所有缓存生成和回退均失败，放弃此次初始化
 			MessageBox(NULL,

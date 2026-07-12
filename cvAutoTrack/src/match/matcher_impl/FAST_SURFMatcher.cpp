@@ -1,22 +1,22 @@
 #include "pch.h"
 #include "FAST_SURFMatcher.h"
 
-bool FAST_SURFMatcher::detect(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints)
+bool FAST_SURFMatcher::detect_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints)
 {
 	cv::FAST(img,keypoints,16,true);
 	return true;
 }
 
-bool FAST_SURFMatcher::compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+bool FAST_SURFMatcher::compute_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
 	detector->compute(img,keypoints,descriptors);
 	return true;
 }
 
-bool FAST_SURFMatcher::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+bool FAST_SURFMatcher::detect_and_compute_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
-	detect(img, keypoints);
-	compute(img, keypoints, descriptors);
+	detect_impl(img, keypoints);
+	compute_impl(img, keypoints, descriptors);
 	return true;
 }
 
