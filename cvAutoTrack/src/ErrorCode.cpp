@@ -2,18 +2,12 @@
 #include "ErrorCode.h"
 #include "utils/Utils.h"
 
-inline std::string wstring2string(std::wstring wstr)
+inline std::string wstring2string(const std::wstring& wstr)
 {
-    std::string result;
-    //获取缓冲区大小，并申请空间，缓冲区大小事按字节计算的
-    int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
-    char* buffer = new char[len + 1];
-    //宽字节编码转换成多字节编码
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), buffer, len, NULL, NULL);
-    buffer[len] = '\0';
-    //删除缓冲区并返回值
-    result.append(buffer);
-    delete[] buffer;
+    if (wstr.empty()) return {};
+    int len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string result(len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), result.data(), len, NULL, NULL);
     return result;
 }
 
@@ -318,11 +312,11 @@ ostream& operator<<(ostream& os, const ErrorCode& err)
         }
         if (i == 0)
         {
-            os << "\u2514\u2500\u2500\u2500\u2192";
+            os << u8"└──→";
         }
         else
         {
-            os << "\u2514\u2500\u252C\u2500\u2192";
+            os << u8"└─┬─→";
         }
         os << to_string(err.error_code_msg_list[i].first) + ": " + err.error_code_msg_list[i].second + '\n';
     }

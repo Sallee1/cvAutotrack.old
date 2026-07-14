@@ -16,31 +16,31 @@ int TEST()
 
     if (ctx->GetCompileVersion(version_buff, 256))
     {
-        std::cout << "版本号       : " << " " << version_buff << " " << "\n";
+        std::cout << u8"版本号       : " << " " << version_buff << " " << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " " << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " " << ctx->GetLastErr() << " " << "\n";
     }
 
     char version_time_buff[256] = { 0 };
 
     if (ctx->GetCompileTime(version_time_buff, 256))
     {
-        std::cout << "编译时间     : " << " " << version_time_buff << " " << "\n";
+        std::cout << u8"编译时间     : " << " " << version_time_buff << " " << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " " << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " " << ctx->GetLastErr() << " " << "\n";
     }
 
-    std::cout << "测试完成\n";
+    std::cout << u8"测试完成\n";
     return 0;
 }
 
 int TEST_init_and_uninit()
 {
-    std::cout << "测试 init 与 uninit\n";
+    std::cout << u8"测试 init 与 uninit\n";
 
     ctx->InitResource();
 
@@ -66,7 +66,7 @@ int TEST_init_and_uninit()
 
     Sleep(1000);
 
-    std::cout << "测试完成\n";
+    std::cout << u8"测试完成\n";
     return 0;
 }
 
@@ -75,11 +75,11 @@ void Run_SetDx()
     //设置Dx截图
     if (ctx->SetUseGraphicsCaptureMode())
     {
-        std::cout << "设置Dx截图成功" << "\n";
+        std::cout << u8"设置Dx截图成功" << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 void Run_SetBit()
@@ -87,11 +87,11 @@ void Run_SetBit()
     //设置Bitblt截图
     if (ctx->SetUseBitbltCaptureMode())
     {
-        std::cout << "设置Bitblt截图成功" << "\n";
+        std::cout << u8"设置Bitblt截图成功" << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 void Run_GetTrans()
@@ -102,11 +102,11 @@ void Run_GetTrans()
     int map_id = 0;
     if (ctx->GetTransformOfMap(x, y, a, map_id))
     {
-        std::cout << "坐标和角度   : " << " " << map_id << x << " " << y << " " << a << "\n";
+        std::cout << u8"坐标和角度   : " << " " << map_id << x << " " << y << " " << a << "\n";
     }
     else
     {
-        std::cout << "错误码 : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 void Run_GetDir()
@@ -114,11 +114,11 @@ void Run_GetDir()
     double a2 = 0;
     if (ctx->GetDirection(a2))
     {
-        std::cout << "角度         : " << " " << a2 << "\n";
+        std::cout << u8"角度         : " << " " << a2 << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 void Run_GetRot()
@@ -126,11 +126,11 @@ void Run_GetRot()
     double aa2 = 0;
     if (ctx->GetRotation(aa2))
     {
-        std::cout << "视角朝向     : " << " " << aa2 << "\n";
+        std::cout << u8"视角朝向     : " << " " << aa2 << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 
@@ -142,12 +142,12 @@ void Run_GetAll()
     if (ctx->GetAllInfo(x, y, mapId, a, r, uid))
     {
         switch (mapId) {
-        case 0:mapType = "提瓦特大陆"; break;
-        case 1:mapType = "渊下宫"; break;
-        case 2:mapType = "地下矿区"; break;
-        case 3:mapType = "旧日之海"; break;
+        case 0:mapType = u8"提瓦特大陆"; break;
+        case 1:mapType = u8"渊下宫"; break;
+        case 2:mapType = u8"地下矿区"; break;
+        case 3:mapType = u8"旧日之海"; break;
         }
-        std::cout << std::format(R"(
+        std::cout << std::format(u8R"(
 全部信息：
 地区:{}
 坐标:x = {:6.2f}; y = {:6.2f}
@@ -158,7 +158,7 @@ UID:{:d}
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 
@@ -167,11 +167,11 @@ void Run_GetUID()
     int uid = 0;
     if (ctx->GetUID(uid))
     {
-        std::cout << "当前UID      : " << " " << uid << " " << "\n";
+        std::cout << u8"当前UID      : " << " " << uid << " " << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 void Run_GetStars()
@@ -195,11 +195,11 @@ void Run_Capture()
     // 设置Dx截图
     if (ctx->DebugCapture())
     {
-        std::cout << "截图成功" << "\n";
+        std::cout << u8"截图成功" << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 
@@ -210,11 +210,11 @@ void Run_GetPosit()
     double y2 = 0;
     if (ctx->GetPositionOfMap(x2, y2, mapid))
     {
-        std::cout << "坐标         : " << " " << x2 << " " << y2 << " " << mapid << "\n";
+        std::cout << u8"坐标         : " << " " << x2 << " " << y2 << " " << mapid << "\n";
     }
     else
     {
-        std::cout << "错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
     }
 }
 
@@ -233,14 +233,13 @@ int RUN(bool is_off_capture = false, bool is_only_capture = false, int frame_rat
 int Run()
 {
     std::ios::sync_with_stdio(false);
-    system("chcp 65001");
 
     // 调用循环
     while (1)
     {
         // 显示菜单
         std::cout <<
-            R"(
+            u8R"(
 1. 设置Dx截图
 2. 设置Bitblt截图
 3. 获取坐标和角度
@@ -346,6 +345,9 @@ void HELP()
 int main(int argc, char* argv[])
 {
     std::vector<std::string> args;
+    // 设置控制台 UTF-8 输出
+    SetConsoleOutputCP(CP_UTF8);
+
     // 初始化上下文
     ctx = create_cvAutoTrack_context_v1();
     // 设置dll加载路径（目前硬编码）
