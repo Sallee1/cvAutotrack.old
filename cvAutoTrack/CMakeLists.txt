@@ -10,31 +10,24 @@ set(CVAT_INCLUDE_DIRS
 )
 
 set(CVAT_SOURCES
-    # 入口
     src/AutoTrack.cpp
     src/cvAutoTrack.cpp
     src/dllmain.cpp
-
-    # 错误码
     src/ErrorCode.cpp
 
-    # 过滤
     src/filter/Filter.cpp
     src/filter/kalman/Kalman.cpp
     src/filter/smooth/Smooth.cpp
     src/filter/untouched/Untouched.cpp
 
-    # 帧捕获
     src/frame/capture/capture.window_graphics.cpp
     src/frame/frame.include.cpp
 
-    # 原神模块
     src/genshin/genshin.handle.cpp
     src/genshin/genshin.minimap.cpp
     src/genshin/genshin.screen.cpp
     src/genshin/match/position/genshin.match.position.cpp
 
-    # 匹配
     src/match/diff/DiffMatch.cpp
     src/match/FlannIndex.cpp
     src/match/IMatcher.cpp
@@ -46,7 +39,7 @@ set(CVAT_SOURCES
     src/match/matcher_impl/FAST_SURFMatcher.cpp
     src/match/tracking.cpp
 
-    # 资源
+    src/resources/binary/resources.binary.h
     src/resources/binary/resources.binary.cpp
     src/resources/gimap_downloader.cpp
     src/resources/import/resources.import.cpp
@@ -54,14 +47,78 @@ set(CVAT_SOURCES
     src/resources/Resources.cpp
     src/resources/resources.load.cpp
 
-    # 工具
     src/utils/log/utils.log.cpp
     src/utils/utils.progress.cpp
     src/utils/Utils.cpp
 
 )
 
-add_library(cvAutoTrack SHARED ${CVAT_SOURCES})
+# 头文件列表（用于 IDE 大纲/项目视图展示）
+set(CVAT_HEADERS
+    include/cvAutoTrack.h
+    src/AutoTrack.h
+    src/pch.h
+    src/resource.h
+    src/Ver.h
+    src/ErrorCode.h
+
+    src/algorithms/algorithms.direction.h
+    src/algorithms/algorithms.include.h
+    src/algorithms/algorithms.rotation.h
+
+    src/downloader/cfiledownloader.h
+    src/downloader/cfiledownloaderasync.h
+
+    src/filter/Filter.h
+    src/filter/kalman/Kalman.h
+    src/filter/smooth/Smooth.h
+    src/filter/untouched/Untouched.h
+
+    src/frame/capture/capture.bitblt.h
+    src/frame/capture/capture.dxgi.h
+    src/frame/capture/capture.include.h
+    src/frame/capture/capture.window_graphics.h
+    src/frame/capture/utils/utils.window_graphics.h
+    src/frame/capture/utils/utils.window_scale.h
+    src/frame/frame.include.h
+
+    src/genshin/genshin.h
+    src/genshin/genshin.handle.h
+    src/genshin/genshin.include.h
+    src/genshin/genshin.minimap.h
+    src/genshin/genshin.screen.h
+    src/genshin/match/position/genshin.match.position.h
+
+    src/match/diff/DiffMatch.h
+    src/match/FlannIndex.h
+    src/match/IMatcher.h
+    src/match/InertialNavigator.h
+    src/match/match.include.h
+    src/match/match.uid.h
+    src/match/tracking.h
+
+    src/match/matcher_impl/AkazeMatcher.h
+    src/match/matcher_impl/FAST_AKAZEMatcher.h
+    src/match/matcher_impl/FAST_SURFMatcher.h
+    src/match/matcher_impl/FAST_TEBLIDMatcher.h
+    src/match/matcher_impl/ORBMatcher.h
+    src/match/matcher_impl/SURFMatcher.h
+    src/match/type/MatchType.h
+
+    src/resources/KeypointsCache.h
+    src/resources/Resources.h
+    src/resources/gimap_downloader.h
+    src/resources/map_mapper_config.h
+    src/resources/resources.load.h
+    src/resources/serialize.h
+    src/resources/import/resources.import.h
+
+    src/utils/Utils.h
+    src/utils/utils.progress.h
+    src/utils/log/utils.log.h
+)
+
+add_library(cvAutoTrack SHARED ${CVAT_HEADERS} ${CVAT_SOURCES})
 
 target_include_directories(cvAutoTrack PRIVATE ${CVAT_INCLUDE_DIRS})
 
