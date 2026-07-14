@@ -49,7 +49,7 @@ namespace TianLi
 	 */
 	struct TileImageInfo
 	{
-		std::string file_path;      // 相对于资源目录的路径 (assets/xxx.avif)
+		fs::path file_path;         // 相对于资源目录的路径 (assets/xxx.avif)
 		std::string md5;            // 文件 MD5
 		std::string map_prefix;     // 所属 MAP 前缀 (如 "MAP:Teyvat")
 		int map_id = 0;             // map_id
@@ -91,7 +91,7 @@ namespace TianLi
 			try { ifs >> root; }
 			catch (...) { return false; }
 
-			resourceDir = fs::path(jsonPath).parent_path().u8string();
+			resourceDir = fs::absolute(fs::path(jsonPath).parent_path());
 			return parseFromJson(root);
 		}
 
@@ -228,7 +228,7 @@ namespace TianLi
 		// ============ 数据访问 ============
 
 		const std::vector<TileImageInfo>& getTileInfos() const { return tileInfos; }
-		const std::string& getResourceDir() const { return resourceDir; }
+		const fs::path& getResourceDir() const { return resourceDir; }
 		const auto& getMappers() const { return mappers; }
         const auto& getBounds() const { return bounds; }
 
@@ -302,7 +302,7 @@ namespace TianLi
 							for (auto& imgJson : layerJson["images"])
 							{
 								TileImageInfo info;
-								info.file_path = imgJson.value("path", "");
+								info.file_path = fs::u8path(imgJson.value("path", ""));
 								info.md5 = imgJson.value("md5", "");
 								info.zoom = imgJson.value("zoom", 1);
 								info.map_prefix = mapPrefix;
@@ -392,7 +392,7 @@ namespace TianLi
 		std::map<int, MapMapperEntry> mappers;      // 重映射信息
 		std::map<int, MapBoundInfo> bounds;         // 通过tile计算的边界信息
 		std::vector<TileImageInfo> tileInfos;       // tile列表
-		std::string resourceDir;
+		fs::path resourceDir;
 		std::string layerVersion;
 		std::string gameVersion;
 		std::string updateTime;

@@ -20,7 +20,7 @@ using Json = nlohmann::json;
 //=============================================================================
 // 文件 MD5 计算（与 cfiledownloader.h 中逻辑一致）
 //=============================================================================
-static std::string calcFileMD5(const std::string& filePath)
+static std::string calcFileMD5(const fs::path& filePath)
 {
     std::ifstream file(filePath, std::ios::binary);
     if (!file) return "";
@@ -59,9 +59,6 @@ static std::string calcFileMD5(const std::string& filePath)
     return std::string(md5_str, 32);
 #endif
 }
-
-namespace fs = std::filesystem;
-using Json = nlohmann::json;
 
 //=============================================================================
 // 网络异常 —— 因网络问题导致的下载失败以异常形式抛出
@@ -185,7 +182,7 @@ bool GIMapDownloader::setHost(const std::string& host)
     // 避免 HEAD 请求被 CDN/对象存储拦截返回 403
     {
         fs::path tmp_md5 = fs::temp_directory_path() / "gimap_host_check.md5";
-        tianli::FileDownloader dl(tmp_md5.string(), base_host + "/dependents.json.md5");
+        tianli::FileDownloader dl(tmp_md5, base_host + "/dependents.json.md5");
         if (!dl.download()) {
             std::string err_msg = "无法连接到服务器: [" +
                                   std::to_string(dl.getLastErrorCode()) + "] " +
@@ -211,12 +208,12 @@ bool GIMapDownloader::download()
         std::string local_md5;
         fs::path local_json = pImpl->dependents_json_path / "dependents.json";
         if (fs::exists(local_json))
-            local_md5 = calcFileMD5(local_json.string());
+            local_md5 = calcFileMD5(local_json);
 
         fs::path tmp_md5 = fs::temp_directory_path() / "gimap_remote_deps.md5";
         try
         {
-            tianli::FileDownloader dl(tmp_md5.string(), pImpl->host + "/dependents.json.md5");
+            tianli::FileDownloader dl(tmp_md5, pImpl->host + "/dependents.json.md5");
             if (dl.download())
             {
                 std::ifstream ifs(tmp_md5);
@@ -275,10 +272,10 @@ bool GIMapDownloader::download()
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
 
-            tianli::FileDownloader dl(tmp_json.string(), pImpl->host + "/dependents.json");
+            tianli::FileDownloader dl(tmp_json, pImpl->host + "/dependents.json");
             if (dl.download())
             {
-                std::string actual_md5 = calcFileMD5(tmp_json.string());
+                std::string actual_md5 = calcFileMD5(tmp_json);
                 if (iequals(actual_md5, pImpl->remote_deps_md5))
                 {
                     dl_ok = true;
@@ -424,7 +421,7 @@ bool GIMapDownloader::download()
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
 
-            tianli::FileDownloader dl(tmp_meta.string(), meta_url, meta_md5);
+            tianli::FileDownloader dl(tmp_meta, meta_url, meta_md5);
             if (dl.download())
             {
                 // 解析 update_time
@@ -552,7 +549,7 @@ bool GIMapDownloader::download()
             if (!md5.empty())
             {
                 // 用 FileDownloader 的 MD5 校验能力
-                tianli::FileDownloader checker(target.string(), "", md5);
+                tianli::FileDownloader checker(target, "", md5);
                 if (checker.download())   // 文件存在且 MD5 匹配 → 跳过
                     need = false;
             }
@@ -586,7 +583,7 @@ bool GIMapDownloader::download()
 
     // 7) 提交所有下载任务（下载器内部使用 .tmp → rename 原子覆盖）
     for (const auto& pf : pending)
-        pImpl->downloader.addTask(pf.target_path.string(), pf.url, pf.md5);
+        pImpl->downloader.addTask(pf.target_path, pf.url, pf.md5);
 
     // 8) 轮询进度（监控线程自行检测完成度后退，避免 wait_done 标志竞争）
     size_t total_sz = pending.size();

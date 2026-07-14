@@ -3,14 +3,16 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <openssl/md5.h>
 #include <openssl/evp.h>
 
 #include <curl/curl.h>
+namespace fs = std::filesystem;
 namespace tianli {
 	class FileDownloader {
 	public:
-		FileDownloader(const std::string& filePath,
+		FileDownloader(const fs::path& filePath,
 			const std::string& url,
 			const std::string& md5 = "")
 			: m_file_path(filePath), m_url(url), m_md5(md5) {
@@ -45,7 +47,7 @@ namespace tianli {
 		std::string getLastErrorMsg() const { return m_last_error_msg; }
 		std::string getLastRedirectUrl() const { return m_last_redirect_url; }
 
-		static std::string calcFileMD5(const std::string& filePath)
+		static std::string calcFileMD5(const fs::path& filePath)
 		{
 			std::ifstream file(filePath, std::ios::binary);
 			if (!file) return "";
@@ -89,14 +91,13 @@ namespace tianli {
 		int last_error_code{ 0 };
 		std::string m_last_error_msg;
 		std::string m_last_redirect_url;
-		std::string m_file_path;
+		fs::path m_file_path;
 		std::string m_url;
 		std::string m_md5;
 
 		// 检查文件是否存在
 		bool fileExists() const {
-			std::ifstream file(m_file_path, std::ios::binary);
-			return file.good();
+			return fs::exists(m_file_path);
 		}
 
 		// 计算文件MD5
@@ -154,12 +155,12 @@ namespace tianli {
 				std::ofstream output_file(m_file_path, std::ios::binary | std::ios::out | std::ios::trunc);
 				if (!output_file.is_open()) {
 					last_error_code = -2;
-					m_last_error_msg = "Failed to open file: " + m_file_path;
+					m_last_error_msg = std::string("Failed to open file: ") + m_file_path.u8string();
 					curl_easy_cleanup(curl);
 					return false;
 				}
 
-				std::cout << "Downloading from URL: " << current_url << " to file: " << m_file_path << std::endl;
+				std::cout << "Downloading from URL: " << current_url << " to file: " << m_file_path.u8string() << std::endl;
 				curl_easy_setopt(curl, CURLOPT_URL, current_url.c_str());
 				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output_file);
 
@@ -171,7 +172,7 @@ namespace tianli {
 					last_error_code = res;
 					m_last_error_msg = curl_easy_strerror(res);
 					appendRedirectInfo();
-					remove(m_file_path.c_str());
+					fs::remove(m_file_path);
 					curl_easy_cleanup(curl);
 					return false;
 				}
@@ -194,7 +195,7 @@ namespace tianli {
 					last_error_code = http_code;
 					m_last_error_msg = "HTTP redirect without Location header";
 					appendRedirectInfo();
-					remove(m_file_path.c_str());
+					fs::remove(m_file_path);
 					curl_easy_cleanup(curl);
 					return false;
 				}
@@ -204,7 +205,7 @@ namespace tianli {
 					last_error_code = static_cast<int>(http_code);
 					m_last_error_msg = "HTTP error: " + std::to_string(http_code);
 					appendRedirectInfo();
-					remove(m_file_path.c_str());
+					fs::remove(m_file_path);
 					curl_easy_cleanup(curl);
 					return false;
 				}
@@ -224,7 +225,7 @@ namespace tianli {
 					m_last_error_msg = "Exceeded max redirects (last: " + m_last_redirect_url + ")";
 				else
 					m_last_error_msg = "Exceeded max redirects";
-				remove(m_file_path.c_str());
+				fs::remove(m_file_path);
 				curl_easy_cleanup(curl);
 				return false;
 			}

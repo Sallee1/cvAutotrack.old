@@ -1,5 +1,8 @@
 #pragma once
+#include <filesystem>
 #include <match/type/MatchType.h>
+
+namespace fs = std::filesystem;
 
 //图片资源 加载类
 class Resources
@@ -25,11 +28,11 @@ public:
 
     struct {
 #ifdef _CVAT_DEBUG
-        const std::string cvAutoTrack_Cache = "cvAutoTrack_Cache.debug.xml";
-        const std::string cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.debug.flann";
+        const fs::path cvAutoTrack_Cache = "cvAutoTrack_Cache.debug.xml";
+        const fs::path cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.debug.flann";
 #else
-        const std::string cvAutoTrack_Cache = "cvAutoTrack_Cache.xml";
-        const std::string cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.flann";
+        const fs::path cvAutoTrack_Cache = "cvAutoTrack_Cache.xml";
+        const fs::path cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.flann";
 #endif
     } CachePath;
 
@@ -49,7 +52,7 @@ public:
 public:
 	bool map_is_embedded();
 
-    static std::string getDllPath();
+    static fs::path getDllPath();
 private:
 	bool is_installed = false;
 };

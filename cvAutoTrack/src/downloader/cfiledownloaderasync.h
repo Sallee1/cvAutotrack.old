@@ -28,7 +28,7 @@ namespace tianli {
             }
         }
 
-        size_t addTask(const std::string& filePath,
+        size_t addTask(const fs::path& filePath,
             const std::string& url,
             const std::string& md5 = "") {
             auto task = std::make_shared<DownloadTask>();
@@ -90,7 +90,7 @@ namespace tianli {
             }
             const auto& task = it->second;
             return "ID: " + std::to_string(task->id) +
-                "\nFile: " + task->filePath +
+                "\nFile: " + task->filePath.u8string() +
                 "\nURL: " + task->url +
                 "\nStatus: " + (task->completed ? (task->success ? "Success" : "Failed") : "In progress") +
                 (task->completed && !task->success ? "\nError: " + std::to_string(task->errorCode) + " - " + task->errorMsg : "");
@@ -121,7 +121,7 @@ namespace tianli {
     private:
         struct DownloadTask {
             size_t id{};
-            std::string filePath;
+            fs::path filePath;
             std::string url;
             std::string md5;
             std::atomic<bool> completed{ false };
@@ -147,7 +147,8 @@ namespace tianli {
 
                 try {
                     // 下载到临时文件，完成后原子重命名，避免写坏目标文件
-                    std::string tmp_path = task->filePath + ".tmp";
+                    fs::path tmp_path = task->filePath;
+                    tmp_path += ".tmp";
 
                     FileDownloader downloader(tmp_path, task->url, task->md5);
                     task->success = downloader.download();

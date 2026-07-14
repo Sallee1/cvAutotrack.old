@@ -1,8 +1,11 @@
 #pragma once
+#include <filesystem>
 #include <vector>
 #include <mutex>
 #include <memory>
 #include <opencv2/opencv.hpp>
+
+namespace fs = std::filesystem;
 
 class FlannIndex;
 
@@ -24,8 +27,8 @@ public:
 	const std::shared_ptr<FlannIndex>& getFlannIndex() const { return m_flann_index; }
 
 	void cache_flann_train_descriptors(const cv::Mat& train_descriptors);
-	bool try_load_flann_index(const std::string& path, const cv::Mat& train_descriptors);
-	bool save_flann_index(const std::string& path);
+	bool try_load_flann_index(const fs::path& path, const cv::Mat& train_descriptors);
+	bool save_flann_index(const fs::path& path);
 
 	std::vector<std::vector<cv::DMatch>> flann_knnmatch(const cv::Mat& query_descriptors, int k = 2);
 	std::vector<std::vector<cv::DMatch>> flann_knnmatch(const KeyMatPoint& query, int k = 2);

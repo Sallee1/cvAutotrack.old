@@ -371,7 +371,7 @@ bool AutoTrack::DebugCapturePath(const char* path_buff, int buff_size)
 
 bool AutoTrack::LoadDependModuleFromPath(const char* path)
 {
-	static std::vector<std::string> dll_list{
+	static std::vector<fs::path> dll_list{
 		"opencv_core4100.dll",
 		"opencv_imgproc4100.dll",
 		"opencv_imgcodecs4100.dll",
@@ -383,8 +383,8 @@ bool AutoTrack::LoadDependModuleFromPath(const char* path)
 		"opencv_xfeatures2d4100.dll",
 	};
 
-	std::string dll_path(path);
-	if (!fs::exists(fs::u8path(dll_path)))
+	fs::path dll_path = fs::u8path(path);
+	if (!fs::exists(dll_path))
 	{
 		return false;
 	}
@@ -392,7 +392,7 @@ bool AutoTrack::LoadDependModuleFromPath(const char* path)
 	//检查dll文件是否存在
 	for (auto& dll_name : dll_list)
 	{
-		if (!fs::exists(fs::u8path(dll_path) / fs::u8path(dll_name)))
+		if (!fs::exists(dll_path / dll_name))
 		{
 			return false;
 		}
@@ -403,7 +403,7 @@ bool AutoTrack::LoadDependModuleFromPath(const char* path)
 		| LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_USER_DIRS);
 
 	//设置dll路径
-	std::wstring wdll_path{ reinterpret_cast<const wchar_t*>(fs::u8path(dll_path).u16string().c_str()) };
+	std::wstring wdll_path{ reinterpret_cast<const wchar_t*>(dll_path.u16string().c_str()) };
 	AddDllDirectory(wdll_path.c_str());
 
 	return true;

@@ -6,6 +6,7 @@
 #include <opencv2/features2d.hpp>
 #include <fstream>
 #include <filesystem>
+namespace fs = std::filesystem;
 #include "version/Version.h"
 #include "serialize.h"
 
@@ -39,8 +40,8 @@ public:
 		keypoints(keypoints), descriptors(descriptors), bulid_version_end(bulid_version) {
 	}
 
-	bool serialize(std::string outfileName);
-	bool deSerialize(std::string infileName, bool version_only = false);
+	bool serialize(const fs::path& outfileName);
+	bool deSerialize(const fs::path& infileName, bool version_only = false);
 };
 
 // 用于bbox查询的简单基于网格的LSH

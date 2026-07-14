@@ -13,7 +13,7 @@
 #include "utils/utils.progress.h"
 #include "match/IMatcher.h"
 
-bool MapKeypointCache::serialize(std::string outFileName)
+bool MapKeypointCache::serialize(const fs::path& outFileName)
 {
 	std::ofstream ofs(outFileName, std::fstream::out | std::fstream::binary);
 	TianLi::Utils::serializeStream ss(ofs);
@@ -39,7 +39,7 @@ bool MapKeypointCache::serialize(std::string outFileName)
     return true;
 }
 
-bool MapKeypointCache::deSerialize(std::string infileName, bool version_only)
+bool MapKeypointCache::deSerialize(const fs::path& infileName, bool version_only)
 {
     try {
 	    std::ifstream ifs(infileName, std::fstream::out | std::fstream::binary);
@@ -107,7 +107,7 @@ namespace {
 		std::atomic<bool> hasError{ false };
 		std::atomic<int> progressCount{ 0 };
 		std::mutex progressMutex;
-		std::string first_missing_file;
+		fs::path first_missing_file;
 		std::mutex missing_file_mutex;
 
 		// 并行处理所有瓦片
@@ -121,8 +121,8 @@ namespace {
 					const auto& tile = tiles[i];
 
 					// 加载瓦片图像
-					fs::path imgPath = fs::u8path(mapper.getResourceDir()) / fs::u8path(tile.file_path);
-					// imread依赖ACP编码路径
+					fs::path imgPath = mapper.getResourceDir() / tile.file_path;
+					// imread依赖ACP编码路径，改用ifstream+imdecode以支持Unicode路径
 					if (!fs::exists(imgPath))
 					{
 						{
@@ -132,7 +132,12 @@ namespace {
 						hasError = true;
 						return;
 					}
-					cv::Mat tileImg = cv::imread(imgPath.string(),cv::IMREAD_GRAYSCALE);
+					cv::Mat tileImg = [&]() {
+						std::ifstream ifs(imgPath, std::ios::binary);
+						if (!ifs) return cv::Mat();
+						std::vector<uchar> buf((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+						return cv::imdecode(buf, cv::IMREAD_GRAYSCALE);
+					}();
 
 					if (tileImg.empty())
 					{
@@ -223,7 +228,7 @@ namespace {
 			// 在非并行主线程中弹窗警告
 			std::string warn_msg = "特征点缓存生成失败：地图瓦片缺失！\n";
 			if (!first_missing_file.empty())
-				warn_msg += "缺少文件: " + first_missing_file + "\n";
+				warn_msg += "缺少文件: " + first_missing_file.u8string() + "\n";
 			warn_msg += "请检查资源下载是否完整，将尝试使用旧缓存回退。";
 			MessageBox(NULL, fs::u8path(warn_msg).wstring().c_str(), L"警告", MB_OK | MB_ICONWARNING);
 			return false;

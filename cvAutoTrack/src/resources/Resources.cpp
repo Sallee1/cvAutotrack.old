@@ -141,7 +141,7 @@ void Resources::install()
         }
 #endif
 
-		fs::path download_target = fs::u8path(getDllPath() + "/../../CVAT_Resources_Beta").lexically_normal();
+		fs::path download_target = (getDllPath() / "../../CVAT_Resources_Beta").lexically_normal();
         if (!fs::exists(download_target))
         {
             fs::create_directories(download_target);
@@ -221,7 +221,7 @@ bool Resources::map_is_embedded()
 	return true;
 }
 
-std::string Resources::getDllPath()
+fs::path Resources::getDllPath()
 {
     HMODULE hModule = NULL;
     // 获取当前DLL自身的句柄
@@ -234,7 +234,7 @@ std::string Resources::getDllPath()
 
     wchar_t path[1024];
     if (hModule != NULL && GetModuleFileName(hModule, path, MAX_PATH) > 0) {
-        return fs::path(path).parent_path().u8string();
+        return fs::path(path).parent_path();
     }
-    return "";
+    return {};
 }

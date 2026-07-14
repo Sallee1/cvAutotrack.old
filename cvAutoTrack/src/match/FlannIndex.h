@@ -1,6 +1,9 @@
 #pragma once
 #include <mutex>
+#include <filesystem>
 #include <opencv2/opencv.hpp>
+
+namespace fs = std::filesystem;
 
 /// 独立的 FLANN 索引，支持注入到多个 IMatcher 实例共享
 class FlannIndex {
@@ -12,10 +15,10 @@ public:
 	void build(const cv::Mat& train_descriptors);
 
 	/// 尝试从磁盘加载；失败返回 false
-	bool try_load(const std::string& path, const cv::Mat& train_descriptors);
+	bool try_load(const fs::path& path, const cv::Mat& train_descriptors);
 
 	/// 保存到磁盘
-	bool save(const std::string& path);
+	bool save(const fs::path& path);
 
 	/// kNN 搜索
 	std::vector<std::vector<cv::DMatch>> knnmatch(const cv::Mat& query_descriptors, int k = 2);

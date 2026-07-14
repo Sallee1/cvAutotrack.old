@@ -24,7 +24,7 @@ void FlannIndex::build(const cv::Mat& train_descriptors)
 	m_train_descriptors = train_descriptors;
 }
 
-bool FlannIndex::try_load(const std::string& path, const cv::Mat& train_descriptors)
+bool FlannIndex::try_load(const fs::path& path, const cv::Mat& train_descriptors)
 {
 	if (train_descriptors.empty()) return false;
 
@@ -39,7 +39,7 @@ bool FlannIndex::try_load(const std::string& path, const cv::Mat& train_descript
 	try
 	{
 		cv::Ptr<cv::flann::Index> idx = cv::makePtr<cv::flann::Index>();
-		bool loaded = idx->load(train_descriptors, path);
+		bool loaded = idx->load(train_descriptors, path.u8string());
 		if (loaded)
 		{
 			m_index = idx;
@@ -53,14 +53,14 @@ bool FlannIndex::try_load(const std::string& path, const cv::Mat& train_descript
 	return false;
 }
 
-bool FlannIndex::save(const std::string& path)
+bool FlannIndex::save(const fs::path& path)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	if (m_index.empty()) return false;
 
 	try
 	{
-		m_index->save(path);
+		m_index->save(path.u8string());
 		return true;
 	}
 	catch (...)

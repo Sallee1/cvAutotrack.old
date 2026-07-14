@@ -8,13 +8,13 @@ void IMatcher::cache_flann_train_descriptors(const cv::Mat& train_descriptors)
 		m_flann_index->build(train_descriptors);
 }
 
-bool IMatcher::try_load_flann_index(const std::string& path, const cv::Mat& train_descriptors)
+bool IMatcher::try_load_flann_index(const fs::path& path, const cv::Mat& train_descriptors)
 {
 	if (!m_flann_index) return false;
 	return m_flann_index->try_load(path, train_descriptors);
 }
 
-bool IMatcher::save_flann_index(const std::string& path)
+bool IMatcher::save_flann_index(const fs::path& path)
 {
 	if (!m_flann_index) return false;
 	return m_flann_index->save(path);

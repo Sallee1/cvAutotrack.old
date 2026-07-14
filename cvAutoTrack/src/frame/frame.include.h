@@ -1,5 +1,8 @@
 #pragma once
+#include <filesystem>
 #include <opencv2/opencv.hpp>
+
+namespace fs = std::filesystem;
 
 namespace tianli::frame
 {
@@ -40,7 +43,7 @@ namespace tianli::frame
         //设置待捕获的句柄
         virtual bool set_capture_handle(HWND handle) = 0;
         virtual bool set_local_frame(cv::Mat frame) = 0;
-        virtual bool set_local_file(std::string file) = 0;
+        virtual bool set_local_file(const fs::path& file) = 0;
         //当设置句柄时，调用的回调函数
         virtual bool set_source_handle_callback(std::function<HWND()> callback) = 0;
         //当截图时，调用的回调函数
