@@ -43,6 +43,7 @@ namespace tianli {
 
 		int getLastErrorCode() const { return last_error_code; }
 		std::string getLastErrorMsg() const { return m_last_error_msg; }
+		std::string getLastRedirectUrl() const { return m_last_redirect_url; }
 
 		static std::string calcFileMD5(const std::string& filePath)
 		{
@@ -87,6 +88,7 @@ namespace tianli {
 	private:
 		int last_error_code{ 0 };
 		std::string m_last_error_msg;
+		std::string m_last_redirect_url;
 		std::string m_file_path;
 		std::string m_url;
 		std::string m_md5;
@@ -121,7 +123,7 @@ namespace tianli {
 			return 0; // 写入失败
 		}
 
-		// 下载文件核心函数
+		// 下载文件核心函数（手动处理重定向，记录重定向链）
 		bool downloadFile() {
 			CURL* curl = curl_easy_init();
 			if (!curl) {
@@ -130,53 +132,98 @@ namespace tianli {
 				return false;
 			}
 
-			std::ofstream output_file(m_file_path, std::ios::binary);
-			std::cout << "Downloading from URL: " << m_url << " to file: " << m_file_path << std::endl;
-			if (!output_file.is_open()) {
-				last_error_code = -2;
-				m_last_error_msg = "Failed to open file: " + m_file_path;
-				curl_easy_cleanup(curl);
-				return false;
-			}
-
 			// TODO: 临时措施，服务器可能转发到无证书的CDN
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 
-			// 设置CURL选项
-			curl_easy_setopt(curl, CURLOPT_URL, m_url.c_str());
+			// 设置CURL选项（通用部分）
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output_file);
-			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
-			curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+			curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0L);   // 手动检查HTTP状态码
+			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L); // 手动处理重定向
 
-			// 执行下载
-			CURLcode res = curl_easy_perform(curl);
-			output_file.close();
+			m_last_redirect_url.clear();
+			std::string current_url = m_url;
+			const int max_redirects = 10;
+			CURLcode res = CURLE_OK;
+			bool success = false;
 
-			// 处理结果
-			if (res != CURLE_OK) {
-				last_error_code = res;
-				m_last_error_msg = curl_easy_strerror(res);
-
-				// 获取重定向URL（如果有）
-				char* redirectUrl = nullptr;
-				if (curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirectUrl) == CURLE_OK && redirectUrl) {
-					m_last_error_msg += " (Redirected to: " + std::string(redirectUrl) + ")";
+			for (int redirect_count = 0; redirect_count <= max_redirects; redirect_count++)
+			{
+				// 每次重定向重新打开文件（truncate 模式清除上次重定向的响应体）
+				std::ofstream output_file(m_file_path, std::ios::binary | std::ios::out | std::ios::trunc);
+				if (!output_file.is_open()) {
+					last_error_code = -2;
+					m_last_error_msg = "Failed to open file: " + m_file_path;
+					curl_easy_cleanup(curl);
+					return false;
 				}
 
-				remove(m_file_path.c_str());
-				curl_easy_cleanup(curl);
-				return false;
+				std::cout << "Downloading from URL: " << current_url << " to file: " << m_file_path << std::endl;
+				curl_easy_setopt(curl, CURLOPT_URL, current_url.c_str());
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output_file);
+
+				res = curl_easy_perform(curl);
+				output_file.close();
+
+				// CURL 级错误
+				if (res != CURLE_OK) {
+					last_error_code = res;
+					m_last_error_msg = curl_easy_strerror(res);
+					appendRedirectInfo();
+					remove(m_file_path.c_str());
+					curl_easy_cleanup(curl);
+					return false;
+				}
+
+				long http_code = 0;
+				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+				// 处理重定向 (3xx)
+				if (http_code >= 300 && http_code < 400) {
+					char* new_url = nullptr;
+					curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &new_url);
+					if (new_url && strlen(new_url) > 0) {
+						std::cout << "Redirect " << (redirect_count + 1) << ": "
+							<< current_url << "  ->  " << new_url << std::endl;
+						current_url = new_url;
+						m_last_redirect_url = current_url;
+						continue; // 用新 URL 重试
+					}
+					// 3xx 但无 Location 头
+					last_error_code = http_code;
+					m_last_error_msg = "HTTP redirect without Location header";
+					appendRedirectInfo();
+					remove(m_file_path.c_str());
+					curl_easy_cleanup(curl);
+					return false;
+				}
+
+				// HTTP 错误 (>= 400)
+				if (http_code >= 400) {
+					last_error_code = static_cast<int>(http_code);
+					m_last_error_msg = "HTTP error: " + std::to_string(http_code);
+					appendRedirectInfo();
+					remove(m_file_path.c_str());
+					curl_easy_cleanup(curl);
+					return false;
+				}
+
+				// 成功 (2xx)
+				if (!m_last_redirect_url.empty())
+					std::cout << "Download succeeded (final URL: " << m_last_redirect_url << ")" << std::endl;
+				else
+					std::cout << "Download succeeded" << std::endl;
+				success = true;
+				break;
 			}
 
-			// 验证下载是否真的成功
-			long http_code = 0;
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-			if (http_code >= 400) {
-				last_error_code = http_code;
-				m_last_error_msg = "HTTP error: " + std::to_string(http_code);
+			if (!success) {
+				last_error_code = -3;
+				if (!m_last_redirect_url.empty())
+					m_last_error_msg = "Exceeded max redirects (last: " + m_last_redirect_url + ")";
+				else
+					m_last_error_msg = "Exceeded max redirects";
 				remove(m_file_path.c_str());
 				curl_easy_cleanup(curl);
 				return false;
@@ -186,6 +233,12 @@ namespace tianli {
 			last_error_code = 0;
 			m_last_error_msg = "Download succeeded";
 			return true;
+		}
+
+		// 将最后的重定向 URL 追加到错误信息末尾
+		void appendRedirectInfo() {
+			if (!m_last_redirect_url.empty())
+				m_last_error_msg += " (last redirect: " + m_last_redirect_url + ")";
 		}
 	};
 }

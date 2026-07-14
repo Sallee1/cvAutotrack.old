@@ -3,6 +3,7 @@
 #include "downloader/cfiledownloaderasync.h"
 #include "downloader/cfiledownloader.h"
 #include "utils/utils.progress.h"
+#include "ErrorCode.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -185,10 +186,13 @@ bool GIMapDownloader::setHost(const std::string& host)
     {
         fs::path tmp_md5 = fs::temp_directory_path() / "gimap_host_check.md5";
         tianli::FileDownloader dl(tmp_md5.string(), base_host + "/dependents.json.md5");
-        if (!dl.download())
-            throw network_error("无法连接到服务器: [" +
-                                std::to_string(dl.getLastErrorCode()) + "] " +
-                                dl.getLastErrorMsg());
+        if (!dl.download()) {
+            std::string err_msg = "无法连接到服务器: [" +
+                                  std::to_string(dl.getLastErrorCode()) + "] " +
+                                  dl.getLastErrorMsg();
+            ErrorCode::getInstance() = { 7001, err_msg };
+            throw network_error(err_msg);
+        }
         std::error_code ec;
         fs::remove(tmp_md5, ec);
     }
@@ -236,14 +240,22 @@ bool GIMapDownloader::download()
                 if (!local_md5.empty() && !remote_md5.empty() &&
                     _stricmp(local_md5.c_str(), remote_md5.c_str()) == 0)
                 {
+                    std::string redirect = dl.getLastRedirectUrl();
+                    if (!redirect.empty())
+                        std::cout << "  [dependents.json.md5] last redirect: " << redirect << std::endl;
                     // 摘要一致 → 无需任何下载和解析
                     return true;
                 }
             }
+            else
+            {
+                std::cout << "  [dependents.json.md5] download failed: "
+                    << dl.getLastErrorMsg() << std::endl;
+            }
         }
-        catch (...)
+        catch (const std::exception& e)
         {
-            // .md5 文件不可用（服务器未提供/网络超时等），回退到完整下载
+            std::cout << "  [dependents.json.md5] exception: " << e.what() << std::endl;
         }
         std::error_code ec;
         fs::remove(tmp_md5, ec);
@@ -273,6 +285,11 @@ bool GIMapDownloader::download()
                     break;
                 }
                 dl_error = "MD5 不匹配: 期望 " + pImpl->remote_deps_md5 + ", 实际 " + actual_md5;
+                {
+                    std::string redirect_url = dl.getLastRedirectUrl();
+                    if (!redirect_url.empty())
+                        dl_error += "\n最后重定向至: " + redirect_url;
+                }
             }
             else
             {
@@ -301,7 +318,12 @@ bool GIMapDownloader::download()
                 if (!pImpl->remote_dependents_json.is_null())
                     return true; // 走本地缓存
             }
-            throw network_error("无法获取远程依赖列表且本地缓存不可用");
+            {
+                std::string err_msg = std::string("无法获取远程依赖列表且本地缓存不可用") +
+                    "\n" + dl_error;
+                ErrorCode::getInstance() = { 7002, err_msg };
+                throw network_error(err_msg);
+            }
         }
     }
 
@@ -309,12 +331,18 @@ bool GIMapDownloader::download()
     {
         std::ifstream ifs(tmp_json);
         if (!ifs.is_open())
-            throw network_error("无法读取远程 dependents.json 临时文件");
+        {
+            std::string err_msg = "无法读取远程 dependents.json 临时文件";
+            ErrorCode::getInstance() = { 7003, err_msg };
+            throw network_error(err_msg);
+        }
         try {
             ifs >> pImpl->remote_dependents_json;
         }
         catch (const std::exception& e) {
-            throw network_error("解析远程 dependents.json 失败: " + std::string(e.what()));
+            std::string err_msg = "解析远程 dependents.json 失败: " + std::string(e.what());
+            ErrorCode::getInstance() = { 7003, err_msg };
+            throw network_error(err_msg);
         }
     }
     std::error_code ec;
@@ -341,11 +369,19 @@ bool GIMapDownloader::download()
 
     // 必须有远程列表
     if (pImpl->remote_dependents_json.is_null())
-        throw network_error("缺少远程依赖列表，请先调用 setHost");
+    {
+        std::string err_msg = "缺少远程依赖列表，请先调用 setHost";
+        ErrorCode::getInstance() = { 7004, err_msg };
+        throw network_error(err_msg);
+    }
 
     auto filelist_it = pImpl->remote_dependents_json.find("filelist");
     if (filelist_it == pImpl->remote_dependents_json.end() || !filelist_it->is_array())
-        throw network_error("远程 dependents.json 缺少 filelist 字段或格式错误");
+    {
+        std::string err_msg = "远程 dependents.json 缺少 filelist 字段或格式错误";
+        ErrorCode::getInstance() = { 7005, err_msg };
+        throw network_error(err_msg);
+    }
 
     // 确定下载根目录
     if (pImpl->local_path.empty())
@@ -402,6 +438,11 @@ bool GIMapDownloader::download()
                 if (remote_update_time.empty())
                 {
                     meta_error = "无法解析远程 metadata.json 的 update_time";
+                    {
+                        std::string redirect_url = dl.getLastRedirectUrl();
+                        if (!redirect_url.empty())
+                            meta_error += "\n最后重定向至: " + redirect_url;
+                    }
                     continue;
                 }
 
@@ -412,6 +453,11 @@ bool GIMapDownloader::download()
                     if (cmp < 0)
                     {
                         meta_error = "远程版本 (" + remote_update_time + ") 早于本地 (" + local_update_time + ")，CDN 缓存未刷新";
+                        {
+                            std::string redirect_url = dl.getLastRedirectUrl();
+                            if (!redirect_url.empty())
+                                meta_error += "\n最后重定向至: " + redirect_url;
+                        }
                         continue;
                     }
                     else if (cmp == 0)
@@ -450,7 +496,9 @@ bool GIMapDownloader::download()
                 {
                     std::error_code ec_clean;
                     fs::remove(tmp_meta, ec_clean);
-                    throw network_error("移动 metadata.json 失败: " + ec_rename.message());
+                    std::string err_msg = "移动 metadata.json 失败: " + ec_rename.message();
+                    ErrorCode::getInstance() = { 7006, err_msg };
+                    throw network_error(err_msg);
                 }
                 metadata_handled = true;
             }
@@ -468,7 +516,12 @@ bool GIMapDownloader::download()
                 // 本地有缓存，回退
                 return true;
             }
-            throw network_error("metadata.json 下载失败且本地无可用缓存");
+            {
+                std::string err_msg = std::string("metadata.json 下载失败且本地无可用缓存") +
+                    "\n" + meta_error;
+                ErrorCode::getInstance() = { 7006, err_msg };
+                throw network_error(err_msg);
+            }
         }
         break;
     }
@@ -577,6 +630,7 @@ bool GIMapDownloader::download()
             msg += "  [任务#" + std::to_string(id) + "] (" +
                    std::to_string(err.first) + ") " + err.second + "\n";
 
+        ErrorCode::getInstance() = { 7007, msg };
         progress.set_status(L"下载完成，部分文件失败");
         std::this_thread::sleep_for(std::chrono::seconds(1));
         progress.close();
