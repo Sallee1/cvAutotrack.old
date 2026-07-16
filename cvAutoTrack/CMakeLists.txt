@@ -25,14 +25,11 @@ set(CVAT_SOURCES
     src/genshin/match/position/genshin.match.position.cpp
 
     src/match/diff/DiffMatch.cpp
-    src/match/FlannIndex.cpp
     src/match/IMatcher.cpp
-    src/match/matcher_impl/AkazeMatcher.cpp
-    src/match/matcher_impl/ORBMatcher.cpp
-    src/match/matcher_impl/FAST_TEBLIDMatcher.cpp
-    src/match/matcher_impl/SURFMatcher.cpp
-    src/match/matcher_impl/FAST_AkazeMatcher.cpp
-    src/match/matcher_impl/FAST_SURFMatcher.cpp
+    src/match/algorithm/FlannIndexedMatcher.cpp
+    src/match/algorithm/FaissIndexedMatcher.cpp
+    src/match/algorithm/OpenCVBFMatcher.cpp
+    src/match/detector/FASTFeatureDetector.cpp
     src/match/tracking.cpp
 
     src/resources/binary/resources.binary.h
@@ -86,19 +83,17 @@ set(CVAT_HEADERS
     src/genshin/match/position/genshin.match.position.h
 
     src/match/diff/DiffMatch.h
-    src/match/FlannIndex.h
     src/match/IMatcher.h
     src/match/InertialNavigator.h
     src/match/match.include.h
     src/match/match.uid.h
     src/match/tracking.h
-
-    src/match/matcher_impl/AkazeMatcher.h
-    src/match/matcher_impl/FAST_AKAZEMatcher.h
-    src/match/matcher_impl/FAST_SURFMatcher.h
-    src/match/matcher_impl/FAST_TEBLIDMatcher.h
-    src/match/matcher_impl/ORBMatcher.h
-    src/match/matcher_impl/SURFMatcher.h
+    
+    src/match/algorithm/FlannIndexedMatcher.h
+    src/match/algorithm/FaissIndexedMatcher.h
+    src/match/algorithm/IIndexedMatchAlgorithm.h
+    src/match/algorithm/OpenCVBFMatcher.h
+    src/match/detector/FASTFeatureDetector.h
     src/match/type/MatchType.h
 
     src/resources/KeypointsCache.h
@@ -151,8 +146,8 @@ target_link_libraries(cvAutoTrack PRIVATE
     opencv_xfeatures2d
     opencv_video
 
-    # fiass
-    fiass
+    # faiss
+    faiss
     
     # 网络
     CURL::libcurl  OpenSSL::SSL

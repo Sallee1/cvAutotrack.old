@@ -21,11 +21,9 @@
 #include "genshin/genshin.h"
 
 #include "version/Version.h"
-#include "match/matcher_impl/AkazeMatcher.h"
-#include "match/FlannIndex.h"
-#include "match/matcher_impl/ORBMatcher.h"
-#include "match/matcher_impl/FAST_TEBLIDMatcher.h"
-#include "match/matcher_impl/FAST_SURFMatcher.h"
+#include "match/detector/FASTFeatureDetector.h"
+#include "match/algorithm/FaissIndexedMatcher.h"
+#include "match/algorithm/OpenCVBFMatcher.h"
 #include "genshin/genshin.screen.h"
 
 #include <cinttypes>
@@ -39,49 +37,38 @@ AutoTrack::AutoTrack()
 	genshin_avatar_position.config.pos_filter = std::make_shared<Kalman>();
 
 	// 构造时仅创建 matcher（轻量），初始化在工作线程中异步执行
-	// 瓦片缓存生成和追踪匹配使用不同的 matcher 实例，避免金字塔设置污染
-	// 但共享同一个 FlannIndex，保证全局匹配正确
-	// 需要切换算法时，注释/反注释下方对应区块即可
+	// 瓦片缓存生成和追踪匹配使用不同的 IMatcher 实例，避免金字塔设置污染
+	// 但共享同一个索引匹配器，保证全局匹配正确
 
-	 // ===== ORB: FAST 提取器 + rBRIEF 描述子（无方向）=====
-	 //{
-	 //	auto flann = std::make_shared<FlannIndex>(true);
-	 //	auto tile_matcher = std::make_shared<ORBMatcher>(-1, 1.0f, 1, 15, 0, 2, cv::ORB::FAST_SCORE, 31, 20);
-	 //	tile_matcher->setFlannIndex(flann);
-	 //	m_tile_matcher = tile_matcher;
-	 //	auto orb_matcher = std::make_shared<ORBMatcher>(-1, 1.0f, 1, 15, 0, 2, cv::ORB::FAST_SCORE, 31, 20);
-	 //	orb_matcher->setFlannIndex(flann);
-	 //	orb_matcher->setPyramidScales({ 1.0, 0.666, 0.5, 0.333 });
-	 //	genshin_minimap.matcher = orb_matcher;
-	 //}
+	// ===== FAST-TEBLID: FAST 提取器 + TEBLID 描述子（二值）=====
+	// 索引：FaissIndexedMatcher（倒排索引），可切换 faiss_factory::hnsw / hash / ivf
+	// 亮度增益：1.0（正常）+ 1.75 + 3.0 补偿亮度变化
+	{
+		auto fast_detector = cv::makePtr<FASTFeatureDetector>(16, true);
+		auto teblid_desc = cv::xfeatures2d::TEBLID::create(5.0f, cv::xfeatures2d::TEBLID::SIZE_256_BITS);
+		auto bf_matcher = std::make_shared<OpenCVBFMatcher>(cv::NORM_HAMMING, false);
+		auto faiss_idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::ivf());
 
-	 // ===== FAST-TEBLID: FAST 提取器 + TEBLID 描述子（二值，效果优于 ORB）=====
-	 // scale_factor=5.0f 适配 FAST 关键点，n_bits=256 平衡精度与FLANN内存
-	 // 亮度增益：1.0（正常）+ 1.75 + 3.0 补偿亮度变化
-	 {
-		auto flann = std::make_shared<FlannIndex>(true);
-		auto tile_matcher = std::make_shared<FAST_TEBLIDMatcher>(5.0f, cv::xfeatures2d::TEBLID::SIZE_256_BITS);
-		tile_matcher->setFlannIndex(flann);
+		// 瓦片 matcher：detect=FAST, desc=TEBLID, 共享索引
+		auto tile_matcher = std::make_shared<IMatcher>();
+		tile_matcher->setFeature2D(fast_detector, teblid_desc);
+		tile_matcher->setMatchAlgorithm(bf_matcher, faiss_idx);
 		m_tile_matcher = tile_matcher;
-		auto teblid_matcher = std::make_shared<FAST_TEBLIDMatcher>(5.0f, cv::xfeatures2d::TEBLID::SIZE_256_BITS);
-		teblid_matcher->setFlannIndex(flann);
-		teblid_matcher->setPyramidScales({ 1.0, 0.666, 0.5, 0.333 });
-		teblid_matcher->setBrightnessGains({ 1.0, 1.75, 3.0 });
-		genshin_minimap.matcher = teblid_matcher;
-	 }
 
-	//{
-	//	auto flann = std::make_shared<FlannIndex>(false);  // ORB 是二值描述子
+		// 追踪 matcher：同算法 + 金字塔 + 亮度增强，共享索引
+		auto track_matcher = std::make_shared<IMatcher>();
+		track_matcher->setFeature2D(fast_detector, teblid_desc);
+		track_matcher->setMatchAlgorithm(bf_matcher, faiss_idx);
+		track_matcher->setPyramidScales({ 1.0, 0.666, 0.5, 0.333 });
+		track_matcher->setBrightnessGains({ 1.0, 1.75, 3.0 });
+		genshin_minimap.matcher = track_matcher;
+	}
 
-	//	auto tile_matcher = std::shared_ptr<IMatcher>(new FAST_SURFMatcher(0.01, 1, 1, false, true));
-	//	tile_matcher->setFlannIndex(flann);
-	//	m_tile_matcher = tile_matcher;
-
-	//	auto orb_matcher = std::shared_ptr<IMatcher>(new FAST_SURFMatcher(0.01, 1, 1, false, true));
-	//	orb_matcher->setFlannIndex(flann);
-	//	orb_matcher->setPyramidScales({ 1.0, 0.666, 0.5, 0.333 });
-	//	genshin_minimap.matcher = orb_matcher;
-	//}
+	// ===== 切换索引算法 =====
+	// auto idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::hnsw(64));  // 图索引
+	// auto idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::ivf(256));  // 倒排索引
+	// auto idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::hash(4));   // 哈希索引
+	// auto idx = std::make_shared<FlannIndexedMatcher>(true);                    // OpenCV FLANN
 }
 
 void AutoTrack::init_matcher()

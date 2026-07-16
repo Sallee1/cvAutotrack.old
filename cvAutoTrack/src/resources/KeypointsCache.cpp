@@ -484,11 +484,11 @@ bool save_map_keypoint_cache(const std::shared_ptr<IMatcher>& matcher, MapKeypoi
 	std::filesystem::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache);
     cache.serialize(Resources::getInstance().CachePath.cvAutoTrack_Cache);
 
-	// 构建并缓存 FLANN 索引到独立文件
+	// 构建并缓存索引到独立文件
 	std::error_code ec;
-	fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann, ec);
-    matcher->cache_flann_train_descriptors(cache.descriptors);
-    matcher->save_flann_index(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann);
+	fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_faiss, ec);
+    matcher->cache_train_descriptors(cache.descriptors);
+    matcher->save_index(Resources::getInstance().CachePath.cvAutoTrack_Cache_faiss);
 
     return true;
 }
@@ -515,7 +515,7 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
         // 反序列化失败，缓存文件损坏，删除后重新生成
         std::error_code ec;
         fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache, ec);
-        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann, ec);
+        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_faiss, ec);
         return false;
     }
 
@@ -523,7 +523,7 @@ bool load_map_keypoint_cache(MapKeypointCache& cache)
     {
         std::error_code ec;
         fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache, ec);
-        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_flann, ec);
+        fs::remove(Resources::getInstance().CachePath.cvAutoTrack_Cache_faiss, ec);
         return false;
     }
 
@@ -547,10 +547,10 @@ MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher)
     // Stage 1: 尝试加载现有缓存（含版本校验）
     if (load_map_keypoint_cache(cache))
     {
-        // 同步加载 FLANN 索引 — 优先从磁盘加载，失败则现场构建
-        if (!matcher->try_load_flann_index(cache_path.cvAutoTrack_Cache_flann, cache.descriptors))
+        // 同步加载索引 — 优先从磁盘加载，失败则现场构建
+        if (!matcher->try_load_index(cache_path.cvAutoTrack_Cache_faiss, cache.descriptors))
         {
-            matcher->cache_flann_train_descriptors(cache.descriptors);
+            matcher->cache_train_descriptors(cache.descriptors);
         }
         return cache;
     }
@@ -559,7 +559,7 @@ MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher)
     cache = {};
     if (save_map_keypoint_cache(matcher, cache))
     {
-        // save 内部已保存 FLANN 索引，无需重复操作
+        // save 内部已保存索引，无需重复操作
         return cache;
     }
 
@@ -570,7 +570,7 @@ MapKeypointCache get_map_keypoint(const std::shared_ptr<IMatcher>& matcher)
     // 回退模式下只尝试从磁盘加载，不重建（避免耗时）
     if (!cache.keypoints.empty())
     {
-        matcher->try_load_flann_index(cache_path.cvAutoTrack_Cache_flann, cache.descriptors);
+        matcher->try_load_index(cache_path.cvAutoTrack_Cache_faiss, cache.descriptors);
     }
     return cache;
 }

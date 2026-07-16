@@ -30,9 +30,11 @@ public:
 #ifdef _CVAT_DEBUG
         const fs::path cvAutoTrack_Cache = "cvAutoTrack_Cache.debug.xml";
         const fs::path cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.debug.flann";
+        const fs::path cvAutoTrack_Cache_faiss = "cvAutoTrack_Cache.debug.faiss";
 #else
         const fs::path cvAutoTrack_Cache = "cvAutoTrack_Cache.xml";
         const fs::path cvAutoTrack_Cache_flann = "cvAutoTrack_Cache.flann";
+        const fs::path cvAutoTrack_Cache_faiss = "cvAutoTrack_Cache.faiss";
 #endif
     } CachePath;
 

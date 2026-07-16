@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "FlannIndex.h"
+#include "FlannIndexedMatcher.h"
 
-void FlannIndex::build(const cv::Mat& train_descriptors)
+void FlannIndexedMatcher::build(const cv::Mat& train_descriptors)
 {
 	if (train_descriptors.empty()) return;
 
@@ -24,7 +24,7 @@ void FlannIndex::build(const cv::Mat& train_descriptors)
 	m_train_descriptors = train_descriptors;
 }
 
-bool FlannIndex::try_load(const fs::path& path, const cv::Mat& train_descriptors)
+bool FlannIndexedMatcher::try_load(const fs::path& path, const cv::Mat& train_descriptors)
 {
 	if (train_descriptors.empty()) return false;
 
@@ -53,7 +53,7 @@ bool FlannIndex::try_load(const fs::path& path, const cv::Mat& train_descriptors
 	return false;
 }
 
-bool FlannIndex::save(const fs::path& path)
+bool FlannIndexedMatcher::save(const fs::path& path)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	if (m_index.empty()) return false;
@@ -69,7 +69,7 @@ bool FlannIndex::save(const fs::path& path)
 	}
 }
 
-std::vector<std::vector<cv::DMatch>> FlannIndex::knnmatch(const cv::Mat& query_descriptors, int k)
+std::vector<std::vector<cv::DMatch>> FlannIndexedMatcher::knnmatch(const cv::Mat& query_descriptors, int k)
 {
 	std::vector<std::vector<cv::DMatch>> match_group;
 	if (query_descriptors.empty()) return match_group;
@@ -98,7 +98,7 @@ std::vector<std::vector<cv::DMatch>> FlannIndex::knnmatch(const cv::Mat& query_d
 	return match_group;
 }
 
-std::vector<cv::DMatch> FlannIndex::match(const cv::Mat& query_descriptors)
+std::vector<cv::DMatch> FlannIndexedMatcher::match(const cv::Mat& query_descriptors)
 {
 	std::vector<cv::DMatch> matches;
 	if (query_descriptors.empty()) return matches;
@@ -122,12 +122,12 @@ std::vector<cv::DMatch> FlannIndex::match(const cv::Mat& query_descriptors)
 	return matches;
 }
 
-cv::Ptr<cv::flann::Index> FlannIndex::create_flann_index()
+cv::Ptr<cv::flann::Index> FlannIndexedMatcher::create_flann_index()
 {
 	return cv::makePtr<cv::flann::Index>();
 }
 
-cv::Ptr<cv::flann::Index> FlannIndex::get_cached_index()
+cv::Ptr<cv::flann::Index> FlannIndexedMatcher::get_cached_index()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	return m_index;

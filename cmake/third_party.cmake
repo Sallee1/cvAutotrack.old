@@ -1,3 +1,6 @@
+# OpenMP（MSVC实现）
+find_package(OpenMP REQUIRED)
+
 # OpenCV
 
 set(OpenCV_DIR  "C:/Packages/opencv-static/staticlib"  CACHE PATH "OpenCV 预编译库路径")

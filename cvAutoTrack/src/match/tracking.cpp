@@ -45,7 +45,7 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 	if(!m_mapMat.empty())
 	{
 		m_matcher->detect_and_compute(m_mapMat, m_map_kp.keypoints, m_map_kp.descriptors);
-		m_matcher->cache_flann_train_descriptors(m_map_kp.descriptors);
+		m_matcher->cache_train_descriptors(m_map_kp.descriptors);
 	}
 	m_isInit = true;
 	return true;
@@ -61,7 +61,7 @@ bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher,int cols,int rows, 
 		return false;
 	}
 	m_matcher = matcher;
-	m_matcher->cache_flann_train_descriptors(m_map_kp.descriptors);
+	m_matcher->cache_train_descriptors(m_map_kp.descriptors);
 
 	auto cell_size = Resources::getInstance().lsh_cell_size;
 	m_lsh_index = std::make_unique<KeypointGridLSH>();
@@ -330,7 +330,7 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 	IMatcher::KeyMatPoint some_map_kp;
 	IMatcher::KeyMatPoint mini_map_kp;
 	
-	m_matcher->detect_and_compute(miniMap, mini_map_kp);
+	m_matcher->detect_and_compute_ex(miniMap, mini_map_kp);
 	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), m_miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
 
 	m_lsh_index->query_and_gather(keypoint_roi, m_map_kp.keypoints, m_map_kp.descriptors, some_map_kp.keypoints, some_map_kp.descriptors);
@@ -394,13 +394,13 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
 	cv::Mat img_object = m_miniMapMat;
 	IMatcher::KeyMatPoint mini_map_kp;
-	m_matcher->detect_and_compute(img_object, mini_map_kp);
+	m_matcher->detect_and_compute_ex(img_object, mini_map_kp);
 	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), m_miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
 	//Lowe测试
 	std::vector<cv::DMatch> good_matches;
 	std::vector<cv::Point2f> good_matched_scene;
 	std::vector<cv::Point2f> good_matched_object;
-	std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->flann_knnmatch(mini_map_kp, 2);
+	std::vector<std::vector<cv::DMatch>> KNN_m = m_matcher->indexed_knnmatch(mini_map_kp, 2);
 	TianLi::Utils::lowe_test(KNN_m, LOWE_RATIO_THRESH, good_matches);
 	TianLi::Utils::dmatch2cvPoints(m_map_kp.keypoints, mini_map_kp.keypoints, good_matches, good_matched_scene, good_matched_object);
 

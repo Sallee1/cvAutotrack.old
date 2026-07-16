@@ -1,112 +1,61 @@
 #include "pch.h"
 #include "IMatcher.h"
-#include "FlannIndex.h"
 
-void IMatcher::cache_flann_train_descriptors(const cv::Mat& train_descriptors)
-{
-	if (m_flann_index)
-		m_flann_index->build(train_descriptors);
-}
-
-bool IMatcher::try_load_flann_index(const fs::path& path, const cv::Mat& train_descriptors)
-{
-	if (!m_flann_index) return false;
-	return m_flann_index->try_load(path, train_descriptors);
-}
-
-bool IMatcher::save_flann_index(const fs::path& path)
-{
-	if (!m_flann_index) return false;
-	return m_flann_index->save(path);
-}
-
-std::vector<std::vector<cv::DMatch>> IMatcher::flann_knnmatch(const cv::Mat& query_descriptors, int k)
-{
-	if (!m_flann_index) return {};
-	return m_flann_index->knnmatch(query_descriptors, k);
-}
-
-std::vector<std::vector<cv::DMatch>> IMatcher::flann_knnmatch(const KeyMatPoint& query, int k)
-{
-	return flann_knnmatch(query.descriptors, k);
-}
-
-std::vector<cv::DMatch> IMatcher::flann_match(const cv::Mat& query_descriptors)
-{
-	if (!m_flann_index) return {};
-	return m_flann_index->match(query_descriptors);
-}
-
-std::vector<cv::DMatch> IMatcher::flann_match(const KeyMatPoint& query)
-{
-	return flann_match(query.descriptors);
-}
-
-std::vector<std::vector<cv::DMatch>> IMatcher::bf_knnmatch(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, int k)
-{
-	std::vector<std::vector<cv::DMatch>> match_group;
-	if (query_descriptors.empty() || train_descriptors.empty())
-	{
-		return match_group;
-	}
-
-	auto matcher = create_bf_matcher(false);
-	matcher->knnMatch(query_descriptors, train_descriptors, match_group, k);
-	return match_group;
-}
-
-std::vector<std::vector<cv::DMatch>> IMatcher::bf_knnmatch(const KeyMatPoint& query, const KeyMatPoint& train, int k)
-{
-	return bf_knnmatch(query.descriptors, train.descriptors, k);
-}
-
-std::vector<cv::DMatch> IMatcher::bf_match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, bool cross_check)
-{
-	std::vector<cv::DMatch> matches;
-	if (query_descriptors.empty() || train_descriptors.empty())
-	{
-		return matches;
-	}
-
-	auto matcher = create_bf_matcher(cross_check);
-	matcher->match(query_descriptors, train_descriptors, matches);
-	return matches;
-}
-
-std::vector<cv::DMatch> IMatcher::bf_match(const KeyMatPoint& query, const KeyMatPoint& train, bool cross_check)
-{
-	return bf_match(query.descriptors, train.descriptors, cross_check);
-}
+// ===== 特征提取（单层） =====
 
 bool IMatcher::detect(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints)
 {
-	if (img.empty()) return false;
-	return detect_impl(img, keypoints);
+	if (img.empty() || !m_detector) return false;
+	m_detector->detect(img, keypoints);
+	return !keypoints.empty();
 }
 
 bool IMatcher::compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
-	if (img.empty() || keypoints.empty()) return false;
-	return compute_impl(img, keypoints, descriptors);
+	if (img.empty() || keypoints.empty() || !m_descriptor) return false;
+	m_descriptor->compute(img, keypoints, descriptors);
+	return !descriptors.empty();
 }
 
 bool IMatcher::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
 {
 	if (img.empty()) return false;
+	if (!m_detector || !m_descriptor) return false;
 
-	// 确定要遍历的配置：金字塔尺度 × 亮度增益
+	// 同一对象时优化为 detectAndCompute
+	if (m_detector == m_descriptor)
+	{
+		m_detector->detectAndCompute(img, cv::noArray(), keypoints, descriptors);
+		return !keypoints.empty();
+	}
+
+	m_detector->detect(img, keypoints);
+	if (keypoints.empty()) return false;
+	m_descriptor->compute(img, keypoints, descriptors);
+	return !descriptors.empty();
+}
+
+bool IMatcher::detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point)
+{
+	return detect_and_compute(img, key_mat_point.keypoints, key_mat_point.descriptors);
+}
+
+// ===== 增强多层检测+描述（金字塔多尺度 × 亮度增益并行处理） =====
+
+bool IMatcher::detect_and_compute_ex(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+{
+	if (img.empty()) return false;
+
 	const auto& scales = m_pyramid_scales;
 	const auto& gains = m_brightness_gains;
 	bool simple = scales.empty() && gains.empty();
 
 	if (simple)
-		return detect_and_compute_impl(img, keypoints, descriptors);
+		return detect_and_compute(img, keypoints, descriptors);
 
-	// 至少有一个维度展开：构造配置列表
+	// 构造配置列表
 	struct Config { double scale; double gain; };
 	std::vector<Config> configs;
-	if (scales.empty())
-		configs.push_back({ 1.0, 1.0 });  // 仅多亮度时用原图亮度1.0做一次兜底
 	for (double s : scales.empty() ? std::vector<double>{1.0} : scales)
 	{
 		for (double g : gains.empty() ? std::vector<double>{1.0} : gains)
@@ -144,7 +93,7 @@ bool IMatcher::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>&
 				work.convertTo(work, -1, cfg.gain, 0);
 
 			auto& r = results[i];
-			if (!detect_and_compute_impl(work, r.kp, r.desc)) continue;
+			if (!detect_and_compute(work, r.kp, r.desc)) continue;
 			if (r.kp.empty()) continue;
 
 			// 坐标还原
@@ -198,46 +147,76 @@ bool IMatcher::detect_and_compute(const cv::Mat& img, std::vector<cv::KeyPoint>&
 	return true;
 }
 
-// --- 默认 _impl 实现（子类可覆写）---
-
-bool IMatcher::detect_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints)
+bool IMatcher::detect_and_compute_ex(const cv::Mat& img, KeyMatPoint& key_mat_point)
 {
-	auto detector = getFeature2D();
-	detector->detect(img, keypoints);
-	return !keypoints.empty();
+	return detect_and_compute_ex(img, key_mat_point.keypoints, key_mat_point.descriptors);
 }
 
-bool IMatcher::compute_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+// ===== 索引匹配（委托 m_indexed_matcher） =====
+
+void IMatcher::cache_train_descriptors(const cv::Mat& train_descriptors)
 {
-	if (keypoints.empty()) return false;
-	auto detector = getFeature2D();
-	detector->compute(img, keypoints, descriptors);
-	return !descriptors.empty();
+	if (m_indexed_matcher)
+		m_indexed_matcher->build(train_descriptors);
 }
 
-bool IMatcher::detect_and_compute_impl(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors)
+bool IMatcher::try_load_index(const fs::path& path, const cv::Mat& train_descriptors)
 {
-	if (!detect_impl(img, keypoints)) return false;
-	if (keypoints.empty()) return false;
-	return compute_impl(img, keypoints, descriptors);
+	if (!m_indexed_matcher) return false;
+	return m_indexed_matcher->try_load(path, train_descriptors);
 }
 
-bool IMatcher::detect_and_compute(const cv::Mat& img, KeyMatPoint& key_mat_point) {
-	return detect_and_compute(img, key_mat_point.keypoints, key_mat_point.descriptors);
-}
-
-cv::Ptr<cv::DescriptorMatcher> IMatcher::create_bf_matcher(bool cross_check)
+bool IMatcher::save_index(const fs::path& path)
 {
-	cv::Ptr<cv::DescriptorMatcher> matcher;
-	if (getIsBinaryDescriptor())
-	{
-		matcher = cv::BFMatcher::create(cv::NORM_HAMMING, cross_check);
-	}
-	else
-	{
-		matcher = cv::BFMatcher::create(cv::NORM_L2, cross_check);
-	}
-	return matcher;
+	if (!m_indexed_matcher) return false;
+	return m_indexed_matcher->save(path);
 }
+
+std::vector<std::vector<cv::DMatch>> IMatcher::indexed_knnmatch(const cv::Mat& query_descriptors, int k)
+{
+	if (!m_indexed_matcher) return {};
+	return m_indexed_matcher->knnmatch(query_descriptors, k);
+}
+
+std::vector<std::vector<cv::DMatch>> IMatcher::indexed_knnmatch(const KeyMatPoint& query, int k)
+{
+	return indexed_knnmatch(query.descriptors, k);
+}
+
+std::vector<cv::DMatch> IMatcher::indexed_match(const cv::Mat& query_descriptors)
+{
+	if (!m_indexed_matcher) return {};
+	return m_indexed_matcher->match(query_descriptors);
+}
+
+std::vector<cv::DMatch> IMatcher::indexed_match(const KeyMatPoint& query)
+{
+	return indexed_match(query.descriptors);
+}
+
+// ===== 暴力匹配（委托 m_bf_matcher） =====
+
+std::vector<std::vector<cv::DMatch>> IMatcher::bf_knnmatch(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors, int k)
+{
+	if (!m_bf_matcher) return {};
+	return m_bf_matcher->knnmatch(query_descriptors, train_descriptors, k);
+}
+
+std::vector<std::vector<cv::DMatch>> IMatcher::bf_knnmatch(const KeyMatPoint& query, const KeyMatPoint& train, int k)
+{
+	return bf_knnmatch(query.descriptors, train.descriptors, k);
+}
+
+std::vector<cv::DMatch> IMatcher::bf_match(const cv::Mat& query_descriptors, const cv::Mat& train_descriptors)
+{
+	if (!m_bf_matcher) return {};
+	return m_bf_matcher->match(query_descriptors, train_descriptors);
+}
+
+std::vector<cv::DMatch> IMatcher::bf_match(const KeyMatPoint& query, const KeyMatPoint& train)
+{
+	return bf_match(query.descriptors, train.descriptors);
+}
+
 
 
