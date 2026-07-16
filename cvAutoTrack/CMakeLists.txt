@@ -3,10 +3,6 @@ project(cvAutoTrack LANGUAGES CXX C RC)
 set(CVAT_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "${OPENCV_STATIC_DIR}/include"
-    "${CURL_STATIC_DIR}/include"
-    "${OPENSSL_STATIC_DIR}/include"
-    "${NLOHMANN_JSON_DIR}/include"
 )
 
 set(CVAT_SOURCES
@@ -142,29 +138,27 @@ target_precompile_headers(cvAutoTrack PRIVATE src/pch.h)
 
 set(CVAT_LIB_DIRS
     "${OPENCV_STATIC_DIR}/staticlib"
-    "${CURL_STATIC_DIR}/lib"
-    "${OPENSSL_STATIC_DIR}/lib"
 )
 
 target_link_directories(cvAutoTrack PRIVATE ${CVAT_LIB_DIRS})
 
 target_link_libraries(cvAutoTrack PRIVATE
-    # OpenCV
-    IlmImf            ippicvmt          ippiw
-    ittnotify         libjpeg-turbo     libopenjp2
-    libpng            libtiff           libwebp
-    opencv_img_hash4100
-    opencv_core4100   opencv_imgproc4100
-    opencv_imgcodecs4100
-    opencv_flann4100  opencv_features2d4100
-    opencv_xfeatures2d4100
-    opencv_calib3d4100  opencv_video4100
+    opencv_core   
+    opencv_imgproc
+    opencv_imgcodecs
+    opencv_flann  
+    opencv_features2d
+    opencv_xfeatures2d
+    opencv_video
 
-    # AVIF / 图片编解码
-    avif  yuv  aom  dav1d  zlib
-
+    # fiass
+    fiass
+    
     # 网络
-    libcurl  libssl  libcrypto
+    CURL::libcurl  OpenSSL::SSL
+
+    # 纯头库（仅传递 include 路径）
+    nlohmann_json::nlohmann_json
 
     # Windows
     dxgi  windowsapp
