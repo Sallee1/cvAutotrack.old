@@ -5,6 +5,78 @@
 #include "resources/KeypointsCache.h"
 #include "utils/Utils.h"
 
+// ============================================================================
+// 3-DOF 缩放+平移模型 (dst = s * src + (dx, dy))
+// 相比 estimateAffinePartial2D (4-DOF 相似变换) 去掉了旋转自由度，
+// 过定程度提升 33%，避免旋转超限导致的帧丢弃，实现亚像素精度。
+// ============================================================================
+namespace {
+
+/// @brief 2 对匹配点的最小求解器（RANSAC 假设检验用）
+/// @return false 当两点重合或 s <= 0
+bool solve_scale_translation_2pair(
+    const cv::Point2d& src1, const cv::Point2d& src2,
+    const cv::Point2d& dst1, const cv::Point2d& dst2,
+    double& s, double& dx, double& dy)
+{
+    double dsx = src2.x - src1.x;
+    double dsy = src2.y - src1.y;
+    double ddx = dst2.x - dst1.x;
+    double ddy = dst2.y - dst1.y;
+
+    double norm_sq = dsx * dsx + dsy * dsy;
+    if (norm_sq < 1e-10)
+        return false;
+
+    // 投影: s = (Δd · Δs) / |Δs|²  即把 Δd 投影到 Δs 方向
+    s = (ddx * dsx + ddy * dsy) / norm_sq;
+    if (s <= 0.0)
+        return false;
+
+    dx = dst1.x - s * src1.x;
+    dy = dst1.y - s * src1.y;
+    return true;
+}
+
+/// @brief 所有内点上的最小二乘精化
+/// @param src  内点的 mini-map 坐标（对象帧）
+/// @param dst  内点的 map 坐标（场景帧）
+/// @param s    [out] 缩放
+/// @param dx   [out] X 平移
+/// @param dy   [out] Y 平移
+void solve_scale_translation_ls(
+    const std::vector<cv::Point2d>& src,
+    const std::vector<cv::Point2d>& dst,
+    double& s, double& dx, double& dy)
+{
+    const int N = static_cast<int>(src.size());
+    // 构建超定方程组 A * [s, dx, dy]^T = b
+    // 每对点贡献 2 行：
+    //   [src.x, 1, 0] * [s, dx, dy]^T = dst.x
+    //   [src.y, 0, 1] * [s, dx, dy]^T = dst.y
+    cv::Mat A(N * 2, 3, CV_64F);
+    cv::Mat b(N * 2, 1, CV_64F);
+    for (int i = 0; i < N; i++) {
+        A.at<double>(i * 2,     0) = src[i].x;
+        A.at<double>(i * 2,     1) = 1.0;
+        A.at<double>(i * 2,     2) = 0.0;
+        b.at<double>(i * 2,     0) = dst[i].x;
+
+        A.at<double>(i * 2 + 1, 0) = src[i].y;
+        A.at<double>(i * 2 + 1, 1) = 0.0;
+        A.at<double>(i * 2 + 1, 2) = 1.0;
+        b.at<double>(i * 2 + 1, 0) = dst[i].y;
+    }
+    // SVD 分解，对退化情况比正规方程更鲁棒
+    cv::Mat x;
+    cv::solve(A, b, x, cv::DECOMP_SVD);
+    s  = x.at<double>(0);
+    dx = x.at<double>(1);
+    dy = x.at<double>(2);
+}
+
+} // anonymous namespace
+
 void Tracking::setMap(cv::Mat gi_map)
 {
 	m_mapMat = gi_map;
@@ -486,49 +558,91 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		calc_is_faile = true; return {};
 	}
 
-	cv::Mat H, mask;
-	H = cv::estimateAffinePartial2D(cv::Mat(good_matched_object), cv::Mat(good_matched_scene), mask, cv::RANSAC);
+	//========================================================================
+	// 3-DOF RANSAC: 纯缩放+平移模型 (dst = s * src + (dx, dy))
+	// 无需旋转自由度，小地图匹配天然不需要旋转估计。
+	//========================================================================
+	const int N = static_cast<int>(good_matched_scene.size());
 
-	int accept_count = cv::countNonZero(mask);
+	// 把 float 点提升到 double 以保持精度
+	std::vector<cv::Point2d> src_pts(N), dst_pts(N);
+	for (int i = 0; i < N; i++) {
+		src_pts[i] = cv::Point2d(good_matched_object[i]);
+		dst_pts[i] = cv::Point2d(good_matched_scene[i]);
+	}
 
-	if (accept_count < 4 || static_cast<double>(accept_count) / good_matched_scene.size() < 0.3)
+	constexpr int    RANSAC_ITER   = 500;
+	constexpr double RANSAC_THRESH = 8.0;   // 地图像素
+	constexpr double THRESH_SQ     = RANSAC_THRESH * RANSAC_THRESH;
+	constexpr double MIN_SCALE     = 0.31;
+	constexpr double MAX_SCALE     = 1.3;
+	constexpr int    MIN_INLIERS   = 4;
+	constexpr double MIN_INLIER_RATIO = 0.3;
+
+	cv::RNG rng(cv::getTickCount());
+	double best_s = 1.0, best_dx = 0.0, best_dy = 0.0;
+	int best_inliers = 0;
+
+	for (int iter = 0; iter < RANSAC_ITER; iter++) {
+		// 随机采样 2 对不重复的点
+		int i1 = rng.uniform(0, N);
+		int i2 = rng.uniform(0, N);
+		if (i1 == i2) continue;
+
+		double s, dx, dy;
+		if (!solve_scale_translation_2pair(src_pts[i1], src_pts[i2],
+			                               dst_pts[i1], dst_pts[i2],
+			                               s, dx, dy))
+			continue;
+		if (s < MIN_SCALE || s > MAX_SCALE)
+			continue;
+
+		// 统计内点 (L2 投影误差)
+		int inliers = 0;
+		for (int k = 0; k < N; k++) {
+			double ex = dst_pts[k].x - (s * src_pts[k].x + dx);
+			double ey = dst_pts[k].y - (s * src_pts[k].y + dy);
+			if (ex * ex + ey * ey < THRESH_SQ)
+				inliers++;
+		}
+		if (inliers > best_inliers) {
+			best_inliers = inliers;
+			best_s = s; best_dx = dx; best_dy = dy;
+		}
+	}
+
+	// 内点数量检查
+	if (best_inliers < MIN_INLIERS ||
+	    static_cast<double>(best_inliers) / N < MIN_INLIER_RATIO)
 	{
 		calc_is_faile = true; return {};
 	}
-	// 新增几何约束检查
-	if (!H.empty() && H.type() == CV_64F) {
-		// 提取旋转缩放矩阵部分
-		cv::Mat R = H(cv::Rect(0, 0, 2, 2));
 
-		// 使用SVD分解计算旋转角度
-		cv::Mat W, U, Vt;
-		cv::SVD::compute(R, W, U, Vt);
-		cv::Mat R_norm = U * Vt;  // 去除缩放的正交旋转矩阵
-
-		// 计算旋转角度（弧度转角度）
-		double angle = std::atan2(R_norm.at<double>(1, 0), R_norm.at<double>(0, 0));
-		double angle_deg = std::abs(angle * 180.0 / CV_PI);
-
-		// 计算缩放因子（取两个主方向的均值）
-		double scale_x = cv::norm(R.col(0));
-		double scale_y = cv::norm(R.col(1));
-		double scale = (scale_x + scale_y) / 2.0;
-
-		// 约束条件阈值
-		const double MAX_ANGLE = 2.0;    // ±5度
-		const double MIN_SCALE = 0.31;    // 最小缩放
-		const double MAX_SCALE = 1.3;    // 最大缩放
-
-		if (angle_deg <= MAX_ANGLE && scale >= MIN_SCALE && scale <= MAX_SCALE)
-		{
-			std::vector<cv::Point2f> out_pt{ cv::Point2f(img_object.cols / 2.0f, img_object.rows / 2.0f) };
-			cv::transform(out_pt, out_pt, H);
-            updateTrackingScale(scale);
-			return out_pt[0];
+	// 用所有内点做最小二乘精化
+	std::vector<cv::Point2d> inlier_src, inlier_dst;
+	inlier_src.reserve(best_inliers);
+	inlier_dst.reserve(best_inliers);
+	for (int k = 0; k < N; k++) {
+		double ex = dst_pts[k].x - (best_s * src_pts[k].x + best_dx);
+		double ey = dst_pts[k].y - (best_s * src_pts[k].y + best_dy);
+		if (ex * ex + ey * ey < THRESH_SQ) {
+			inlier_src.push_back(src_pts[k]);
+			inlier_dst.push_back(dst_pts[k]);
 		}
 	}
-	//不满足约束
-	calc_is_faile = true; return {};
+	solve_scale_translation_ls(inlier_src, inlier_dst, best_s, best_dx, best_dy);
+
+	// 缩放约束
+	if (best_s < MIN_SCALE || best_s > MAX_SCALE) {
+		calc_is_faile = true; return {};
+	}
+
+	updateTrackingScale(best_s);
+
+	// 小地图中心点映射到大地图坐标
+	double cx = static_cast<double>(img_object.cols) / 2.0;
+	double cy = static_cast<double>(img_object.rows) / 2.0;
+	return cv::Point2d(cx * best_s + best_dx, cy * best_s + best_dy);
 }
 
 [[deprecated]] cv::Point2d Tracking::cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene, bool& calc_is_faile)
