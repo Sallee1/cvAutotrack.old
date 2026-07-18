@@ -85,10 +85,8 @@ else()
     message(FATAL_ERROR "无法解析版本标签: ${TAG_CONTENT}")
 endif()
 
-# revision 自增（仅 RelWithDebInfo 发布版本）
-if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    math(EXPR VREVISION "${VREVISION} + 1")
-endif()
+# revision 自增
+math(EXPR VREVISION "${VREVISION} + 1")
 
 # ---- Git 信息 ----
 execute_process(COMMAND git rev-parse --abbrev-ref HEAD
@@ -145,10 +143,8 @@ else()
     set(NEW_TAG_STR "${VPREFIX}-${VMAJOR}.${VMINOR}.${VREVISION}")
 endif()
 
-# RelWithDebInfo 才写回 tag 文件
-if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    file(WRITE "${TAG_FILE}" "${NEW_TAG_STR}")
-endif()
+# 写回 tag 文件
+file(WRITE "${TAG_FILE}" "${NEW_TAG_STR}")
 
 # 用新 tag 重算 FULL_FP 并缓存
 file(SHA256 "${TAG_FILE}" NEW_TAG_HASH)
