@@ -1,6 +1,6 @@
 #pragma once
 #include "IIndexedMatchAlgorithm.h"
-#include <mutex>
+#include <memory>
 #include <filesystem>
 #include <opencv2/opencv.hpp>
 
@@ -21,14 +21,10 @@ public:
 	std::vector<std::vector<cv::DMatch>> knnmatch(const cv::Mat& query_descriptors, int k = 2) override;
 	std::vector<cv::DMatch> match(const cv::Mat& query_descriptors) override;
 
-	bool empty() const override { return m_index.empty(); }
+	bool empty() const override { return !m_index; }
 
 private:
-	cv::Ptr<cv::flann::Index> create_flann_index();
-	cv::Ptr<cv::flann::Index> get_cached_index();
-
-	mutable std::mutex m_mutex;
-	cv::Ptr<cv::flann::Index> m_index;
+	std::unique_ptr<cv::flann::Index> m_index;
 	cv::Mat m_train_descriptors;
 	bool m_is_binary;
 };

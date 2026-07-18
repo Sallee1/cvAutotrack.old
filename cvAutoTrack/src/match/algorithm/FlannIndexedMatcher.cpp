@@ -5,8 +5,7 @@ void FlannIndexedMatcher::build(const cv::Mat& train_descriptors)
 {
 	if (train_descriptors.empty()) return;
 
-	std::lock_guard<std::mutex> lock(m_mutex);
-	const bool cache_hit = !m_index.empty()
+	const bool cache_hit = m_index
 		&& m_train_descriptors.data == train_descriptors.data
 		&& m_train_descriptors.rows == train_descriptors.rows
 		&& m_train_descriptors.cols == train_descriptors.cols
@@ -14,13 +13,13 @@ void FlannIndexedMatcher::build(const cv::Mat& train_descriptors)
 
 	if (cache_hit) return;
 
-	auto idx = create_flann_index();
+	auto idx = std::make_unique<cv::flann::Index>();
 	if (m_is_binary)
 		idx->build(train_descriptors, cv::flann::LshIndexParams(12, 20, 2), cvflann::FLANN_DIST_HAMMING);
 	else
 		idx->build(train_descriptors, cv::flann::KDTreeIndexParams(8), cvflann::FLANN_DIST_L2);
 
-	m_index = idx;
+	m_index = std::move(idx);
 	m_train_descriptors = train_descriptors;
 }
 
@@ -28,8 +27,7 @@ bool FlannIndexedMatcher::try_load(const fs::path& path, const cv::Mat& train_de
 {
 	if (train_descriptors.empty()) return false;
 
-	std::lock_guard<std::mutex> lock(m_mutex);
-	const bool cache_hit = !m_index.empty()
+	const bool cache_hit = m_index
 		&& m_train_descriptors.data == train_descriptors.data
 		&& m_train_descriptors.rows == train_descriptors.rows
 		&& m_train_descriptors.cols == train_descriptors.cols
@@ -38,11 +36,11 @@ bool FlannIndexedMatcher::try_load(const fs::path& path, const cv::Mat& train_de
 
 	try
 	{
-		cv::Ptr<cv::flann::Index> idx = cv::makePtr<cv::flann::Index>();
+		auto idx = std::make_unique<cv::flann::Index>();
 		bool loaded = idx->load(train_descriptors, path.u8string());
 		if (loaded)
 		{
-			m_index = idx;
+			m_index = std::move(idx);
 			m_train_descriptors = train_descriptors;
 			return true;
 		}
@@ -55,8 +53,7 @@ bool FlannIndexedMatcher::try_load(const fs::path& path, const cv::Mat& train_de
 
 bool FlannIndexedMatcher::save(const fs::path& path)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-	if (m_index.empty()) return false;
+	if (!m_index) return false;
 
 	try
 	{
@@ -74,14 +71,13 @@ std::vector<std::vector<cv::DMatch>> FlannIndexedMatcher::knnmatch(const cv::Mat
 	std::vector<std::vector<cv::DMatch>> match_group;
 	if (query_descriptors.empty()) return match_group;
 
-	auto index = get_cached_index();
-	if (index.empty()) return match_group;
+	if (!m_index) return match_group;
 
 	cv::Mat indices, dists;
 	if (m_is_binary)
-		index->knnSearch(query_descriptors, indices, dists, k, cv::flann::SearchParams(256, 0.1f, true));
+		m_index->knnSearch(query_descriptors, indices, dists, k, cv::flann::SearchParams(256, 0.1f, true));
 	else
-		index->knnSearch(query_descriptors, indices, dists, k, cv::flann::SearchParams(256, 0.0f, true));
+		m_index->knnSearch(query_descriptors, indices, dists, k, cv::flann::SearchParams(256, 0.0f, true));
 
 	match_group.resize(query_descriptors.rows);
 	for (int i = 0; i < query_descriptors.rows; ++i)
@@ -103,14 +99,13 @@ std::vector<cv::DMatch> FlannIndexedMatcher::match(const cv::Mat& query_descript
 	std::vector<cv::DMatch> matches;
 	if (query_descriptors.empty()) return matches;
 
-	auto index = get_cached_index();
-	if (index.empty()) return matches;
+	if (!m_index) return matches;
 
 	cv::Mat indices, dists;
 	if (m_is_binary)
-		index->knnSearch(query_descriptors, indices, dists, 1, cv::flann::SearchParams(256, 0.1f, true));
+		m_index->knnSearch(query_descriptors, indices, dists, 1, cv::flann::SearchParams(256, 0.1f, true));
 	else
-		index->knnSearch(query_descriptors, indices, dists, 1, cv::flann::SearchParams(256, 0.0f, true));
+		m_index->knnSearch(query_descriptors, indices, dists, 1, cv::flann::SearchParams(256, 0.0f, true));
 
 	matches.reserve(query_descriptors.rows);
 	for (int i = 0; i < query_descriptors.rows; ++i)
@@ -122,13 +117,4 @@ std::vector<cv::DMatch> FlannIndexedMatcher::match(const cv::Mat& query_descript
 	return matches;
 }
 
-cv::Ptr<cv::flann::Index> FlannIndexedMatcher::create_flann_index()
-{
-	return cv::makePtr<cv::flann::Index>();
-}
 
-cv::Ptr<cv::flann::Index> FlannIndexedMatcher::get_cached_index()
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-	return m_index;
-}

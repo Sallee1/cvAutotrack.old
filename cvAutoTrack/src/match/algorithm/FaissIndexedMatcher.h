@@ -2,11 +2,9 @@
 #include "IIndexedMatchAlgorithm.h"
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <filesystem>
 #include <opencv2/opencv.hpp>
-
-namespace faiss { class IndexBinary; }
+#include <faiss/IndexBinary.h>
 
 namespace fs = std::filesystem;
 
@@ -18,8 +16,10 @@ namespace fs = std::filesystem;
 ///   auto idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::hash(4, 16));
 class FaissIndexedMatcher : public IIndexedMatchAlgorithm {
 public:
-	/// @param factory 索引工厂: (int d) → faiss::IndexBinary*
-	explicit FaissIndexedMatcher(std::function<faiss::IndexBinary*(int d)> factory)
+	using FactoryFunc = std::function<std::unique_ptr<faiss::IndexBinary>(int d, int nb)>;
+	/// @param factory 索引工厂: (int d, int nb) → faiss::IndexBinary*
+	///               nb 为训练向量数，工厂可用 nb 自动推算适合的参数。
+	explicit FaissIndexedMatcher(FactoryFunc factory)
 		: m_factory(std::move(factory)) {}
 	~FaissIndexedMatcher() override;
 
@@ -31,26 +31,30 @@ public:
 	bool empty() const override;
 
 private:
-	mutable std::mutex m_mutex;
-	faiss::IndexBinary* m_index = nullptr;
+	std::unique_ptr<faiss::IndexBinary> m_index = nullptr;
 	cv::Mat m_train_descriptors;
-	std::function<faiss::IndexBinary*(int d)> m_factory;
+	FactoryFunc m_factory;
 };
 
 /// 预定义 Faiss 索引工厂
+///
+/// 所有工厂签名为 (int d, int nb)：
+///   d  — 描述子位数（bit）
+///   nb — 训练向量数（可由 FaissIndexedMatcher::build 自动传入）
 namespace faiss_factory {
 
-/// 倒排索引（IndexBinaryIVF）
-/// @param nlist 聚类中心数，0 = auto sqrt(N)
-std::function<faiss::IndexBinary*(int d)> ivf(int nlist = 0);
+	/// 倒排索引（IndexBinaryIVF）
+	/// @param nlist 聚类中心数。0 = auto sqrt(nb)，建议保留默认。
+	///              可手工指定，例如 256~1024。
+	FaissIndexedMatcher::FactoryFunc ivf(int nlist = 0);
 
-/// 图索引（IndexBinaryHNSW）
-/// @param M 连接数，越大召回越高（默认 32）
-std::function<faiss::IndexBinary*(int d)> hnsw(int M = 32);
+	/// 图索引（IndexBinaryHNSW）
+	/// @param M 连接数，越大召回越高（默认 32）
+	FaissIndexedMatcher::FactoryFunc hnsw(int M = 32);
 
-/// 多索引哈希（IndexBinaryMultiHash）
-/// @param nhash 哈希表数量
-/// @param b 每表位数，0 = auto
-std::function<faiss::IndexBinary*(int d)> hash(int nhash = 2, int b = 0);
+	/// 多索引哈希（IndexBinaryMultiHash）
+	/// @param nhash 哈希表数量（推荐 2~4）
+	/// @param b 每表位数。0 = auto = d / nhash，建议保留默认。
+	FaissIndexedMatcher::FactoryFunc hash(int nhash = 0, int b = 0);
 
 } // namespace faiss_factory
