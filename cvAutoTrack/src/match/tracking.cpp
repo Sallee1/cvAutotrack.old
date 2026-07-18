@@ -183,6 +183,7 @@ void Tracking::match()
         // 不使用惯性导航
         if (m_isNoInertialNavigator)
         {
+            m_isMatchAllMap = true;
             m_isNoInertialNavigator = false;
             break;
         }
