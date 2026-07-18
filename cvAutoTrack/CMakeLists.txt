@@ -29,6 +29,7 @@ set(CVAT_SOURCES
     src/match/algorithm/FlannIndexedMatcher.cpp
     src/match/algorithm/FaissIndexedMatcher.cpp
     src/match/algorithm/OpenCVBFMatcher.cpp
+    src/match/LinearSolve.cpp
     src/match/detector/FASTFeatureDetector.cpp
     src/match/tracking.cpp
 
@@ -95,6 +96,7 @@ set(CVAT_HEADERS
     src/match/algorithm/OpenCVBFMatcher.h
     src/match/detector/FASTFeatureDetector.h
     src/match/type/MatchType.h
+    src/match/LinearSolve.h
 
     src/resources/KeypointsCache.h
     src/resources/Resources.h
