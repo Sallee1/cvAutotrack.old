@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "IMatcher.h"
+#include "utils/utils.progress.h"
 
 // ===== 特征提取（单层） =====
 
@@ -156,8 +157,14 @@ bool IMatcher::detect_and_compute_ex(const cv::Mat& img, KeyMatPoint& key_mat_po
 
 void IMatcher::cache_train_descriptors(const cv::Mat& train_descriptors)
 {
-	if (m_indexed_matcher)
-		m_indexed_matcher->build(train_descriptors);
+	if (!m_indexed_matcher)
+		return;
+
+	// 索引构建可能耗时（~1min），显示不定进度条
+	TianLi::Utils::Win32ProgressWindow progress;
+	progress.create_marquee(L"cvAutoTrack", L"正在构建特征索引...（约1分钟）");
+	m_indexed_matcher->build(train_descriptors);
+	progress.close();
 }
 
 bool IMatcher::try_load_index(const fs::path& path, const cv::Mat& train_descriptors)

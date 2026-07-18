@@ -8,22 +8,25 @@
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "shell32.lib")
 
+// PROGDLG_MARQUEEPROGRESS 在部分 SDK 中可能未定义
+#ifndef PROGDLG_MARQUEEPROGRESS
+#define PROGDLG_MARQUEEPROGRESS 0x20
+#endif
+
 namespace TianLi::Utils
 {
 	//-------------------------------------------------------------------------
-	// create —— 启动 UI 线程创建原生现代进度对话框
+	// create_impl —— 通用创建进度对话框
 	//-------------------------------------------------------------------------
-	bool Win32ProgressWindow::create(const std::wstring& title, int max_value, const std::wstring& status)
+	bool Win32ProgressWindow::create_impl(const std::wstring& title, const std::wstring& status, DWORD flags)
 	{
-		max_value_ = static_cast<DWORD>(std::max(1, max_value));
-
 		// 用事件同步：等待 UI 线程初始化完再返回
 		HANDLE h_ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
 		if (!h_ready)
 			return false;
 
 		// 启动 UI 线程
-		ui_thread_ = std::thread([this, title, status, h_ready]() {
+		ui_thread_ = std::thread([this, title, status, flags, h_ready]() {
 			ui_thread_id_ = GetCurrentThreadId();
 
 			// 初始化 COM（UI 线程需 STA）
@@ -50,8 +53,7 @@ namespace TianLi::Utils
 			pDlg->SetTitle(title.c_str());
 			pDlg->SetLine(1, status.c_str(), false, nullptr);
 			pDlg->StartProgressDialog(
-				nullptr, nullptr, PROGDLG_NORMAL | PROGDLG_AUTOTIME, nullptr);
-			pDlg->SetProgress(0, max_value_);
+				nullptr, nullptr, flags | PROGDLG_AUTOTIME, nullptr);
 
 			// 通知主线程创建完毕
 			SetEvent(h_ready);
@@ -76,6 +78,27 @@ namespace TianLi::Utils
 		CloseHandle(h_ready);
 
 		return dialog_ != nullptr;
+	}
+
+	//-------------------------------------------------------------------------
+	// create —— 普通进度条
+	//-------------------------------------------------------------------------
+	bool Win32ProgressWindow::create(const std::wstring& title, int max_value, const std::wstring& status)
+	{
+		max_value_ = static_cast<DWORD>(std::max(1, max_value));
+		if (!create_impl(title, status, PROGDLG_NORMAL))
+			return false;
+		dialog_->SetProgress(0, max_value_);
+		return true;
+	}
+
+	//-------------------------------------------------------------------------
+	// create_marquee —— 不定进度条
+	//-------------------------------------------------------------------------
+	bool Win32ProgressWindow::create_marquee(const std::wstring& title, const std::wstring& status)
+	{
+		max_value_ = 0;
+		return create_impl(title, status, PROGDLG_MARQUEEPROGRESS);
 	}
 
 	void Win32ProgressWindow::set_range(int /*max_value*/)
