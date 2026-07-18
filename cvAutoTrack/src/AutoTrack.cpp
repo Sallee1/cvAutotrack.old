@@ -48,7 +48,7 @@ AutoTrack::AutoTrack()
 		auto fast_detector = cv::makePtr<FASTFeatureDetector>(16, true);
 		auto teblid_desc = cv::xfeatures2d::TEBLID::create(5.0f, cv::xfeatures2d::TEBLID::SIZE_256_BITS);
 		auto bf_matcher = std::make_shared<OpenCVBFMatcher>(cv::NORM_HAMMING, false);
-		auto faiss_idx = std::make_shared<FlannIndexedMatcher>(true);
+		auto faiss_idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::hnsw(32));
 
 		// 瓦片 matcher：detect=FAST, desc=TEBLID, 共享索引
 		auto tile_matcher = std::make_shared<IMatcher>();
@@ -454,7 +454,8 @@ bool AutoTrack::GetPosition(double& x, double& y)
 
 #ifdef _CVAT_DEBUG_LOG
     auto __capture_time_len = std::chrono::steady_clock::now() - __begin_time;
-    printf("[DEBUG] 截图耗时：%lld ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(__capture_time_len).count());
+    int64_t time_count_ms = std::chrono::duration_cast<std::chrono::milliseconds>(__capture_time_len).count();
+    printf("[DEBUG] 截图耗时：%lld ms\n", time_count_ms);
 #endif
 	if (getMiniMapRefMat() == false)
 	{
@@ -485,7 +486,15 @@ bool AutoTrack::GetPosition(double& x, double& y)
 	}
 #ifdef _CVAT_DEBUG_LOG
     auto __tracking_time_len = std::chrono::steady_clock::now() - __begin_time;
+    time_count_ms = std::chrono::duration_cast<std::chrono::milliseconds>(__tracking_time_len).count();
     printf("[DEBUG] 匹配耗时：%lld ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(__tracking_time_len).count());
+
+#ifndef _CVAT_DEBUG
+    if (time_count_ms > 1000)
+    {
+        throw std::exception("match timeout");
+    }
+#endif
 #endif
 
 	x = pos.x;
@@ -752,12 +761,12 @@ bool AutoTrack::try_get_genshin_windows()
 		ErrorCode::getInstance() = { 101, "未能找到原神窗口句柄" };
 		return false;
 	}
-	if (!getGengshinImpactScreen())
-	{
-		ErrorCode::getInstance() = { 103, "获取原神画面失败" };
-		genshin_handle.is_exist = false;
-		return false;
-	}
+    if (!getGengshinImpactScreen())
+    {
+        ErrorCode::getInstance() = { 103, "获取原神画面失败" };
+        genshin_handle.is_exist = false;
+        return false;
+    }
 	return true;
 }
 
