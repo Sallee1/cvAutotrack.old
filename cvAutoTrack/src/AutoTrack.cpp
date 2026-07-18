@@ -24,6 +24,7 @@
 #include "match/detector/FASTFeatureDetector.h"
 #include "match/algorithm/FaissIndexedMatcher.h"
 #include "match/algorithm/OpenCVBFMatcher.h"
+#include "match/algorithm/FlannIndexedMatcher.h"
 #include "genshin/genshin.screen.h"
 
 #include <cinttypes>
@@ -47,7 +48,7 @@ AutoTrack::AutoTrack()
 		auto fast_detector = cv::makePtr<FASTFeatureDetector>(16, true);
 		auto teblid_desc = cv::xfeatures2d::TEBLID::create(5.0f, cv::xfeatures2d::TEBLID::SIZE_256_BITS);
 		auto bf_matcher = std::make_shared<OpenCVBFMatcher>(cv::NORM_HAMMING, false);
-		auto faiss_idx = std::make_shared<FaissIndexedMatcher>(faiss_factory::ivf());
+		auto faiss_idx = std::make_shared<FlannIndexedMatcher>(true);
 
 		// 瓦片 matcher：detect=FAST, desc=TEBLID, 共享索引
 		auto tile_matcher = std::make_shared<IMatcher>();
@@ -443,11 +444,11 @@ bool AutoTrack::GetPosition(double& x, double& y)
 #endif
 
     // 设定一个特殊标志位用于全图匹配，避免卡住
-    static bool is_match_all_map = false;
+    static bool is_no_inertial_navigator = false;
 
 	if (try_get_genshin_windows() == false)
 	{
-        is_match_all_map = true;
+        is_no_inertial_navigator = true;
 		return false;
 	}
 
@@ -458,13 +459,13 @@ bool AutoTrack::GetPosition(double& x, double& y)
 	if (getMiniMapRefMat() == false)
 	{
 		//ErrorCode::getInstance() = { 1001, "获取坐标时，没有识别到paimon" };
-        is_match_all_map = true;
+        is_no_inertial_navigator = true;
 		return false;
 	}
 
 	if (genshin_minimap.img_minimap.empty())
 	{
-        is_match_all_map = true;
+        is_no_inertial_navigator = true;
 		ErrorCode::getInstance() = { 5, "原神小地图区域为空" };
 		return false;
 	}
@@ -472,9 +473,9 @@ bool AutoTrack::GetPosition(double& x, double& y)
 #ifdef _CVAT_DEBUG_LOG
     __begin_time = std::chrono::steady_clock::now();
 #endif
-	TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position, is_match_all_map);
+	TianLi::Genshin::Match::get_avatar_position(genshin_minimap, genshin_avatar_position, is_no_inertial_navigator);
 
-    is_match_all_map = false;
+    is_no_inertial_navigator = false;
 
 	cv::Point2d pos = genshin_avatar_position.position;
 	if (!genshin_avatar_position.config.is_exist_last_match_minimap)

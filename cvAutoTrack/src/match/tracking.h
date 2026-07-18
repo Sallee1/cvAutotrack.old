@@ -83,14 +83,6 @@ public:
 
 	bool m_is_success_match = false;
 
-#ifdef _CVAT_PURE_INS
-	// ========== 调试：惯性导航与特征匹配并行对比 ==========
-	std::ofstream m_debug_csv;          // CSV 输出文件
-	int m_debug_step = 0;               // 惯性步数计数器
-	cv::Point2d m_debug_local_pos = { NAN, NAN }; // 局部匹配结果（用于 CSV）
-	bool m_debug_local_ok = false;      // 局部匹配是否成功
-#endif
-
 	void setMap(cv::Mat gi_map);
 	/**
 	 * @brief 设置小地图图像
@@ -101,7 +93,16 @@ public:
 	 */
 	void setMiniMap(const GenshinMinimap& minimap);
 
+    /**
+     * @brief 强制下一次使用全局匹配
+     */
     void setMatchAllMapNext();
+
+    /**
+     * @brief 强制下一次不使用惯性导航
+     */
+    void setNoInertialNavigatorNext();
+
 
 	bool Init(const std::shared_ptr<IMatcher>& matcher);
 	bool Init(const std::shared_ptr<IMatcher>& matcher, int cols, int rows, std::vector<cv::KeyPoint>&& gi_map_keypoints, cv::Mat&& gi_map_descriptors);
@@ -118,11 +119,14 @@ private:
 
 	cv::Point2d match_no_continuity(bool& calc_is_faile);
 
-	cv::Point2d match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile);
+	cv::Point2d match_impl(const IMatcher::KeyMatPoint& keypoint_scene, const cv::Rect2i& keypoint_roi, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile);
 
 	cv::Point2d cleanAndComputePos_Old(std::vector<cv::Point2f>& good_matched_scene,bool& calc_is_faile);
 
 	//全图匹配
 	//cv::Point2d match_all_map(bool& calc_is_faile,double& stdev, double minimap_scale_param = 1.0);
 	bool m_isMatchAllMap = true;
+
+    // 不使用惯性导航
+	bool m_isNoInertialNavigator = false;
 };

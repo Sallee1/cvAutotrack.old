@@ -18,11 +18,11 @@ namespace LinearSolve {
 /// RANSAC + LS 精化参数
 struct STParams
 {
-	double ransac_thresh = 8.0;       // 内点距离阈值（像素）
+	double ransac_thresh = 3.0;       // 内点距离阈值（像素）
 	int    ransac_iter   = 500;       // RANSAC 迭代次数
 	double min_scale     = 0.31;      // 缩放下限
 	double max_scale     = 1.3;       // 缩放上限
-	int    min_inliers   = 4;         // 最小内点数
+	int    min_inliers   = 6;         // 最小内点数
 	double min_inlier_ratio = 0.3;    // 最小内点比例
 };
 

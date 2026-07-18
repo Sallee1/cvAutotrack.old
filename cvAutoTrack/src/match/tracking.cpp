@@ -35,6 +35,13 @@ void Tracking::setMatchAllMapNext() {
     m_isMatchAllMap = true;
 }
 
+/**
+ * @brief 强制下一次不使用惯性导航
+ */
+void Tracking::setNoInertialNavigatorNext() {
+    m_isNoInertialNavigator = true;
+}
+
 bool Tracking::Init(const std::shared_ptr<IMatcher>& matcher)
 {
 	if (m_isInit)return true;
@@ -165,7 +172,6 @@ void Tracking::match()
 			break;
 		}
 
-		// B2. 特征匹配失败 → 惯性导航补位（帧间相位相关）
 		m_pos = m_last_pos;
 		m_is_success_match = false;
 
@@ -174,6 +180,14 @@ void Tracking::match()
 		if (m_miniMapCenter.empty())
 			break;
 
+        // 不使用惯性导航
+        if (m_isNoInertialNavigator)
+        {
+            m_isNoInertialNavigator = false;
+            break;
+        }
+
+		// B2. 特征匹配失败 → 惯性导航补位（帧间相位相关）
 		double peak = 0.0;
 		cv::Point2d diff_delta = {NAN, NAN};
 		double pixel_dist = 0.0;
@@ -301,7 +315,7 @@ void Tracking::match()
 
 cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 {
-	static cv::Mat img_scene(m_mapMat);
+	const cv::Mat& img_scene = m_mapMat;
 	int real_some_map_size_r = DEFAULT_SOME_MAP_SIZE_R;
 
 	cv::Point2d pos_object;
@@ -357,7 +371,7 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 		return pos_object;
 	}
 
-	cv::Point2d p = match_impl(someMap, some_map_kp, img_object, mini_map_kp, calc_continuity_is_faile);
+	cv::Point2d p = match_impl(some_map_kp, keypoint_roi, mini_map_kp , calc_continuity_is_faile);
 	if (calc_continuity_is_faile)
 	{
 		return {};
@@ -392,8 +406,8 @@ cv::Point2d Tracking::match_continuity(bool& calc_continuity_is_faile)
 /// <returns></returns>
 cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 {
-	//cv::Mat img_object = TianLi::Utils::crop_border(_miniMapMat, 0.15);
-	cv::Mat img_object = m_miniMapMat;
+	const cv::Mat &img_scene = m_mapMat;
+	const cv::Mat &img_object = m_miniMapMat;
 	IMatcher::KeyMatPoint mini_map_kp;
 	m_matcher->detect_and_compute_ex(img_object, mini_map_kp);
 	mini_map_kp = TianLi::Utils::remove_minimap_fake_keypoint(img_object.size(), m_miniMapDiameter * MINIMAP_BORDER_CROP_RATIO, mini_map_kp);
@@ -439,7 +453,7 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
         });
 #endif
 
-		cv::Point2d out_pt = match_impl(some_map, some_map_kp, img_object, mini_map_kp, calc_is_faile);
+		cv::Point2d out_pt = match_impl(some_map_kp, rect, mini_map_kp, calc_is_faile);
 
 
 #ifdef _CVAT_DEBUG
@@ -459,8 +473,20 @@ cv::Point2d Tracking::match_no_continuity(bool& calc_is_faile)
 	return {};
 }
 
-cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMatPoint& keypoint_scene, const cv::Mat& img_object, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile)
+cv::Point2d Tracking::match_impl(const IMatcher::KeyMatPoint& keypoint_scene, const cv::Rect2i& keypoint_roi, const IMatcher::KeyMatPoint& keypoint_object, bool& calc_is_faile)
 {
+	cv::Mat img_scene;
+	if(!m_mapMat.empty())
+	{
+		cv::Rect2i mapMatRoi{cv::Point2i{}, m_mapMat.size()};
+		cv::Rect2i roi = mapMatRoi & keypoint_roi;
+		if(roi.size() != cv::Size2i{0,0})
+		{
+			img_scene = m_mapMat(roi);
+		}
+	}
+	const cv::Mat &img_object = m_miniMapMat;
+
 	// 没有提取到特征点直接返回，结果无效
 	if (keypoint_object.keypoints.size() == 0)
 	{
@@ -487,10 +513,6 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		calc_is_faile = true; return {};
 	}
 
-	//========================================================================
-	// 3-DOF RANSAC: 纯缩放+平移模型 (dst = s * src + (dx, dy))
-	// 委托 LinearSolve 一步完成 RANSAC + LS 精化，返回 2×3 矩阵
-	//========================================================================
 	const int N = static_cast<int>(good_matched_scene.size());
 
 	std::vector<cv::Point2d> src_pts(N), dst_pts(N);
@@ -499,6 +521,7 @@ cv::Point2d Tracking::match_impl(const cv::Mat& img_scene, const IMatcher::KeyMa
 		dst_pts[i] = cv::Point2d(good_matched_scene[i]);
 	}
 
+	// 线性求解器估计约束
 	cv::Mat H = LinearSolve::estimateScaleTranslation(src_pts, dst_pts);
 	if (H.empty()) {
 		calc_is_faile = true; return {};

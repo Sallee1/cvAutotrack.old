@@ -180,7 +180,7 @@ cv::Point2d match_no_continuity_2nd(bool& calc_is_faile)
 	return pos_continuity_no;
 }
 
-void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position, bool is_match_all_map)
+void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_minimap, GenshinAvatarPosition& out_genshin_position, bool is_no_inertial_navigator)
 {
 	if (!g_is_init.load())
 	{
@@ -194,9 +194,9 @@ void TianLi::Genshin::Match::get_avatar_position(const GenshinMinimap& genshin_m
 
 	g_surf_match.setMiniMap(genshin_minimap);
 
-    if (is_match_all_map)
+    if (is_no_inertial_navigator)
     {
-        g_surf_match.setMatchAllMapNext();
+        g_surf_match.setNoInertialNavigatorNext();
     }
 	g_surf_match.match();
 
