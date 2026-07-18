@@ -18,10 +18,8 @@ namespace TianLi::Utils
 			size_t fsLen = fileOut.tellp();
 			size_t addLen = (fsLen >> p << p) + size - fsLen;
 			if (addLen != size) {
-				char* emptyBinarys = new char[addLen];
-				memset(emptyBinarys, 0, addLen);
-				fileOut.write(emptyBinarys, addLen);
-				delete[] emptyBinarys;
+				std::vector<char> emptyBinarys(addLen, 0);
+				fileOut.write(emptyBinarys.data(), addLen);
 			}
 		}
 
@@ -145,13 +143,11 @@ namespace TianLi::Utils
 			fileIn.read((char*)&size, sizeof(DWORD));
 			if (size > MAXSHORT) throw std::exception("解析到的字符串过长");
 
-			char* bytes = new char[size];
+			std::vector<char> bytes(size);
 			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
-			fileIn.read(bytes, size);
+			fileIn.read(bytes.data(), size);
 
-			s = std::string(bytes);
-
-			delete[] bytes;
+			s = std::string(bytes.data());
 		}
 
 		template<typename Digital>
@@ -170,14 +166,12 @@ namespace TianLi::Utils
 			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
 			fileIn.read((char*)&size, sizeof(DWORD));
 
-			char* bytes = new char[size];
+			std::vector<char> bytes(size);
 			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
-			fileIn.read(bytes, size);
+			fileIn.read(bytes.data(), size);
 
-			cv::KeyPoint* keyPointPtr = (cv::KeyPoint*)bytes;
+			cv::KeyPoint* keyPointPtr = (cv::KeyPoint*)bytes.data();
 			points = std::vector<cv::KeyPoint>(keyPointPtr, keyPointPtr + size / sizeof(cv::KeyPoint));
-
-			delete[] bytes;
 		}
 
 		void operator >>(cv::Mat& mat)
@@ -187,14 +181,12 @@ namespace TianLi::Utils
 			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
 			fileIn.read((char*)&size, sizeof(DWORD));
 
-			char* bytes = new char[size];
+			std::vector<char> bytes(size);
 			if (fileIn.eof()) throw std::exception("尝试读取已经为空的流");
-			fileIn.read(bytes, size);
+			fileIn.read(bytes.data(), size);
 
-			std::vector<uchar> inputArray(bytes, bytes + size);
+			std::vector<uchar> inputArray(bytes.begin(), bytes.end());
 			mat = cv::imdecode(inputArray, cv::IMREAD_ANYDEPTH | cv::IMREAD_UNCHANGED);
-
-			delete[] bytes;
 		}
 
 		// New helpers for common OpenCV/STD types
