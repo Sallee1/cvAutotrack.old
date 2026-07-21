@@ -8,7 +8,7 @@
 #include "KeypointsCache.h"
 #include "resources/gimap_downloader.h"
 #include "resources/map_mapper_config.h"
-#include "ErrorCode.h"
+#include "utils/log/cvat_logger.h"
 
 namespace
 {
@@ -163,7 +163,7 @@ void Resources::install()
             MessageBox(NULL, warn_info.c_str(), L"警告", MB_OK | MB_ICONWARNING);
 
             // 同时写入日志文件，方便用户复制重定向地址等详细信息
-            ErrorCode::getInstance() = { 7000, std::string("\"位置追踪\"资源下载失败: ") + e.what() };
+            CVAT_PUSH_ERR(7000, std::string("\"位置追踪\"资源下载失败: ") + e.what());
         }
 
 		// 加载地图映射配置

@@ -1,10 +1,7 @@
 #pragma once
 #include <string>
 #include "version/Version.h"
-#include "ErrorCode.h"
-#ifndef err
-#define err ErrorCode::getInstance()
-#endif
+#include "utils/log/cvat_logger.h"
 
 
 class Ver
@@ -14,12 +11,12 @@ public:
 	{
 		if (version_buff == nullptr || buff_size < 1)
 		{
-			err = { 291,"缓存区为空指针或是缓存区大小为小于1" };
+			CVAT_PUSH_ERR(291, "缓存区为空指针或是缓存区大小为小于1");
 			return false;
 		}
 		if (TianLi::Version::build_version.size() > buff_size)
 		{
-			err = { 292,"缓存区大小不足" };
+			CVAT_PUSH_ERR(292, "缓存区大小不足");
 			return false;
 		}
 		strcpy_s(version_buff, buff_size, TianLi::Version::build_version.c_str());
@@ -30,17 +27,15 @@ public:
 	{
 		if (time_buff == nullptr || buff_size < 1)
 		{
-			err = { 291,"缓存区为空指针或是缓存区大小为小于1" };
+			CVAT_PUSH_ERR(291, "缓存区为空指针或是缓存区大小为小于1");
 			return false;
 		}
 		if (TianLi::Version::build_time.size() > buff_size)
 		{
-			err = { 292,"缓存区大小不足" };
+			CVAT_PUSH_ERR(292, "缓存区大小不足");
 			return false;
 		}
 		strcpy_s(time_buff, buff_size, TianLi::Version::build_time.c_str());
 		return true;
 	}
 };
-
-#undef err

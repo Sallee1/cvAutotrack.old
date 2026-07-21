@@ -20,7 +20,7 @@ int TEST()
     }
     else
     {
-        std::cout << u8"错误码       : " << " " << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取版本号失败 (详见 autoTrack.log)\n";
     }
 
     char version_time_buff[256] = { 0 };
@@ -31,7 +31,7 @@ int TEST()
     }
     else
     {
-        std::cout << u8"错误码       : " << " " << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取编译时间失败 (详见 autoTrack.log)\n";
     }
 
     std::cout << u8"测试完成\n";
@@ -79,7 +79,7 @@ void Run_SetDx()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"设置Dx截图失败 (详见 autoTrack.log)\n";
     }
 }
 void Run_SetBit()
@@ -91,7 +91,7 @@ void Run_SetBit()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"设置Bitblt截图失败 (详见 autoTrack.log)\n";
     }
 }
 void Run_GetTrans()
@@ -106,7 +106,7 @@ void Run_GetTrans()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取坐标和角度失败 (详见 autoTrack.log)\n";
     }
 }
 void Run_GetDir()
@@ -118,7 +118,7 @@ void Run_GetDir()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取方向失败 (详见 autoTrack.log)\n";
     }
 }
 void Run_GetRot()
@@ -130,7 +130,7 @@ void Run_GetRot()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取视角朝向失败 (详见 autoTrack.log)\n";
     }
 }
 
@@ -158,7 +158,7 @@ UID:{:d}
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取全部信息失败 (详见 autoTrack.log)\n";
     }
 }
 
@@ -171,7 +171,7 @@ void Run_GetUID()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取UID失败 (详见 autoTrack.log)\n";
     }
 }
 void Run_GetStars()
@@ -199,7 +199,7 @@ void Run_Capture()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"截图失败 (详见 autoTrack.log)\n";
     }
 }
 
@@ -214,7 +214,7 @@ void Run_GetPosit()
     }
     else
     {
-        std::cout << u8"错误码       : " << " \n" << ctx->GetLastErr() << " " << "\n";
+        std::cout << u8"获取坐标失败 (详见 autoTrack.log)\n";
     }
 }
 

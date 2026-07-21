@@ -41,7 +41,7 @@ set(CVAT_SOURCES
     src/resources/Resources.cpp
     src/resources/resources.load.cpp
 
-    src/utils/log/utils.log.cpp
+    src/utils/log/cvat_logger.cpp
     src/utils/utils.progress.cpp
     src/utils/Utils.cpp
 
@@ -108,12 +108,12 @@ set(CVAT_HEADERS
 
     src/utils/Utils.h
     src/utils/utils.progress.h
-    src/utils/log/utils.log.h
+    src/utils/log/cvat_logger.h
 )
 
 add_library(cvAutoTrack SHARED ${CVAT_HEADERS} ${CVAT_SOURCES})
 
-target_include_directories(cvAutoTrack PRIVATE ${CVAT_INCLUDE_DIRS})
+target_include_directories(cvAutoTrack PRIVATE ${CVAT_INCLUDE_DIRS} "C:/Packages/spdlog/include")
 
 # 导出宏
 target_compile_definitions(cvAutoTrack PRIVATE CVAUTOTRACK_EXPORTS)

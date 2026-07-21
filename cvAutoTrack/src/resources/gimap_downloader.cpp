@@ -3,7 +3,7 @@
 #include "downloader/cfiledownloaderasync.h"
 #include "downloader/cfiledownloader.h"
 #include "utils/utils.progress.h"
-#include "ErrorCode.h"
+#include "utils/log/cvat_logger.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -187,7 +187,7 @@ bool GIMapDownloader::setHost(const std::string& host)
             std::string err_msg = "无法连接到服务器: [" +
                                   std::to_string(dl.getLastErrorCode()) + "] " +
                                   dl.getLastErrorMsg();
-            ErrorCode::getInstance() = { 7001, err_msg };
+            CVAT_PUSH_ERR(7001, err_msg);
             throw network_error(err_msg);
         }
         std::error_code ec;
@@ -318,7 +318,7 @@ bool GIMapDownloader::download()
             {
                 std::string err_msg = std::string("无法获取远程依赖列表且本地缓存不可用") +
                     "\n" + dl_error;
-                ErrorCode::getInstance() = { 7002, err_msg };
+                CVAT_PUSH_ERR(7002, err_msg);
                 throw network_error(err_msg);
             }
         }
@@ -330,7 +330,7 @@ bool GIMapDownloader::download()
         if (!ifs.is_open())
         {
             std::string err_msg = "无法读取远程 dependents.json 临时文件";
-            ErrorCode::getInstance() = { 7003, err_msg };
+            CVAT_PUSH_ERR(7003, err_msg);
             throw network_error(err_msg);
         }
         try {
@@ -338,7 +338,7 @@ bool GIMapDownloader::download()
         }
         catch (const std::exception& e) {
             std::string err_msg = "解析远程 dependents.json 失败: " + std::string(e.what());
-            ErrorCode::getInstance() = { 7003, err_msg };
+            CVAT_PUSH_ERR(7003, err_msg);
             throw network_error(err_msg);
         }
     }
@@ -368,7 +368,7 @@ bool GIMapDownloader::download()
     if (pImpl->remote_dependents_json.is_null())
     {
         std::string err_msg = "缺少远程依赖列表，请先调用 setHost";
-        ErrorCode::getInstance() = { 7004, err_msg };
+        CVAT_PUSH_ERR(7004, err_msg);
         throw network_error(err_msg);
     }
 
@@ -376,7 +376,7 @@ bool GIMapDownloader::download()
     if (filelist_it == pImpl->remote_dependents_json.end() || !filelist_it->is_array())
     {
         std::string err_msg = "远程 dependents.json 缺少 filelist 字段或格式错误";
-        ErrorCode::getInstance() = { 7005, err_msg };
+        CVAT_PUSH_ERR(7005, err_msg);
         throw network_error(err_msg);
     }
 
@@ -494,7 +494,7 @@ bool GIMapDownloader::download()
                     std::error_code ec_clean;
                     fs::remove(tmp_meta, ec_clean);
                     std::string err_msg = "移动 metadata.json 失败: " + ec_rename.message();
-                    ErrorCode::getInstance() = { 7006, err_msg };
+                    CVAT_PUSH_ERR(7006, err_msg);
                     throw network_error(err_msg);
                 }
                 metadata_handled = true;
@@ -516,7 +516,7 @@ bool GIMapDownloader::download()
             {
                 std::string err_msg = std::string("metadata.json 下载失败且本地无可用缓存") +
                     "\n" + meta_error;
-                ErrorCode::getInstance() = { 7006, err_msg };
+                CVAT_PUSH_ERR(7006, err_msg);
                 throw network_error(err_msg);
             }
         }
@@ -627,7 +627,7 @@ bool GIMapDownloader::download()
             msg += "  [任务#" + std::to_string(id) + "] (" +
                    std::to_string(err.first) + ") " + err.second + "\n";
 
-        ErrorCode::getInstance() = { 7007, msg };
+        CVAT_PUSH_ERR(7007, msg);
         progress.set_status(L"下载完成，部分文件失败");
         std::this_thread::sleep_for(std::chrono::seconds(1));
         progress.close();

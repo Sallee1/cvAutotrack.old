@@ -1,40 +1,47 @@
 #pragma once
+//=============================================================================
+// ErrorCode — 外部 C API 兼容层（内部代码请使用日志宏 + CVAT_PUSH_ERR）
+//=============================================================================
+#include "utils/log/cvat_logger.h"
+#include <string>
+#include <vector>
+
 using namespace std;
 
 class ErrorCode
 {
-	std::fstream log_file;
-	bool is_use_file = false;
 private:
-	ErrorCode();
+    ErrorCode() = default;
 
 public:
-	~ErrorCode();
-	ErrorCode(const ErrorCode&) = delete;
-	ErrorCode& operator=(const ErrorCode&) = delete;
-	static ErrorCode& getInstance();
-	ErrorCode& operator=(const std::pair<int,std::string>& err_code_msg);
-	operator int();
-	friend std::ostream & operator<<(std::ostream & os, const ErrorCode & err);
+    ~ErrorCode() = default;
+    ErrorCode(const ErrorCode&) = delete;
+    ErrorCode& operator=(const ErrorCode&) = delete;
 
-	bool disableWirteFile();
-	bool enableWirteFile();
-	int writeFile(char const* const format, ...);
+    static ErrorCode& getInstance();
+
+    // [内部兼容] operator= 转发到 CVAT_PUSH_ERR
+    ErrorCode& operator=(const std::pair<int, std::string>& err_code_msg);
+
+    [[deprecated("Use CVAT_PUSH_ERR macro instead")]]
+    operator int();
+
+    friend std::ostream& operator<<(std::ostream& os, const ErrorCode& err);
+
 public:
-	int getLastError();
-	std::string getLastErrorMsg();
-	std::string toJson();
+    [[deprecated("Always returns 0. Check log output instead.")]]
+    int getLastError();
 
-private:
-	int error_code=0;
-	int error_code_last = 0;
-	std::vector<std::pair<int, std::string>> error_code_msg_list;
-private:
-	void push(int code, string msg);
+    [[deprecated("Use cvat::log::last_error_msg() instead")]]
+    std::string getLastErrorMsg();
+
+    [[deprecated("Use cvat::log::error_list_json() instead")]]
+    std::string toJson();
 };
 
+// clear_error_logs 适配为 CVAT_CLEAR_ERR
 inline bool clear_error_logs()
 {
-	ErrorCode::getInstance() = { 0,"调用成功" };
-	return true;
+    CVAT_CLEAR_ERR();
+    return true;
 }

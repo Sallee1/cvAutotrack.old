@@ -1,5 +1,5 @@
 #pragma once
-#include "ErrorCode.h"
+#include "utils/log/cvat_logger.h"
 class Point2d;
 class Filter
 {

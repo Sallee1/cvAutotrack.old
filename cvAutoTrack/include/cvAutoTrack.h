@@ -153,30 +153,18 @@ extern "C"
      */
     bool CVAUTOTRACK_API DebugCapturePath(const char* path_buff, int buff_size);
 
-    /**
-     * @brief 获取最后一次错误码
-     * @return 错误码
-     */
+    [[deprecated("Error code retrieval is deprecated. Check autoTrack.log for details.")]]
     int  CVAUTOTRACK_API GetLastErr();
 
-    /**
-     * @brief 获取最后一次错误信息
-     * @param msg_buff 错误信息
-     * @param buff_size 字符串长度
-     * @return 错误码
-     */
+    [[deprecated("Error code retrieval is deprecated. Check autoTrack.log for details.")]]
     int  CVAUTOTRACK_API GetLastErrMsg(char* msg_buff, int buff_size);
+    [[deprecated("Error code retrieval is deprecated. Check autoTrack.log for details.")]]
     int  CVAUTOTRACK_API GetLastErrJson(char* json_buff, int buff_size);
 
-    /**
-     * @brief 关闭文件日志
-     * @return 是否成功
-     */
+    [[deprecated("Log file is now managed by spdlog.")]]
     bool CVAUTOTRACK_API SetDisableFileLog();
-    /**
-     * @brief 打开文件日志
-     * @return 是否成功
-     */
+
+    [[deprecated("Log file is now managed by spdlog.")]]
     bool CVAUTOTRACK_API SetEnableFileLog();
 
     /**
