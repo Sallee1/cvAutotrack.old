@@ -8,6 +8,7 @@
 #include <openssl/evp.h>
 
 #include <curl/curl.h>
+#include <rpcdce.h>
 namespace fs = std::filesystem;
 namespace tianli {
 	class FileDownloader {
@@ -144,10 +145,16 @@ namespace tianli {
 			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L); // 手动处理重定向
 
 			m_last_redirect_url.clear();
-			std::string current_url = m_url;
+			std::string current_url = appendSidParam(m_url);
 			const int max_redirects = 10;
 			CURLcode res = CURLE_OK;
 			bool success = false;
+
+			// 连接超时（最多等10s建立TCP/TLS连接）
+			curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+			// 弱网检测：速度低于 1KB/s 持续超过 10s 则自动中止
+			curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1024L);
+			curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 10L);
 
 			for (int redirect_count = 0; redirect_count <= max_redirects; redirect_count++)
 			{
@@ -170,7 +177,17 @@ namespace tianli {
 				// CURL 级错误
 				if (res != CURLE_OK) {
 					last_error_code = res;
-					m_last_error_msg = curl_easy_strerror(res);
+					if (res == CURLE_OPERATION_TIMEDOUT) {
+						// 根据是否收到过数据判断是"下载过慢"还是"服务器无响应"
+						curl_off_t bytes_downloaded = 0;
+						curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &bytes_downloaded);
+						if (bytes_downloaded > 0)
+							m_last_error_msg = "Download aborted: network speed too low (< 1KB/s) for more than 10 seconds";
+						else
+							m_last_error_msg = "Download aborted: server not responding (timeout)";
+					} else {
+						m_last_error_msg = curl_easy_strerror(res);
+					}
 					appendRedirectInfo();
 					fs::remove(m_file_path);
 					curl_easy_cleanup(curl);
@@ -240,6 +257,30 @@ namespace tianli {
 		void appendRedirectInfo() {
 			if (!m_last_redirect_url.empty())
 				m_last_error_msg += " (last redirect: " + m_last_redirect_url + ")";
+		}
+
+		// ---- sid参数 ----
+
+		// 生成UUID（基于Windows UuidCreate）
+		static std::string generateUUID() {
+			UUID uuid;
+			UuidCreate(&uuid);
+			RPC_CSTR rpc_str;
+			if (UuidToStringA(&uuid, &rpc_str) == RPC_S_OK) {
+				std::string result(reinterpret_cast<char*>(rpc_str));
+				RpcStringFreeA(&rpc_str);
+				return result;
+			}
+			return "";
+		}
+
+		// 为URL追加sid={uuid}参数
+		static std::string appendSidParam(const std::string& url) {
+			std::string sid = generateUUID();
+			if (url.find('?') != std::string::npos)
+				return url + "&sid=" + sid;
+			else
+				return url + "?sid=" + sid;
 		}
 	};
 }

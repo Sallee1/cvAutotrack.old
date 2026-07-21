@@ -158,7 +158,7 @@ target_link_libraries(cvAutoTrack PRIVATE
     nlohmann_json::nlohmann_json
 
     # Windows
-    dxgi  windowsapp
+    dxgi  windowsapp   Rpcrt4
 )
 
 # 屏蔽系统 vcpkg 全局集成（避免灌入 C:\vcpkg\installed\*.lib 等无关库）
